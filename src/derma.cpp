@@ -1,3 +1,7 @@
+#define _CRTDBG_MAP_ALLOC
+
+#include <stdlib.h>
+#include <crtdbg.h>
 #include <Windows.h>
 
 #include <d3d11_1.h>
@@ -5,6 +9,8 @@
 #include <d3dcompiler.h>
 #include <DirectXColors.h>
 #include <WICTextureLoader.h>
+
+#include <wrl/client.h>
 
 #include "imgui.h"
 #include "imgui_impl_dx11.h"
@@ -15,23 +21,15 @@
 #include <iostream>
 #include <string>
 
+
 #pragma comment (lib, "d3d11.lib")
 #pragma comment (lib, "dxgi.lib")
 #pragma comment (lib, "d3dcompiler.lib")
 #pragma comment (lib, "winmm.lib")
 
-// Safely release a COM object.
-template<typename T>
-inline void SafeRelease(T& ptr)
-{
-    if (ptr != NULL)
-    {
-        ptr->Release();
-        ptr = NULL;
-    }
-}
 
 namespace dx = DirectX;
+namespace wrl = Microsoft::WRL;
 
 const LONG g_windowWidth = 1280;
 const LONG g_windowHeight = 720;
@@ -44,36 +42,39 @@ const BOOL g_enableVSync = TRUE;
 D3D_DRIVER_TYPE g_d3dDrivType = D3D_DRIVER_TYPE_NULL;
 D3D_FEATURE_LEVEL g_d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
 
-ID3D11Device* g_d3dDevice = nullptr;
-ID3D11Device1* g_d3dDevice1 = nullptr;
 
-ID3D11DeviceContext* g_d3dDeviceContext = nullptr;
-ID3D11DeviceContext1* g_d3dDeviceContext1 = nullptr;
+wrl::ComPtr<ID3D11Device> g_d3dDevice;
 
-IDXGISwapChain* g_dxgiSwapChain = nullptr;
-IDXGISwapChain1* g_dxgiSwapChain1 = nullptr;
+wrl::ComPtr<ID3D11DeviceContext> g_d3dDeviceContext;
 
-ID3D11RenderTargetView* g_d3dRenderTargetView = nullptr;
-ID3D11DepthStencilView* g_d3dDepthStencilView = nullptr;
-ID3D11Texture2D* g_d3dDepthStencilBuffer = nullptr;
+wrl::ComPtr<IDXGISwapChain> g_dxgiSwapChain;
 
-ID3D11DepthStencilState* g_d3dDepthStencilState = nullptr;
-ID3D11RasterizerState* g_d3dRasterizerState = nullptr;
+wrl::ComPtr<ID3D11RenderTargetView> g_d3dRenderTargetView;
+wrl::ComPtr<ID3D11DepthStencilView> g_d3dDepthStencilView;
+wrl::ComPtr<ID3D11Texture2D> g_d3dDepthStencilBuffer;
+
+wrl::ComPtr<ID3D11DepthStencilState> g_d3dDepthStencilState;
+wrl::ComPtr<ID3D11RasterizerState> g_d3dRasterizerState;
+wrl::ComPtr<ID3D11RasterizerState> g_d3dRasterizerStateCullBack;
+wrl::ComPtr<ID3D11RasterizerState> g_d3dRasterizerStateCullFront;
+
+wrl::ComPtr<ID3D11BlendState> g_d3dBlendState;
+
+wrl::ComPtr<ID3D11InputLayout> g_d3dInputLayout;
+wrl::ComPtr<ID3D11Buffer> g_d3dVertexBuffer;
+wrl::ComPtr<ID3D11Buffer> g_d3dIndexBuffer;
+
+wrl::ComPtr<ID3D11Buffer> g_cbPerObj;
+wrl::ComPtr<ID3D11Buffer> g_cbPerCam;
+wrl::ComPtr<ID3D11Buffer> g_cbPerProj;
+wrl::ComPtr<ID3D11Buffer> g_cbLight;
+
+wrl::ComPtr<ID3D11PixelShader> g_d3dPixelShader;
+wrl::ComPtr<ID3D11VertexShader> g_d3dVertexShader;
+
+
 D3D11_VIEWPORT g_Viewport = { 0 };
-
-ID3D11InputLayout* g_d3dInputLayout = nullptr;
-ID3D11Buffer* g_d3dVertexBuffer = nullptr;
-ID3D11Buffer* g_d3dIndexBuffer = nullptr;
-
-ID3D11Buffer* g_cbPerObj = nullptr;
-ID3D11Buffer* g_cbPerCam = nullptr;
-ID3D11Buffer* g_cbPerProj = nullptr;
-
-ID3D11PixelShader* g_d3dPixelShader = nullptr;
-ID3D11VertexShader* g_d3dVertexShader = nullptr;
-
 Camera g_cam;
-
 
 template<class ShaderClass>
 std::string GetLatestProfile();
@@ -90,60 +91,51 @@ std::string GetLatestProfile<ID3D11PixelShader>() {
 
 
 template<class ShaderClass>
-ShaderClass* CreateShader(ID3DBlob* pShaderBlob);
+HRESULT CreateShader(ID3DBlob* pShaderBlob, ShaderClass** pShader, ID3D11Device* g_d3dDevice);
 
 template<>
-ID3D11VertexShader* CreateShader<ID3D11VertexShader>(ID3DBlob* pShaderBlob) {
-
-    ID3D11VertexShader* pShader = nullptr;
-    g_d3dDevice->CreateVertexShader(pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize(), nullptr, &pShader);
-
-    return pShader;
+HRESULT CreateShader<ID3D11VertexShader>(ID3DBlob* pShaderBlob, ID3D11VertexShader** pShader, ID3D11Device *g_d3dDevice) 
+{
+    return g_d3dDevice->CreateVertexShader(pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize(), nullptr, pShader);
 };
 
 template<>
-ID3D11PixelShader* CreateShader<ID3D11PixelShader>(ID3DBlob* pShaderBlob) {
-
-    ID3D11PixelShader* pShader = nullptr;
-    g_d3dDevice->CreatePixelShader(pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize(), nullptr, &pShader);
-
-    return pShader;
+HRESULT CreateShader<ID3D11PixelShader>(ID3DBlob* pShaderBlob, ID3D11PixelShader** pShader, ID3D11Device* g_d3dDevice)
+{
+    return g_d3dDevice->CreatePixelShader(pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize(), nullptr, pShader);
 };
 
 template<class ShaderClass>
-ShaderClass* LoadShader(const std::wstring& shaderFilename, const std::string& entrypoint, ID3DBlob** shaderBlob) {
+HRESULT LoadShader(const std::wstring& shaderFilename, const std::string& entrypoint, ID3DBlob** shaderBlob, ShaderClass** shader, ID3D11Device *g_d3dDevice) {
 
-    //ID3DBlob* shaderBlob = nullptr;
-    ID3DBlob* errBlob = nullptr;
-    ShaderClass* shader = nullptr;
+    wrl::ComPtr<ID3DBlob> errBlob = nullptr;
 
     std::string profile = GetLatestProfile<ShaderClass>();
 
-    UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
+    UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG;
 
-    HRESULT hr = D3DCompileFromFile(shaderFilename.c_str(), NULL, NULL, entrypoint.c_str(), profile.c_str(), flags, 0, shaderBlob, &errBlob);
+    HRESULT hr = D3DCompileFromFile(shaderFilename.c_str(), NULL, NULL, entrypoint.c_str(), profile.c_str(), flags, 0, shaderBlob, errBlob.GetAddressOf());
 
     if (FAILED(hr)) {
         std::string errorMessage = (char*)errBlob->GetBufferPointer();
         OutputDebugStringA(errorMessage.c_str());
 
-        SafeRelease(*shaderBlob);
-        SafeRelease(errBlob);
-
-        return false;
+        return hr;
     }
      
-    shader = CreateShader<ShaderClass>(*shaderBlob);
+    hr = CreateShader<ShaderClass>(*shaderBlob, shader, g_d3dDevice);
+    if (FAILED(hr)) {
+        return hr;
+    }
 
-    SafeRelease(errBlob);
-
-    return shader;
+    return S_OK;
 }
 
 enum ConstanBuffer {
     CB_Application,
     CB_Frame,
     CB_Object,
+    CB_Light,
     NumConstantBuffers
 };
 
@@ -155,58 +147,59 @@ dx::XMMATRIX g_projMatrix;
 
 D3D11_INPUT_ELEMENT_DESC vertexLayouts[] = {
     {"position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-    {"texcoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
+    {"texcoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+    {"normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
 };
 
 struct Vertex
 {
     Vertex() {}
     Vertex(float x, float y, float z,
-        float u, float v)
-        : position(x, y, z), texCoord(u, v) {}
+        float u, float v, float nx, float ny, float nz)
+        : position(x, y, z), texCoord(u, v), normal(nx, ny, nz) {}
 
     dx::XMFLOAT3 position;
     dx::XMFLOAT2 texCoord;
-    //dx::XMFLOAT4 color;
+    dx::XMFLOAT3 normal;
 };
 
 Vertex g_Vertices[] =
 {
     // Front Face
-    Vertex(-1.0f, -1.0f, -1.0f, 0.0f, 1.0f),
-    Vertex(-1.0f,  1.0f, -1.0f, 0.0f, 0.0f),
-    Vertex(1.0f,  1.0f, -1.0f, 1.0f, 0.0f),
-    Vertex(1.0f, -1.0f, -1.0f, 1.0f, 1.0f),
+    Vertex(-1.0f, -1.0f, -1.0f, 0.0f, 1.0f,-1.0f, -1.0f, -1.0f),
+    Vertex(-1.0f,  1.0f, -1.0f, 0.0f, 0.0f,-1.0f,  1.0f, -1.0f),
+    Vertex(1.0f,  1.0f, -1.0f, 1.0f, 0.0f, 1.0f,  1.0f, -1.0f),
+    Vertex(1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f),
 
     // Back Face
-    Vertex(-1.0f, -1.0f, 1.0f, 1.0f, 1.0f),
-    Vertex(1.0f, -1.0f, 1.0f, 0.0f, 1.0f),
-    Vertex(1.0f,  1.0f, 1.0f, 0.0f, 0.0f),
-    Vertex(-1.0f,  1.0f, 1.0f, 1.0f, 0.0f),
+    Vertex(-1.0f, -1.0f, 1.0f, 1.0f, 1.0f,-1.0f, -1.0f, 1.0f),
+    Vertex(1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 1.0f, -1.0f, 1.0f),
+    Vertex(1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f,  1.0f, 1.0f),
+    Vertex(-1.0f,  1.0f, 1.0f, 1.0f, 0.0f,-1.0f,  1.0f, 1.0f),
 
     // Top Face
-    Vertex(-1.0f, 1.0f, -1.0f, 0.0f, 1.0f),
-    Vertex(-1.0f, 1.0f,  1.0f, 0.0f, 0.0f),
-    Vertex(1.0f, 1.0f,  1.0f, 1.0f, 0.0f),
-    Vertex(1.0f, 1.0f, -1.0f, 1.0f, 1.0f),
+    Vertex(-1.0f, 1.0f, -1.0f, 0.0f, 1.0f,-1.0f, 1.0f, -1.0f),
+    Vertex(-1.0f, 1.0f,  1.0f, 0.0f, 0.0f,-1.0f, 1.0f,  1.0f),
+    Vertex(1.0f, 1.0f,  1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  1.0f),
+    Vertex(1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f),
 
     // Bottom Face
-    Vertex(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f),
-    Vertex(1.0f, -1.0f, -1.0f, 0.0f, 1.0f),
-    Vertex(1.0f, -1.0f,  1.0f, 0.0f, 0.0f),
-    Vertex(-1.0f, -1.0f,  1.0f, 1.0f, 0.0f),
+    Vertex(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f,-1.0f, -1.0f, -1.0f),
+    Vertex(1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 1.0f, -1.0f, -1.0f),
+    Vertex(1.0f, -1.0f,  1.0f, 0.0f, 0.0f, 1.0f, -1.0f,  1.0f),
+    Vertex(-1.0f, -1.0f,  1.0f, 1.0f, 0.0f,-1.0f, -1.0f,  1.0f),
 
     // Left Face
-    Vertex(-1.0f, -1.0f,  1.0f, 0.0f, 1.0f),
-    Vertex(-1.0f,  1.0f,  1.0f, 0.0f, 0.0f),
-    Vertex(-1.0f,  1.0f, -1.0f, 1.0f, 0.0f),
-    Vertex(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f),
+    Vertex(-1.0f, -1.0f,  1.0f, 0.0f, 1.0f,-1.0f, -1.0f,  1.0f),
+    Vertex(-1.0f,  1.0f,  1.0f, 0.0f, 0.0f,-1.0f,  1.0f,  1.0f),
+    Vertex(-1.0f,  1.0f, -1.0f, 1.0f, 0.0f,-1.0f,  1.0f, -1.0f),
+    Vertex(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f,-1.0f, -1.0f, -1.0f),
 
     // Right Face
-    Vertex(1.0f, -1.0f, -1.0f, 0.0f, 1.0f),
-    Vertex(1.0f,  1.0f, -1.0f, 0.0f, 0.0f),
-    Vertex(1.0f,  1.0f,  1.0f, 1.0f, 0.0f),
-    Vertex(1.0f, -1.0f,  1.0f, 1.0f, 1.0f),
+    Vertex(1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 1.0f, -1.0f, -1.0f),
+    Vertex(1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 1.0f,  1.0f, -1.0f),
+    Vertex(1.0f,  1.0f,  1.0f, 1.0f, 0.0f, 1.0f,  1.0f,  1.0f),
+    Vertex(1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 1.0f, -1.0f,  1.0f),
 };
 
 WORD g_Indices[36] =
@@ -258,6 +251,13 @@ struct ProjCB {
 
 };
 
+struct LightCB {
+    dx::XMVECTOR lightDir;
+};
+
+LightCB lightCB = { dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f) };
+
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 bool LoadContent();
@@ -271,6 +271,7 @@ int InitApplication(HINSTANCE hInstance, int cmdShow) {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
 
     WNDCLASSEX wndClassEx = { 0 };
     wndClassEx.cbSize = sizeof(WNDCLASSEX);
@@ -359,7 +360,7 @@ int Run() {
         }
     }
 
-    Cleanup();
+
 
     return static_cast<int>(msg.wParam);
 
@@ -419,10 +420,10 @@ HRESULT InitDevice() {
             featureLevNum,
             D3D11_SDK_VERSION,
             &scd,
-            &g_dxgiSwapChain,
-            &g_d3dDevice,
+            g_dxgiSwapChain.GetAddressOf(),
+            &(g_d3dDevice),
             &g_d3dFeatureLevel,
-            &g_d3dDeviceContext
+            g_d3dDeviceContext.GetAddressOf()
         );
 
         if (SUCCEEDED(hRes)) break;
@@ -432,20 +433,20 @@ HRESULT InitDevice() {
 
 
 
-    IDXGIFactory1* dxgiFactory1 = nullptr;
+    wrl::ComPtr<IDXGIFactory1> dxgiFactory1;
     {
-        IDXGIDevice* dxgiDevice = nullptr;
-        hRes = g_d3dDevice->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>(&dxgiDevice));
+        wrl::ComPtr<IDXGIDevice> dxgiDevice;
+        hRes = (g_d3dDevice)->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>(dxgiDevice.GetAddressOf()));
 
         if (SUCCEEDED(hRes)) {
-            IDXGIAdapter* adapter = nullptr;
-            hRes = dxgiDevice->GetAdapter(&adapter);
+            wrl::ComPtr<IDXGIAdapter> adapter;
+            hRes = dxgiDevice->GetAdapter(adapter.GetAddressOf());
 
             if (SUCCEEDED(hRes)) {
-                adapter->GetParent(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&dxgiFactory1));
-                adapter->Release();
+                adapter->GetParent(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(dxgiFactory1.GetAddressOf()));
+                //adapter->Release();
             }
-            dxgiDevice->Release();
+            //dxgiDevice->Release();
         }
     }
 
@@ -457,7 +458,7 @@ HRESULT InitDevice() {
     //if (dxgiFactory2) {
     //    hRes = g_d3dDevice->QueryInterface(__uuidof(ID3D11Device1), reinterpret_cast<void**>(&g_d3dDevice1));
     //    if (SUCCEEDED(hRes)) {
-    //        (void)g_d3dDeviceContext->QueryInterface(__uuidof(ID3D11DeviceContext1), reinterpret_cast<void**>(&g_d3dDeviceContext1));
+    //        (void)g_d3dDeviceContexQueryInterface(__uuidof(ID3D11DeviceContext1), reinterpret_cast<void**>(&g_d3dDeviceContext1));
     //    }
 
     //    DXGI_SWAP_CHAIN_DESC1 scd1 = {};
@@ -497,18 +498,17 @@ HRESULT InitDevice() {
     //}
 
     hRes = dxgiFactory1->MakeWindowAssociation(g_windowHandle, DXGI_MWA_NO_ALT_ENTER);
-    dxgiFactory1->Release();
 
     if (FAILED(hRes)) return hRes;
 
-    ID3D11Texture2D* backBuffer = nullptr;
-    hRes = g_dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer));
+    wrl::ComPtr<ID3D11Texture2D> backBuffer ;
+    hRes = g_dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.GetAddressOf()));
     if (FAILED(hRes)) return hRes;
 
-    hRes = g_d3dDevice->CreateRenderTargetView(backBuffer, nullptr, &g_d3dRenderTargetView);
+    hRes = (g_d3dDevice)->CreateRenderTargetView(backBuffer.Get(), nullptr, g_d3dRenderTargetView.GetAddressOf());
     if (FAILED(hRes)) return hRes;
 
-    g_d3dDeviceContext->OMSetRenderTargets(1, &g_d3dRenderTargetView, nullptr);
+    (g_d3dDeviceContext)->OMSetRenderTargets(1, g_d3dRenderTargetView.GetAddressOf(), nullptr);
 
     g_Viewport.TopLeftX = 0;
     g_Viewport.TopLeftY = 0;
@@ -519,19 +519,33 @@ HRESULT InitDevice() {
 
     g_d3dDeviceContext->RSSetViewports(1, &g_Viewport);
 
-    ImGui_ImplDX11_Init(g_d3dDevice, g_d3dDeviceContext);
+    ImGui_ImplDX11_Init(g_d3dDevice.Get(), g_d3dDeviceContext.Get());
 
     return S_OK;
 }
 
 
 HRESULT InitData() {
-    ID3D11InputLayout* vertLayout = nullptr;
-    ID3D11InputLayout* pixLayout = nullptr;
-    ID3DBlob* verShaderBlob = nullptr;
-    ID3DBlob* pixShaderBlob = nullptr;
-    g_d3dVertexShader = LoadShader<ID3D11VertexShader>(L"shaders/BasicVertexShader.hlsl", "vs", &verShaderBlob);
-    g_d3dPixelShader = LoadShader<ID3D11PixelShader>(L"./shaders/BasicPixelShader.hlsl", "ps", &pixShaderBlob);
+
+    wrl::ComPtr<ID3D11InputLayout> vertLayout ;
+    wrl::ComPtr<ID3D11InputLayout> pixLayout ;
+
+    wrl::ComPtr<ID3DBlob> verShaderBlob ;
+    wrl::ComPtr<ID3DBlob> pixShaderBlob;
+    
+    HRESULT hr;
+
+    hr = LoadShader<ID3D11VertexShader>(L"shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), g_d3dDevice.Get());
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    hr = LoadShader<ID3D11PixelShader>(L"./shaders/BasicPixelShader.hlsl", "ps", pixShaderBlob.GetAddressOf(), g_d3dPixelShader.GetAddressOf(), g_d3dDevice.Get());
+    if (FAILED(hr))
+    {
+        return hr;
+    }
 
     D3D11_BUFFER_DESC vertBuffDesc;
     vertBuffDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -545,12 +559,12 @@ HRESULT InitData() {
     vertSubresource.SysMemPitch = 0;
     vertSubresource.SysMemSlicePitch = 0;
 
-    HRESULT hr = g_d3dDevice->CreateBuffer(&vertBuffDesc, &vertSubresource, &g_d3dVertexBuffer);
+    hr = g_d3dDevice->CreateBuffer(&vertBuffDesc, &vertSubresource, g_d3dVertexBuffer.GetAddressOf());
     if (FAILED(hr)) return hr;
 
     UINT strides[] = { sizeof(Vertex) };
     UINT offsets[] = { 0 };
-    g_d3dDeviceContext->IASetVertexBuffers(0, 1, &g_d3dVertexBuffer, strides, offsets);
+    g_d3dDeviceContext->IASetVertexBuffers(0, 1, g_d3dVertexBuffer.GetAddressOf(), strides, offsets);
 
     D3D11_BUFFER_DESC indxBuffDesc;
     indxBuffDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -564,16 +578,16 @@ HRESULT InitData() {
     indxSubresource.SysMemPitch = 0;
     indxSubresource.SysMemSlicePitch = 0;
 
-    hr = g_d3dDevice->CreateBuffer(&indxBuffDesc, &indxSubresource, &g_d3dIndexBuffer);
+    hr = g_d3dDevice->CreateBuffer(&indxBuffDesc, &indxSubresource, g_d3dIndexBuffer.GetAddressOf());
     if (FAILED(hr)) return hr;
-    g_d3dDeviceContext->IASetIndexBuffer(g_d3dIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+    g_d3dDeviceContext->IASetIndexBuffer(g_d3dIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
 
-    g_d3dDeviceContext->VSSetShader(g_d3dVertexShader, 0, 0);
-    g_d3dDeviceContext->PSSetShader(g_d3dPixelShader, 0, 0);
+    g_d3dDeviceContext->VSSetShader(g_d3dVertexShader.Get(), 0, 0);
+    g_d3dDeviceContext->PSSetShader(g_d3dPixelShader.Get(), 0, 0);
 
-    hr = g_d3dDevice->CreateInputLayout(vertexLayouts, 2, verShaderBlob->GetBufferPointer(), verShaderBlob->GetBufferSize(), &vertLayout);
+    hr = g_d3dDevice->CreateInputLayout(vertexLayouts, 3, verShaderBlob->GetBufferPointer(), verShaderBlob->GetBufferSize(), vertLayout.GetAddressOf());
 
-    g_d3dDeviceContext->IASetInputLayout(vertLayout);
+    g_d3dDeviceContext->IASetInputLayout(vertLayout.Get());
     g_d3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     D3D11_TEXTURE2D_DESC depthStenTexDesc;
@@ -590,27 +604,17 @@ HRESULT InitData() {
     depthStenTexDesc.SampleDesc.Quality = 0;
 
 
-    hr = g_d3dDevice->CreateTexture2D(&depthStenTexDesc, NULL, &g_d3dDepthStencilBuffer);
+    hr = g_d3dDevice->CreateTexture2D(&depthStenTexDesc, NULL, (g_d3dDepthStencilBuffer).GetAddressOf());
     if (FAILED(hr)) {
-        SafeRelease(verShaderBlob);
-        SafeRelease(pixShaderBlob);
-        SafeRelease(vertLayout);
-        SafeRelease(pixLayout);
-
         return hr;
     }
 
-    hr = g_d3dDevice->CreateDepthStencilView(g_d3dDepthStencilBuffer, NULL, &g_d3dDepthStencilView);
+    hr = g_d3dDevice->CreateDepthStencilView(g_d3dDepthStencilBuffer.Get(), NULL, g_d3dDepthStencilView.GetAddressOf());
     if (FAILED(hr)) {
-        SafeRelease(verShaderBlob);
-        SafeRelease(pixShaderBlob);
-        SafeRelease(vertLayout);
-        SafeRelease(pixLayout);
-
         return hr;
     }
 
-    g_d3dDeviceContext->OMSetRenderTargets(1, &g_d3dRenderTargetView, g_d3dDepthStencilView);
+    g_d3dDeviceContext->OMSetRenderTargets(1, g_d3dRenderTargetView.GetAddressOf(), g_d3dDepthStencilView.Get());
 
     D3D11_SUBRESOURCE_DATA resourceCbPerObj;
     resourceCbPerObj.pSysMem = &objCB;
@@ -625,27 +629,22 @@ HRESULT InitData() {
     cbObjDesc.ByteWidth = sizeof(ObjCB);
 
 
-    hr = g_d3dDevice->CreateBuffer(&cbObjDesc, &resourceCbPerObj, &g_cbPerObj);
+    hr = g_d3dDevice->CreateBuffer(&cbObjDesc, &resourceCbPerObj, g_cbPerObj.GetAddressOf());
     if (FAILED(hr)) {
-        SafeRelease(verShaderBlob);
-        SafeRelease(pixShaderBlob);
-        SafeRelease(vertLayout);
-        SafeRelease(pixLayout);
-
         return hr;
     }
 
-    g_d3dDeviceContext->VSSetConstantBuffers(0, 1, &g_cbPerObj);
+    g_d3dDeviceContext->VSSetConstantBuffers(0, 1, g_cbPerObj.GetAddressOf());
 
 
-    dx::XMVECTOR camPos = dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    dx::XMVECTOR camPos = dx::XMVectorSet(0.0f, 0.0f, -8.0f, 0.0f);
     dx::XMVECTOR camDir = dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
     dx::XMVECTOR camUp = dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     //g_ViewMatrix = dx::XMMatrixLookAtLH(camPos, camDir, camUp);
 
-    viewCB.viewMatrix = dx::XMMatrixTranspose(g_ViewMatrix);
+    //viewCB.viewMatrix = dx::XMMatrixTranspose(g_ViewMatrix);
 
-    g_cam = Camera(camPos, camDir, camUp, 0.4f * 3.14f, g_Viewport.Width / g_Viewport.Height, 1.0f, 100.0f);
+    g_cam = Camera(camPos, camDir, camUp, 60.0f * (3.14f/180.0f), g_Viewport.Width / g_Viewport.Height, 1.0f, 100.0f);
 
     viewCB.viewMatrix = g_cam.getViewMatrix();//dx::XMMatrixTranspose(g_ViewMatrix);
 
@@ -662,17 +661,12 @@ HRESULT InitData() {
     cbCamDesc.ByteWidth = sizeof(viewCB);
 
 
-    hr = g_d3dDevice->CreateBuffer(&cbCamDesc, &resourceCbPerCam, &g_cbPerCam);
+    hr = g_d3dDevice->CreateBuffer(&cbCamDesc, &resourceCbPerCam, g_cbPerCam.GetAddressOf());
     if (FAILED(hr)) {
-        SafeRelease(verShaderBlob);
-        SafeRelease(pixShaderBlob);
-        SafeRelease(vertLayout);
-        SafeRelease(pixLayout);
-
         return hr;
     }
 
-    g_d3dDeviceContext->VSSetConstantBuffers(1, 1, &g_cbPerCam);
+    g_d3dDeviceContext->VSSetConstantBuffers(1, 1, g_cbPerCam.GetAddressOf());
 
 
     //g_projMatrix = dx::XMMatrixPerspectiveFovLH(0.4f * 3.14f, g_Viewport.Width / g_Viewport.Height, 1.0f, 100.0f);
@@ -693,36 +687,70 @@ HRESULT InitData() {
     cbProjDesc.ByteWidth = sizeof(projCB);
 
 
-    hr = g_d3dDevice->CreateBuffer(&cbProjDesc, &resourceCbPerProj, &g_cbPerProj);
+    hr = g_d3dDevice->CreateBuffer(&cbProjDesc, &resourceCbPerProj, g_cbPerProj.GetAddressOf());
     if (FAILED(hr)) {
-        SafeRelease(verShaderBlob);
-        SafeRelease(pixShaderBlob);
-        SafeRelease(vertLayout);
-        SafeRelease(pixLayout);
-
         return hr;
     }
 
-    g_d3dDeviceContext->VSSetConstantBuffers(2, 1, &g_cbPerProj);
+    g_d3dDeviceContext->VSSetConstantBuffers(2, 1, g_cbPerProj.GetAddressOf());
+
+    lightCB.lightDir = dx::XMVector4Transform(lightCB.lightDir, g_cam.getViewMatrix());
+
+    D3D11_SUBRESOURCE_DATA lightResource;
+    lightResource.pSysMem = &lightCB;
+    lightResource.SysMemPitch = 0;
+    lightResource.SysMemSlicePitch = 0;
+
+    D3D11_BUFFER_DESC lightBuffDesc;
+    ZeroMemory(&lightBuffDesc, sizeof(lightBuffDesc));
+    lightBuffDesc.Usage = D3D11_USAGE_DEFAULT;
+    lightBuffDesc.ByteWidth = sizeof(lightCB);
+    
+    g_d3dDevice->CreateBuffer(&lightBuffDesc, &lightResource, g_cbLight.GetAddressOf());
+
+    g_d3dDeviceContext->PSSetConstantBuffers(0, 1, g_cbLight.GetAddressOf());
 
     //D3D11_RASTERIZER_DESC rastDesc;
     //ZeroMemory(&rastDesc, sizeof(rastDesc));
 
     //rastDesc.CullMode = D3D11_CULL_NONE;
-    //rastDesc.FillMode = D3D11_FILL_WIREFRAME;
+    //rastDesc.FillMode = D3D11_FILL_SOLID
 
     //g_d3dDevice->CreateRasterizerState(&rastDesc, &g_d3dRasterizerState);
-    //g_d3dDeviceContext->RSSetState(g_d3dRasterizerState);
+    //g_d3dDeviceContexRSSetState(g_d3dRasterizerState);
 
-    ID3D11ShaderResourceView* textureView = nullptr;
-    hr = dx::CreateWICTextureFromFile(g_d3dDevice, L"./shaders/metallic_rock.png", NULL, &textureView);
+    D3D11_RASTERIZER_DESC rastDesc;
+    ZeroMemory(&rastDesc, sizeof(rastDesc));
+    
+    rastDesc.CullMode = D3D11_CULL_BACK;
+    rastDesc.FillMode = D3D11_FILL_SOLID;
+
+    g_d3dDevice->CreateRasterizerState(&rastDesc, g_d3dRasterizerStateCullBack.GetAddressOf());
+
+    rastDesc.CullMode = D3D11_CULL_FRONT;
+    g_d3dDevice->CreateRasterizerState(&rastDesc, g_d3dRasterizerStateCullFront.GetAddressOf());
+
+
+    D3D11_RENDER_TARGET_BLEND_DESC targetBlendDesc1;
+    targetBlendDesc1.BlendEnable = true;
+    targetBlendDesc1.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    targetBlendDesc1.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    targetBlendDesc1.BlendOp = D3D11_BLEND_OP_ADD;
+    targetBlendDesc1.SrcBlendAlpha = D3D11_BLEND_ONE;
+    targetBlendDesc1.DestBlendAlpha = D3D11_BLEND_ZERO;
+    targetBlendDesc1.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    targetBlendDesc1.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+    D3D11_BLEND_DESC blendDesc;
+    blendDesc.AlphaToCoverageEnable = false;
+    blendDesc.IndependentBlendEnable = false;
+    blendDesc.RenderTarget[0] = targetBlendDesc1;
+
+    g_d3dDevice->CreateBlendState(&blendDesc, g_d3dBlendState.GetAddressOf());
+
+    wrl::ComPtr<ID3D11ShaderResourceView> textureView;
+    hr = dx::CreateWICTextureFromFile(g_d3dDevice.Get(), L"./shaders/glass.png", NULL, textureView.GetAddressOf());
     if (FAILED(hr)) {
-        SafeRelease(textureView);
-        SafeRelease(verShaderBlob);
-        SafeRelease(pixShaderBlob);
-        SafeRelease(vertLayout);
-        SafeRelease(pixLayout);
-
         return hr;
     }
 
@@ -739,27 +767,14 @@ HRESULT InitData() {
     samplerDesc.MaxAnisotropy = 16;
 
 
-    ID3D11SamplerState* samplerState = nullptr;
-    hr = g_d3dDevice->CreateSamplerState(&samplerDesc, &samplerState);
+    wrl::ComPtr<ID3D11SamplerState> samplerState ;
+    hr = g_d3dDevice->CreateSamplerState(&samplerDesc, samplerState.GetAddressOf());
     if (FAILED(hr)) {
-        SafeRelease(textureView);
-        SafeRelease(verShaderBlob);
-        SafeRelease(pixShaderBlob);
-        SafeRelease(vertLayout);
-        SafeRelease(pixLayout);
-
         return hr;
     }
 
-    g_d3dDeviceContext->PSSetSamplers(0, 1, &samplerState);
-    g_d3dDeviceContext->PSSetShaderResources(0, 1, &textureView);
-
-
-    SafeRelease(textureView);
-    SafeRelease(verShaderBlob);
-    SafeRelease(pixShaderBlob);
-    SafeRelease(vertLayout);
-    SafeRelease(pixLayout);
+    g_d3dDeviceContext->PSSetSamplers(0, 1, samplerState.GetAddressOf());
+    g_d3dDeviceContext->PSSetShaderResources(0, 1, textureView.GetAddressOf());
 
     return hr;
 }
@@ -772,21 +787,37 @@ void Render() {
     ImGui::NewFrame();
     ImGui::ShowDemoWindow();
 
-    g_d3dDeviceContext->ClearRenderTargetView(g_d3dRenderTargetView, dx::Colors::Black);
-    g_d3dDeviceContext->ClearDepthStencilView(g_d3dDepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    g_d3dDeviceContext->ClearRenderTargetView(g_d3dRenderTargetView.Get(), dx::Colors::Black);
+    g_d3dDeviceContext->ClearDepthStencilView(g_d3dDepthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-    dx::XMMATRIX transMat = dx::XMMatrixTranslation(-2.0f, -2.0f, 4.0f);
+    g_cam.rotate(0.0f, -0.003f, 0.0f);
+    viewCB.viewMatrix = g_cam.getViewMatrix();
+    g_d3dDeviceContext->UpdateSubresource(g_cbPerCam.Get(), 0, NULL, &viewCB, 0, 0);
+    float blendFactor[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
+
+
+    //Update light direction with view matrix
+    lightCB.lightDir = dx::XMVector4Transform(dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), g_cam._viewMatrix);
+    g_d3dDeviceContext->UpdateSubresource(g_cbLight.Get(), 0, NULL, &lightCB, 0, 0);
+
+    //g_d3dDeviceContexOMSetBlendState(g_d3dBlendState, blendFactor, 0xffffffff);
+    
+    dx::XMMATRIX transMat = dx::XMMatrixTranslation(0.0f, 0.0f, 7.0f);
     objCB.worldMatrix = dx::XMMatrixTranspose(dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rot) * transMat);//dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), 0.05f);
-    g_d3dDeviceContext->UpdateSubresource(g_cbPerObj, 0, NULL, &objCB, 0, 0);
+    g_d3dDeviceContext->UpdateSubresource(g_cbPerObj.Get(), 0, NULL, &objCB, 0, 0);
+
+    g_d3dDeviceContext->RSSetState(g_d3dRasterizerStateCullFront.Get());
+    g_d3dDeviceContext->DrawIndexed(36, 0, 0);
+    g_d3dDeviceContext->RSSetState(g_d3dRasterizerStateCullBack.Get());
     g_d3dDeviceContext->DrawIndexed(36, 0, 0);
 
-    g_cam.rotate(0.0f, 0.01f, 0.0f);
-    viewCB.viewMatrix = g_cam.getViewMatrix();
-    g_d3dDeviceContext->UpdateSubresource(g_cbPerCam, 0, NULL, &viewCB, 0, 0);
-
-    transMat = dx::XMMatrixTranslation(0.0f, -2.3f, 6.0f);
+    transMat = dx::XMMatrixTranslation(-2.0f, -0.5f, 4.0f);
     objCB.worldMatrix = dx::XMMatrixTranspose(dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot) * transMat);//dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), 0.05f);
-    g_d3dDeviceContext->UpdateSubresource(g_cbPerObj, 0, NULL, &objCB, 0, 0);
+    g_d3dDeviceContext->UpdateSubresource(g_cbPerObj.Get(), 0, NULL, &objCB, 0, 0);
+
+    g_d3dDeviceContext->RSSetState(g_d3dRasterizerStateCullFront.Get());
+    g_d3dDeviceContext->DrawIndexed(36, 0, 0);
+    g_d3dDeviceContext->RSSetState(g_d3dRasterizerStateCullBack.Get());
     g_d3dDeviceContext->DrawIndexed(36, 0, 0);
 
     ImGui::Render();
@@ -800,6 +831,7 @@ void Update(float deltaTime) {
     if (rot > 6.28f) {
         rot = 0.0f;
     }
+    rot = 0.0f;
 }
 
 void Cleanup() {
@@ -807,17 +839,19 @@ void Cleanup() {
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
-    if (g_d3dDeviceContext) g_d3dDeviceContext->ClearState();
+    if (g_d3dDeviceContext) {
+        g_d3dDeviceContext->ClearState();
+        g_d3dDeviceContext->Flush();
+    }
 
-    if (g_cbPerObj) g_cbPerObj->Release();
-    if (g_cbPerCam) g_cbPerCam->Release();
-    if (g_d3dDevice) g_d3dDevice->Release();
-    if (g_d3dDeviceContext) g_d3dDevice->Release();
-    if (g_dxgiSwapChain) g_dxgiSwapChain->Release();
-    if (g_d3dDevice1) g_d3dDevice1->Release();
-    if (g_d3dDeviceContext1) g_d3dDeviceContext1->Release();
-    if (g_dxgiSwapChain1) g_dxgiSwapChain1->Release();
-
+//    if (g_cbPerObj) g_cbPerObj->Release();
+//    if (g_cbPerCam) g_cbPerCam->Release();
+//    if (g_d3dDevice) g_d3dDevice->Release();
+//    if (g_d3dDeviceContext) g_d3dDevice->Release();
+//    if (g_dxgiSwapChain) g_dxgiSwapChain->Release();
+ //   if (g_d3dDevice1) g_d3dDevice1->Release();
+ //   if (g_d3dDeviceContext1) g_d3dDeviceContext1->Release();
+ //   if (g_dxgiSwapChain1) g_dxgiSwapChain1->Release();
 
 }
 
@@ -826,6 +860,7 @@ void Cleanup() {
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(pCmdLine);
+
 
     if (!dx::XMVerifyCPUSupport()) {
         MessageBox(NULL, "DirectXMath not supported by CPU", "Error", MB_OK);
@@ -850,6 +885,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     }
 
     int returnCode = Run();
+
+    Cleanup();
+    
+
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
+    _CrtDumpMemoryLeaks();
+
 
     return returnCode;
 }

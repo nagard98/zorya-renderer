@@ -7,7 +7,7 @@ class Camera {
 public:
 	Camera::Camera() {};
 
-	Camera::Camera(dx::XMVECTOR camPos, dx::XMVECTOR camDir, dx::XMVECTOR camUp, float fov, float aspectRatio, float nearZ, float farZ){
+	Camera::Camera(const dx::XMVECTOR camPos, const dx::XMVECTOR camDir, const dx::XMVECTOR camUp, float fov, float aspectRatio, float nearZ, float farZ){
 		_camPos = camPos;
 		_camDir = camDir;
 		_camUp = camUp;
@@ -29,9 +29,11 @@ public:
 
 	void Camera::rotate(float aroundX, float aroundY, float aroundZ);
 
+	dx::XMMATRIX _viewMatrix;
+
 private:
 
-	dx::XMMATRIX _viewMatrix, _projMatrix;
+	dx::XMMATRIX _projMatrix;
 	dx::XMVECTOR _camPos, _camDir, _camUp;
 
 	float _fov;
