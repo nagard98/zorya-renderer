@@ -16,10 +16,14 @@
 #include "imgui_impl_dx11.h"
 #include "imgui_impl_win32.h"
 
-#include "../include/Camera.h";
+#include "../include/Camera.h"
+#include "../include/Lights.h"
+#include "../include/Shaders.h"
+#include "../include/Mesh.h"
 
 #include <iostream>
 #include <string>
+#include <cstdint>
 
 
 #pragma comment (lib, "d3d11.lib")
@@ -27,6 +31,7 @@
 #pragma comment (lib, "d3dcompiler.lib")
 #pragma comment (lib, "winmm.lib")
 
+#define RETURN_IF_FAILED(hResult) { if(FAILED(hResult)) return hr; }
 
 namespace dx = DirectX;
 namespace wrl = Microsoft::WRL;
@@ -76,60 +81,6 @@ wrl::ComPtr<ID3D11VertexShader> g_d3dVertexShader;
 D3D11_VIEWPORT g_Viewport = { 0 };
 Camera g_cam;
 
-template<class ShaderClass>
-std::string GetLatestProfile();
-
-template<>
-std::string GetLatestProfile<ID3D11VertexShader>(){
-    return "vs_5_0";
-}
-
-template<>
-std::string GetLatestProfile<ID3D11PixelShader>() {
-    return "ps_5_0";
-}
-
-
-template<class ShaderClass>
-HRESULT CreateShader(ID3DBlob* pShaderBlob, ShaderClass** pShader, ID3D11Device* g_d3dDevice);
-
-template<>
-HRESULT CreateShader<ID3D11VertexShader>(ID3DBlob* pShaderBlob, ID3D11VertexShader** pShader, ID3D11Device *g_d3dDevice) 
-{
-    return g_d3dDevice->CreateVertexShader(pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize(), nullptr, pShader);
-};
-
-template<>
-HRESULT CreateShader<ID3D11PixelShader>(ID3DBlob* pShaderBlob, ID3D11PixelShader** pShader, ID3D11Device* g_d3dDevice)
-{
-    return g_d3dDevice->CreatePixelShader(pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize(), nullptr, pShader);
-};
-
-template<class ShaderClass>
-HRESULT LoadShader(const std::wstring& shaderFilename, const std::string& entrypoint, ID3DBlob** shaderBlob, ShaderClass** shader, ID3D11Device *g_d3dDevice) {
-
-    wrl::ComPtr<ID3DBlob> errBlob = nullptr;
-
-    std::string profile = GetLatestProfile<ShaderClass>();
-
-    UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG;
-
-    HRESULT hr = D3DCompileFromFile(shaderFilename.c_str(), NULL, NULL, entrypoint.c_str(), profile.c_str(), flags, 0, shaderBlob, errBlob.GetAddressOf());
-
-    if (FAILED(hr)) {
-        std::string errorMessage = (char*)errBlob->GetBufferPointer();
-        OutputDebugStringA(errorMessage.c_str());
-
-        return hr;
-    }
-     
-    hr = CreateShader<ShaderClass>(*shaderBlob, shader, g_d3dDevice);
-    if (FAILED(hr)) {
-        return hr;
-    }
-
-    return S_OK;
-}
 
 enum ConstanBuffer {
     CB_Application,
@@ -151,17 +102,7 @@ D3D11_INPUT_ELEMENT_DESC vertexLayouts[] = {
     {"normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
 };
 
-struct Vertex
-{
-    Vertex() {}
-    Vertex(float x, float y, float z,
-        float u, float v, float nx, float ny, float nz)
-        : position(x, y, z), texCoord(u, v), normal(nx, ny, nz) {}
 
-    dx::XMFLOAT3 position;
-    dx::XMFLOAT2 texCoord;
-    dx::XMFLOAT3 normal;
-};
 
 Vertex g_Vertices[] =
 {
@@ -202,7 +143,7 @@ Vertex g_Vertices[] =
     Vertex(1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 1.0f, -1.0f,  1.0f),
 };
 
-WORD g_Indices[36] =
+std::uint16_t g_Indices[36] =
 {
     // Front Face
     0,  1,  2,
@@ -229,17 +170,6 @@ WORD g_Indices[36] =
     20, 22, 23
 };
 
-struct DirectionalLight {
-    dx::XMVECTOR direction;
-};
-
-struct PointLight {
-    dx::XMVECTOR pos;
-    
-    float constant;
-    float linear;
-    float quadratic;
-};
 
 struct ObjCB {
     
@@ -263,10 +193,7 @@ struct ProjCB {
 
 };
 
-struct LightCB {
-    DirectionalLight dLight;
-    PointLight pointLights[1];
-};
+
 
 DirectionalLight dLight = { dx::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f) };
 PointLight pLight1 = { dx::XMVectorSet(0.0f, 2.0f, 4.0f, 1.0f), 1.0f, 0.22f, 0.20f };
@@ -553,16 +480,10 @@ HRESULT InitData() {
     HRESULT hr;
 
     hr = LoadShader<ID3D11VertexShader>(L"shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), g_d3dDevice.Get());
-    if (FAILED(hr))
-    {
-        return hr;
-    }
+    RETURN_IF_FAILED(hr);
 
     hr = LoadShader<ID3D11PixelShader>(L"./shaders/BasicPixelShader.hlsl", "ps", pixShaderBlob.GetAddressOf(), g_d3dPixelShader.GetAddressOf(), g_d3dDevice.Get());
-    if (FAILED(hr))
-    {
-        return hr;
-    }
+    RETURN_IF_FAILED(hr);
 
     D3D11_BUFFER_DESC vertBuffDesc;
     vertBuffDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -577,17 +498,17 @@ HRESULT InitData() {
     vertSubresource.SysMemSlicePitch = 0;
 
     hr = g_d3dDevice->CreateBuffer(&vertBuffDesc, &vertSubresource, g_d3dVertexBuffer.GetAddressOf());
-    if (FAILED(hr)) return hr;
+    RETURN_IF_FAILED(hr);
 
-    UINT strides[] = { sizeof(Vertex) };
-    UINT offsets[] = { 0 };
+    std::uint32_t strides[] = { sizeof(Vertex) };
+    std::uint32_t offsets[] = { 0 };
     g_d3dDeviceContext->IASetVertexBuffers(0, 1, g_d3dVertexBuffer.GetAddressOf(), strides, offsets);
 
     D3D11_BUFFER_DESC indxBuffDesc;
     indxBuffDesc.Usage = D3D11_USAGE_DEFAULT;
     indxBuffDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
     indxBuffDesc.CPUAccessFlags = 0;
-    indxBuffDesc.ByteWidth = sizeof(WORD) * 36;
+    indxBuffDesc.ByteWidth = sizeof(g_Indices);
     indxBuffDesc.MiscFlags = 0;
 
     D3D11_SUBRESOURCE_DATA indxSubresource;
@@ -596,13 +517,15 @@ HRESULT InitData() {
     indxSubresource.SysMemSlicePitch = 0;
 
     hr = g_d3dDevice->CreateBuffer(&indxBuffDesc, &indxSubresource, g_d3dIndexBuffer.GetAddressOf());
-    if (FAILED(hr)) return hr;
+    RETURN_IF_FAILED(hr);
+
     g_d3dDeviceContext->IASetIndexBuffer(g_d3dIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
 
     g_d3dDeviceContext->VSSetShader(g_d3dVertexShader.Get(), 0, 0);
     g_d3dDeviceContext->PSSetShader(g_d3dPixelShader.Get(), 0, 0);
 
     hr = g_d3dDevice->CreateInputLayout(vertexLayouts, 3, verShaderBlob->GetBufferPointer(), verShaderBlob->GetBufferSize(), vertLayout.GetAddressOf());
+    RETURN_IF_FAILED(hr);
 
     g_d3dDeviceContext->IASetInputLayout(vertLayout.Get());
     g_d3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -622,14 +545,10 @@ HRESULT InitData() {
 
 
     hr = g_d3dDevice->CreateTexture2D(&depthStenTexDesc, NULL, (g_d3dDepthStencilBuffer).GetAddressOf());
-    if (FAILED(hr)) {
-        return hr;
-    }
+    RETURN_IF_FAILED(hr);
 
     hr = g_d3dDevice->CreateDepthStencilView(g_d3dDepthStencilBuffer.Get(), NULL, g_d3dDepthStencilView.GetAddressOf());
-    if (FAILED(hr)) {
-        return hr;
-    }
+    RETURN_IF_FAILED(hr);
 
     g_d3dDeviceContext->OMSetRenderTargets(1, g_d3dRenderTargetView.GetAddressOf(), g_d3dDepthStencilView.Get());
 
@@ -647,12 +566,9 @@ HRESULT InitData() {
 
 
     hr = g_d3dDevice->CreateBuffer(&cbObjDesc, &resourceCbPerObj, g_cbPerObj.GetAddressOf());
-    if (FAILED(hr)) {
-        return hr;
-    }
+    RETURN_IF_FAILED(hr);
 
     g_d3dDeviceContext->VSSetConstantBuffers(0, 1, g_cbPerObj.GetAddressOf());
-
 
     dx::XMVECTOR camPos = dx::XMVectorSet(0.0f, 0.0f, -8.0f, 0.0f);
     dx::XMVECTOR camDir = dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
@@ -679,17 +595,14 @@ HRESULT InitData() {
 
 
     hr = g_d3dDevice->CreateBuffer(&cbCamDesc, &resourceCbPerCam, g_cbPerCam.GetAddressOf());
-    if (FAILED(hr)) {
-        return hr;
-    }
+    RETURN_IF_FAILED(hr);
 
     g_d3dDeviceContext->VSSetConstantBuffers(1, 1, g_cbPerCam.GetAddressOf());
-
 
     //g_projMatrix = dx::XMMatrixPerspectiveFovLH(0.4f * 3.14f, g_Viewport.Width / g_Viewport.Height, 1.0f, 100.0f);
 
     ProjCB projCB;
-    projCB.projMatrix = g_cam.getProjMatrix();//dx::XMMatrixTranspose(g_projMatrix);
+    projCB.projMatrix = g_cam.getProjMatrix();
 
     D3D11_SUBRESOURCE_DATA resourceCbPerProj;
     resourceCbPerProj.pSysMem = &projCB;
@@ -705,9 +618,7 @@ HRESULT InitData() {
 
 
     hr = g_d3dDevice->CreateBuffer(&cbProjDesc, &resourceCbPerProj, g_cbPerProj.GetAddressOf());
-    if (FAILED(hr)) {
-        return hr;
-    }
+    RETURN_IF_FAILED(hr);
 
     g_d3dDeviceContext->VSSetConstantBuffers(2, 1, g_cbPerProj.GetAddressOf());
 
@@ -771,9 +682,7 @@ HRESULT InitData() {
 
     wrl::ComPtr<ID3D11ShaderResourceView> textureView;
     hr = dx::CreateWICTextureFromFile(g_d3dDevice.Get(), L"./shaders/glass.png", NULL, textureView.GetAddressOf());
-    if (FAILED(hr)) {
-        return hr;
-    }
+    RETURN_IF_FAILED(hr);
 
     D3D11_SAMPLER_DESC samplerDesc;
     ZeroMemory(&samplerDesc, sizeof(samplerDesc));
@@ -790,9 +699,7 @@ HRESULT InitData() {
 
     wrl::ComPtr<ID3D11SamplerState> samplerState ;
     hr = g_d3dDevice->CreateSamplerState(&samplerDesc, samplerState.GetAddressOf());
-    if (FAILED(hr)) {
-        return hr;
-    }
+    RETURN_IF_FAILED(hr);
 
     g_d3dDeviceContext->PSSetSamplers(0, 1, samplerState.GetAddressOf());
     g_d3dDeviceContext->PSSetShaderResources(0, 1, textureView.GetAddressOf());
@@ -825,7 +732,7 @@ void Render() {
     //g_d3dDeviceContexOMSetBlendState(g_d3dBlendState, blendFactor, 0xffffffff);
     
     dx::XMMATRIX transMat = dx::XMMatrixTranslation(0.0f, 0.0f, 7.0f);
-    objCB.worldMatrix = dx::XMMatrixTranspose(dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rot) * transMat);//dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), 0.05f);
+    objCB.worldMatrix = dx::XMMatrixTranspose(dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rot) * transMat);
     g_d3dDeviceContext->UpdateSubresource(g_cbPerObj.Get(), 0, NULL, &objCB, 0, 0);
 
     g_d3dDeviceContext->RSSetState(g_d3dRasterizerStateCullFront.Get());
@@ -834,7 +741,7 @@ void Render() {
     g_d3dDeviceContext->DrawIndexed(36, 0, 0);
 
     transMat = dx::XMMatrixTranslation(-2.0f, -0.5f, 4.0f);
-    objCB.worldMatrix = dx::XMMatrixTranspose(dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot) * transMat);//dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), 0.05f);
+    objCB.worldMatrix = dx::XMMatrixTranspose(dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot) * transMat);
     g_d3dDeviceContext->UpdateSubresource(g_cbPerObj.Get(), 0, NULL, &objCB, 0, 0);
 
     g_d3dDeviceContext->RSSetState(g_d3dRasterizerStateCullFront.Get());
