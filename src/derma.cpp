@@ -229,6 +229,18 @@ WORD g_Indices[36] =
     20, 22, 23
 };
 
+struct DirectionalLight {
+    dx::XMVECTOR direction;
+};
+
+struct PointLight {
+    dx::XMVECTOR pos;
+    
+    float constant;
+    float linear;
+    float quadratic;
+};
+
 struct ObjCB {
     
     dx::XMMATRIX worldMatrix;
@@ -252,11 +264,16 @@ struct ProjCB {
 };
 
 struct LightCB {
-    dx::XMVECTOR lightDir;
+    DirectionalLight dLight;
+    PointLight pointLights[1];
 };
 
-LightCB lightCB = { dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f) };
+DirectionalLight dLight = { dx::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f) };
+PointLight pLight1 = { dx::XMVectorSet(0.0f, 2.0f, 4.0f, 1.0f), 1.0f, 0.22f, 0.20f };
 
+LightCB lightCB;
+
+//-----------------------------------------------------
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -694,7 +711,11 @@ HRESULT InitData() {
 
     g_d3dDeviceContext->VSSetConstantBuffers(2, 1, g_cbPerProj.GetAddressOf());
 
-    lightCB.lightDir = dx::XMVector4Transform(lightCB.lightDir, g_cam.getViewMatrix());
+    lightCB.dLight.direction = dx::XMVector4Transform(dLight.direction, g_cam.getViewMatrix());
+    lightCB.pointLights[0].pos = dx::XMVector4Transform(pLight1.pos, g_cam.getViewMatrix());
+    lightCB.pointLights[0].constant = pLight1.constant;
+    lightCB.pointLights[0].linear = pLight1.linear;
+    lightCB.pointLights[0].quadratic = pLight1.quadratic;
 
     D3D11_SUBRESOURCE_DATA lightResource;
     lightResource.pSysMem = &lightCB;
@@ -790,14 +811,15 @@ void Render() {
     g_d3dDeviceContext->ClearRenderTargetView(g_d3dRenderTargetView.Get(), dx::Colors::Black);
     g_d3dDeviceContext->ClearDepthStencilView(g_d3dDepthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-    g_cam.rotate(0.0f, -0.003f, 0.0f);
+    g_cam.rotate(0.0f, -0.00f, 0.0f);
     viewCB.viewMatrix = g_cam.getViewMatrix();
     g_d3dDeviceContext->UpdateSubresource(g_cbPerCam.Get(), 0, NULL, &viewCB, 0, 0);
     float blendFactor[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
 
 
     //Update light direction with view matrix
-    lightCB.lightDir = dx::XMVector4Transform(dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), g_cam._viewMatrix);
+    lightCB.dLight.direction = dx::XMVector4Transform(dLight.direction, g_cam._viewMatrix);
+    lightCB.pointLights[0].pos = dx::XMVector4Transform(pLight1.pos, g_cam._viewMatrix);
     g_d3dDeviceContext->UpdateSubresource(g_cbLight.Get(), 0, NULL, &lightCB, 0, 0);
 
     //g_d3dDeviceContexOMSetBlendState(g_d3dBlendState, blendFactor, 0xffffffff);
@@ -831,7 +853,7 @@ void Update(float deltaTime) {
     if (rot > 6.28f) {
         rot = 0.0f;
     }
-    rot = 0.0f;
+    //rot = 0.0f;
 }
 
 void Cleanup() {
@@ -843,16 +865,6 @@ void Cleanup() {
         g_d3dDeviceContext->ClearState();
         g_d3dDeviceContext->Flush();
     }
-
-//    if (g_cbPerObj) g_cbPerObj->Release();
-//    if (g_cbPerCam) g_cbPerCam->Release();
-//    if (g_d3dDevice) g_d3dDevice->Release();
-//    if (g_d3dDeviceContext) g_d3dDevice->Release();
-//    if (g_dxgiSwapChain) g_dxgiSwapChain->Release();
- //   if (g_d3dDevice1) g_d3dDevice1->Release();
- //   if (g_d3dDeviceContext1) g_d3dDeviceContext1->Release();
- //   if (g_dxgiSwapChain1) g_dxgiSwapChain1->Release();
-
 }
 
 
