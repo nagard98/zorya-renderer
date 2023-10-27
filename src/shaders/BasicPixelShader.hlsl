@@ -41,13 +41,13 @@ PS_OUTPUT ps(PS_INPUT input)
 
     input.fNormal = normalize(input.fNormal);
     
+    //float4 tex = float4(1.0f, 0.0f, 0.0f, 1.0f);
     float4 tex = ObjTexture.Sample(ObjSamplerState, input.texCoord);
     
     float3 viewDir = -normalize(input.posViewSpace).xyz;
     
     //float3 col = float3(0.1f, 0.1f, 0.1f) * tex.xyz; //ambient
-    float3 col = float3(0.0f, 0.0f, 0.0f);
-    col += computeColDirLight(dirLight, viewDir, input.fNormal, tex);
+    float3 col = computeColDirLight(dirLight, viewDir, input.fNormal, tex);
     
     for (int i = 0; i < 1; i++)
     {

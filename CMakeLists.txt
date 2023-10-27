@@ -11,9 +11,10 @@ ADD_CUSTOM_TARGET(
         )
 
 add_subdirectory("external/imgui")
+add_subdirectory("external/assimp")
 
 find_package(directxtk CONFIG REQUIRED)
 add_executable(derma WIN32 src/derma.cpp "include/Camera.h" "src/Camera.cpp" "include/Lights.h" "src/Shaders.cpp" "include/Shaders.h" "include/Mesh.h" "src/Mesh.cpp")
 
-target_link_libraries(derma PRIVATE Microsoft::DirectXTK imgui)
+target_link_libraries(derma PRIVATE Microsoft::DirectXTK imgui assimp::assimp)
 ADD_DEPENDENCIES(derma copy_shader_files)

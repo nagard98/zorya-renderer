@@ -30,11 +30,12 @@ public:
 	void Camera::rotate(float aroundX, float aroundY, float aroundZ);
 
 	dx::XMMATRIX _viewMatrix;
+	dx::XMVECTOR _camPos;
 
 private:
 
 	dx::XMMATRIX _projMatrix;
-	dx::XMVECTOR _camPos, _camDir, _camUp;
+	dx::XMVECTOR _camDir, _camUp;
 
 	float _fov;
 	float _aspectRatio;

@@ -5,11 +5,19 @@
       "generator": "Ninja",
       "configurationType": "Debug",
       "buildRoot": "${projectDir}\\build\\${name}",
-      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "installRoot": "${projectDir}\\build\\install\\${name}",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "msvc_x64_x64" ],
-      "cmakeToolchain": "E:/source/repos/vcpkg/scripts/buildsystems/vcpkg.cmake"
+      "cmakeToolchain": "E:/source/repos/vcpkg/scripts/buildsystems/vcpkg.cmake",
+      "variables": [
+        {
+          "name": "BUILD_SHARED_LIBS",
+          "value": "False",
+          "type": "BOOL"
+        }
+      ],
+      "cmakeExecutable": "E:/Program Files (x86)/CMake/bin/cmake.exe"
     }
   ]
 }

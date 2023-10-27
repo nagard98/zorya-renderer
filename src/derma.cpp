@@ -3,12 +3,14 @@
 #include <stdlib.h>
 #include <crtdbg.h>
 #include <Windows.h>
+#include <hidusage.h>
 
 #include <d3d11_1.h>
 #include <DirectXMath.h>
 #include <d3dcompiler.h>
 #include <DirectXColors.h>
 #include <WICTextureLoader.h>
+#include <DDSTextureLoader.h>
 
 #include <wrl/client.h>
 
@@ -21,10 +23,14 @@
 #include "../include/Shaders.h"
 #include "../include/Mesh.h"
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 #include <iostream>
+#include <vector>
 #include <string>
 #include <cstdint>
-
 
 #pragma comment (lib, "d3d11.lib")
 #pragma comment (lib, "dxgi.lib")
@@ -47,6 +53,7 @@ const BOOL g_enableVSync = TRUE;
 D3D_DRIVER_TYPE g_d3dDrivType = D3D_DRIVER_TYPE_NULL;
 D3D_FEATURE_LEVEL g_d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
 
+Assimp::Importer importer;
 
 wrl::ComPtr<ID3D11Device> g_d3dDevice;
 
@@ -58,16 +65,23 @@ wrl::ComPtr<ID3D11RenderTargetView> g_d3dRenderTargetView;
 wrl::ComPtr<ID3D11DepthStencilView> g_d3dDepthStencilView;
 wrl::ComPtr<ID3D11Texture2D> g_d3dDepthStencilBuffer;
 
-wrl::ComPtr<ID3D11DepthStencilState> g_d3dDepthStencilState;
+wrl::ComPtr<ID3D11ShaderResourceView> textureView;
+wrl::ComPtr<ID3D11ShaderResourceView> cubemapView;
+
+wrl::ComPtr<ID3D11DepthStencilState> g_d3dDepthStencilStateSkybox;
 wrl::ComPtr<ID3D11RasterizerState> g_d3dRasterizerState;
 wrl::ComPtr<ID3D11RasterizerState> g_d3dRasterizerStateCullBack;
 wrl::ComPtr<ID3D11RasterizerState> g_d3dRasterizerStateCullFront;
+wrl::ComPtr<ID3D11RasterizerState> g_d3dRasterizerStateSkybox;
 
 wrl::ComPtr<ID3D11BlendState> g_d3dBlendState;
 
 wrl::ComPtr<ID3D11InputLayout> g_d3dInputLayout;
 wrl::ComPtr<ID3D11Buffer> g_d3dVertexBuffer;
 wrl::ComPtr<ID3D11Buffer> g_d3dIndexBuffer;
+
+wrl::ComPtr<ID3D11Buffer> g_d3dVertexBufferSkybox;
+wrl::ComPtr<ID3D11Buffer> g_d3dIndexBufferSkybox;
 
 wrl::ComPtr<ID3D11Buffer> g_cbPerObj;
 wrl::ComPtr<ID3D11Buffer> g_cbPerCam;
@@ -77,6 +91,11 @@ wrl::ComPtr<ID3D11Buffer> g_cbLight;
 wrl::ComPtr<ID3D11PixelShader> g_d3dPixelShader;
 wrl::ComPtr<ID3D11VertexShader> g_d3dVertexShader;
 
+wrl::ComPtr<ID3D11PixelShader> g_d3dPixelShaderSkybox;
+wrl::ComPtr<ID3D11VertexShader> g_d3dVertexShaderSkybox;
+
+wrl::ComPtr<ID3D11SamplerState> samplerState;
+wrl::ComPtr<ID3D11SamplerState> samplerStateCube;
 
 D3D11_VIEWPORT g_Viewport = { 0 };
 Camera g_cam;
@@ -102,9 +121,7 @@ D3D11_INPUT_ELEMENT_DESC vertexLayouts[] = {
     {"normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
 };
 
-
-
-Vertex g_Vertices[] =
+Vertex g_Vertices2[] =
 {
     // Front Face
     Vertex(-1.0f, -1.0f, -1.0f, 0.0f, 1.0f,-1.0f, -1.0f, -1.0f),
@@ -143,7 +160,7 @@ Vertex g_Vertices[] =
     Vertex(1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 1.0f, -1.0f,  1.0f),
 };
 
-std::uint16_t g_Indices[36] =
+WORD g_Indices2[36] =
 {
     // Front Face
     0,  1,  2,
@@ -170,6 +187,13 @@ std::uint16_t g_Indices[36] =
     20, 22, 23
 };
 
+//Vertex *g_Vertices;
+int numVertices = 0;
+
+std::uint16_t *g_Indices;
+int numFaces = 0;
+
+
 
 struct ObjCB {
     
@@ -194,11 +218,16 @@ struct ProjCB {
 };
 
 
-
 DirectionalLight dLight = { dx::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f) };
 PointLight pLight1 = { dx::XMVectorSet(0.0f, 2.0f, 4.0f, 1.0f), 1.0f, 0.22f, 0.20f };
 
 LightCB lightCB;
+
+struct Mouse {
+    std::int64_t relX, relY;
+};
+
+Mouse mouse;
 
 //-----------------------------------------------------
 
@@ -248,6 +277,14 @@ int InitApplication(HINSTANCE hInstance, int cmdShow) {
         return -1;
     }
 
+    RAWINPUTDEVICE rid[1];
+    rid[0].hwndTarget = g_windowHandle;
+    rid[0].dwFlags = RIDEV_INPUTSINK;
+    rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
+    rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
+
+    RegisterRawInputDevices(rid, 1, sizeof(rid[0]));
+
     ImGui_ImplWin32_Init(g_windowHandle);
 
     ShowWindow(g_windowHandle, cmdShow);
@@ -267,6 +304,21 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     switch (msg)
     {
+    case WM_INPUT:
+    {
+        UINT size = sizeof(RAWINPUT);
+        static BYTE lpb[sizeof(RAWINPUT)];
+        GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &size, sizeof(RAWINPUTHEADER));
+
+        RAWINPUT* raw = (RAWINPUT*)lpb;
+
+        if (raw->header.dwType == RIM_TYPEMOUSE) {
+            mouse.relX = raw->data.mouse.lLastX;
+            mouse.relY = raw->data.mouse.lLastY;
+        }
+
+        break;
+    }
     case WM_PAINT:
         hDC = BeginPaint(hwnd, &paintStruct);
         EndPaint(hwnd, &paintStruct);
@@ -468,18 +520,112 @@ HRESULT InitDevice() {
     return S_OK;
 }
 
+dx::XMMATRIX scaleMat;
 
 HRESULT InitData() {
 
+    HRESULT hr;
+    RenderSystem renderSys;
+    
+    const aiScene* scene = importer.ReadFile("./shaders/stanford-bunny.obj", aiProcess_GenSmoothNormals | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices);
+
+    if(scene == nullptr)
+    {
+        std::cout << importer.GetErrorString() << std::endl;
+        return E_ABORT;
+    }
+
+    aiMesh *mesh = scene->mMeshes[0];
+    aiMatrix4x4 sM = scene->mRootNode->mTransformation;
+    scaleMat = dx::XMMatrixScaling(/*sM.a1, sM.b2, sM.c3*/20.0f, 20.0f, 20.0f);
+
+    numVertices = mesh->mNumVertices;
+    //g_Vertices = new Vertex[numVertices];
+    renderSys.bufLengths.push_back(numVertices);
+    for (int i = 0; i < numVertices; i++) 
+    {
+        aiVector3D *vert = &(mesh->mVertices[i]);
+        aiVector3D *normal = &(mesh->mNormals[i]);
+        aiVector3D* texture = nullptr;// (mesh->mTextureCoords[i]);
+        //g_Vertices[i] = Vertex(vert->x, vert->y, vert->z, 0.5f, 0.5f ,normal->x, normal->y, normal->z);
+        renderSys.vertices.push_back(Vertex(vert->x, vert->y, vert->z, 0.5f, 0.5f, normal->x, normal->y, normal->z));
+    }
+
+    numFaces = mesh->mNumFaces;
+    g_Indices = new std::uint16_t[numFaces * 3];
+    for (int i = 0; i < numFaces; i++) {
+        aiFace *face = &(mesh->mFaces[i]);
+        for (int j = 0; j < face->mNumIndices; j++) {
+            g_Indices[i * 3 + j] = face->mIndices[j];
+        }
+
+    }
+
+
+    //----------------------------Skybox----------------------
+    wrl::ComPtr<ID3D11Resource> skyTexture;
+    hr = dx::CreateDDSTextureFromFileEx(g_d3dDevice.Get(), L"./shaders/skybox2.dds", 0, D3D11_USAGE_DEFAULT,
+        D3D11_BIND_SHADER_RESOURCE, 0, D3D11_RESOURCE_MISC_TEXTURECUBE, dx::DX11::DDS_LOADER_DEFAULT, skyTexture.GetAddressOf(), cubemapView.GetAddressOf());
+    RETURN_IF_FAILED(hr);
+
+
+    wrl::ComPtr<ID3DBlob> verShaderBlob2;
+    wrl::ComPtr<ID3DBlob> pixShaderBlob2;
+
+    hr = LoadShader<ID3D11VertexShader>(L"./shaders/SkyboxVertexShader.hlsl", "vs", verShaderBlob2.GetAddressOf(), g_d3dVertexShaderSkybox.GetAddressOf(), g_d3dDevice.Get());
+    RETURN_IF_FAILED(hr);
+
+    hr = LoadShader<ID3D11PixelShader>(L"./shaders/SkyboxPixelShader.hlsl", "ps", pixShaderBlob2.GetAddressOf(), g_d3dPixelShaderSkybox.GetAddressOf(), g_d3dDevice.Get());
+    RETURN_IF_FAILED(hr);
+
+    D3D11_BUFFER_DESC cubeBuffDesc;
+    ZeroMemory(&cubeBuffDesc, sizeof(cubeBuffDesc));
+    cubeBuffDesc.ByteWidth = sizeof(g_Vertices2);
+    cubeBuffDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    cubeBuffDesc.Usage = D3D11_USAGE_DEFAULT;
+
+    D3D11_SUBRESOURCE_DATA cubeData;
+    cubeData.pSysMem = g_Vertices2;
+    cubeData.SysMemPitch = 0;
+    cubeData.SysMemSlicePitch = 0;
+
+    hr = g_d3dDevice->CreateBuffer(&cubeBuffDesc, &cubeData, g_d3dVertexBufferSkybox.GetAddressOf());
+    RETURN_IF_FAILED(hr);
+
+    D3D11_BUFFER_DESC cubeIndexBuffDesc;
+    ZeroMemory(&cubeIndexBuffDesc, sizeof(cubeIndexBuffDesc));
+    cubeIndexBuffDesc.ByteWidth = sizeof(g_Indices2);
+    cubeIndexBuffDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    cubeIndexBuffDesc.Usage = D3D11_USAGE_DEFAULT;
+    
+    D3D11_SUBRESOURCE_DATA cubeIndexData;
+    cubeIndexData.pSysMem = g_Indices2;
+    cubeIndexData.SysMemPitch = 0;
+    cubeIndexData.SysMemSlicePitch = 0;
+
+    hr = g_d3dDevice->CreateBuffer(&cubeIndexBuffDesc, &cubeIndexData, g_d3dIndexBufferSkybox.GetAddressOf());
+    RETURN_IF_FAILED(hr);
+
+    D3D11_RASTERIZER_DESC rastSkyboxDesc;
+    ZeroMemory(&rastSkyboxDesc, sizeof(rastSkyboxDesc));
+    rastSkyboxDesc.CullMode = D3D11_CULL_NONE;
+    rastSkyboxDesc.FillMode = D3D11_FILL_SOLID;
+    rastSkyboxDesc.FrontCounterClockwise = false;
+    rastSkyboxDesc.AntialiasedLineEnable = false;
+    rastSkyboxDesc.MultisampleEnable = false;
+    
+    hr = g_d3dDevice->CreateRasterizerState(&rastSkyboxDesc, g_d3dRasterizerStateSkybox.GetAddressOf());
+    RETURN_IF_FAILED(hr);
+
+    //------------------------------------------------------
+
     wrl::ComPtr<ID3D11InputLayout> vertLayout ;
-    wrl::ComPtr<ID3D11InputLayout> pixLayout ;
 
     wrl::ComPtr<ID3DBlob> verShaderBlob ;
     wrl::ComPtr<ID3DBlob> pixShaderBlob;
     
-    HRESULT hr;
 
-    hr = LoadShader<ID3D11VertexShader>(L"shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), g_d3dDevice.Get());
+    hr = LoadShader<ID3D11VertexShader>(L"./shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), g_d3dDevice.Get());
     RETURN_IF_FAILED(hr);
 
     hr = LoadShader<ID3D11PixelShader>(L"./shaders/BasicPixelShader.hlsl", "ps", pixShaderBlob.GetAddressOf(), g_d3dPixelShader.GetAddressOf(), g_d3dDevice.Get());
@@ -487,13 +633,13 @@ HRESULT InitData() {
 
     D3D11_BUFFER_DESC vertBuffDesc;
     vertBuffDesc.Usage = D3D11_USAGE_DEFAULT;
-    vertBuffDesc.ByteWidth = sizeof(g_Vertices);
+    vertBuffDesc.ByteWidth = sizeof(Vertex) * numVertices;
     vertBuffDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
     vertBuffDesc.CPUAccessFlags = 0;
     vertBuffDesc.MiscFlags = 0;
 
     D3D11_SUBRESOURCE_DATA vertSubresource;
-    vertSubresource.pSysMem = g_Vertices;
+    vertSubresource.pSysMem = &(renderSys.vertices[0]);
     vertSubresource.SysMemPitch = 0;
     vertSubresource.SysMemSlicePitch = 0;
 
@@ -508,7 +654,7 @@ HRESULT InitData() {
     indxBuffDesc.Usage = D3D11_USAGE_DEFAULT;
     indxBuffDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
     indxBuffDesc.CPUAccessFlags = 0;
-    indxBuffDesc.ByteWidth = sizeof(g_Indices);
+    indxBuffDesc.ByteWidth = sizeof(std::uint16_t) * numFaces * 3;
     indxBuffDesc.MiscFlags = 0;
 
     D3D11_SUBRESOURCE_DATA indxSubresource;
@@ -653,7 +799,8 @@ HRESULT InitData() {
 
     D3D11_RASTERIZER_DESC rastDesc;
     ZeroMemory(&rastDesc, sizeof(rastDesc));
-    
+    rastDesc.AntialiasedLineEnable = false;
+    rastDesc.MultisampleEnable = false;
     rastDesc.CullMode = D3D11_CULL_BACK;
     rastDesc.FillMode = D3D11_FILL_SOLID;
 
@@ -680,9 +827,19 @@ HRESULT InitData() {
 
     g_d3dDevice->CreateBlendState(&blendDesc, g_d3dBlendState.GetAddressOf());
 
-    wrl::ComPtr<ID3D11ShaderResourceView> textureView;
+    
     hr = dx::CreateWICTextureFromFile(g_d3dDevice.Get(), L"./shaders/glass.png", NULL, textureView.GetAddressOf());
     RETURN_IF_FAILED(hr);
+
+    D3D11_DEPTH_STENCIL_DESC depthDesc;
+    ZeroMemory(&depthDesc, sizeof(D3D11_DEPTH_STENCIL_DESC));
+    depthDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+    depthDesc.DepthEnable = true;
+    depthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    
+    hr = g_d3dDevice->CreateDepthStencilState(&depthDesc, g_d3dDepthStencilStateSkybox.GetAddressOf());
+    RETURN_IF_FAILED(hr);
+
 
     D3D11_SAMPLER_DESC samplerDesc;
     ZeroMemory(&samplerDesc, sizeof(samplerDesc));
@@ -696,8 +853,6 @@ HRESULT InitData() {
     samplerDesc.MaxLOD = FLT_MAX;
     samplerDesc.MaxAnisotropy = 16;
 
-
-    wrl::ComPtr<ID3D11SamplerState> samplerState ;
     hr = g_d3dDevice->CreateSamplerState(&samplerDesc, samplerState.GetAddressOf());
     RETURN_IF_FAILED(hr);
 
@@ -718,6 +873,28 @@ void Render() {
     g_d3dDeviceContext->ClearRenderTargetView(g_d3dRenderTargetView.Get(), dx::Colors::Black);
     g_d3dDeviceContext->ClearDepthStencilView(g_d3dDepthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
+    //D3D11_SAMPLER_DESC samplerSkyDesc;
+    //ZeroMemory(&samplerSkyDesc, sizeof(samplerSkyDesc));
+    //samplerSkyDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    //samplerSkyDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    //samplerSkyDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    //samplerSkyDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    //samplerSkyDesc.MipLODBias = 0.0f;
+    //samplerSkyDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    //samplerSkyDesc.MinLOD = 0.0f;
+    //samplerSkyDesc.MaxLOD = FLT_MAX;
+    //samplerSkyDesc.MaxAnisotropy = 16;
+    //
+    //wrl::ComPtr<ID3D11SamplerState> samplerSkyState;
+    //g_d3dDevice->CreateSamplerState(&samplerSkyDesc, samplerSkyState.GetAddressOf());
+
+    //g_d3dDeviceContext->PSSetSamplers(0, 1, samplerSkyState.GetAddressOf());
+
+    
+
+    std::uint32_t strides[] = { sizeof(Vertex) };
+    std::uint32_t offsets[] = { 0 };
+
     g_cam.rotate(0.0f, -0.00f, 0.0f);
     viewCB.viewMatrix = g_cam.getViewMatrix();
     g_d3dDeviceContext->UpdateSubresource(g_cbPerCam.Get(), 0, NULL, &viewCB, 0, 0);
@@ -731,28 +908,58 @@ void Render() {
 
     //g_d3dDeviceContexOMSetBlendState(g_d3dBlendState, blendFactor, 0xffffffff);
     
-    dx::XMMATRIX transMat = dx::XMMatrixTranslation(0.0f, 0.0f, 7.0f);
-    objCB.worldMatrix = dx::XMMatrixTranspose(dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rot) * transMat);
+    dx::XMMATRIX transMat = dx::XMMatrixTranslationFromVector(g_cam._camPos);
+
+    objCB.worldMatrix = dx::XMMatrixTranspose(transMat);
+    g_d3dDeviceContext->UpdateSubresource(g_cbPerObj.Get(), 0, NULL, &objCB, 0, 0);
+
+    g_d3dDeviceContext->IASetVertexBuffers(0, 1, g_d3dVertexBufferSkybox.GetAddressOf(), strides, offsets);
+    g_d3dDeviceContext->IASetIndexBuffer(g_d3dIndexBufferSkybox.Get(), DXGI_FORMAT_R16_UINT, 0);
+
+    g_d3dDeviceContext->VSSetShader(g_d3dVertexShaderSkybox.Get(), 0, 0);
+    g_d3dDeviceContext->PSSetShader(g_d3dPixelShaderSkybox.Get(), 0, 0);
+
+    g_d3dDeviceContext->PSSetShaderResources(0, 1, cubemapView.GetAddressOf());
+
+    g_d3dDeviceContext->OMSetDepthStencilState(g_d3dDepthStencilStateSkybox.Get(), 0);
+    g_d3dDeviceContext->RSSetState(g_d3dRasterizerStateSkybox.Get());
+    g_d3dDeviceContext->DrawIndexed(36, 0, 0);
+
+    //models
+    g_d3dDeviceContext->OMSetDepthStencilState(NULL, 0);
+
+    transMat = dx::XMMatrixTranslation(0.0f, 0.0f, 5.0f);
+    objCB.worldMatrix = dx::XMMatrixTranspose(dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rot) * scaleMat * transMat);
+    g_d3dDeviceContext->UpdateSubresource(g_cbPerObj.Get(), 0, NULL, &objCB, 0, 0);
+    
+    g_d3dDeviceContext->IASetVertexBuffers(0, 1, g_d3dVertexBuffer.GetAddressOf(), strides, offsets);
+    g_d3dDeviceContext->IASetIndexBuffer(g_d3dIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+    g_d3dDeviceContext->VSSetShader(g_d3dVertexShader.Get(), 0, 0);
+    g_d3dDeviceContext->PSSetShader(g_d3dPixelShader.Get(), 0, 0);
+
+    g_d3dDeviceContext->PSSetShaderResources(0, 1, textureView.GetAddressOf());
+
+    g_d3dDeviceContext->RSSetState(g_d3dRasterizerStateCullFront.Get());
+    g_d3dDeviceContext->DrawIndexed(numFaces * 3, 0, 0);
+    g_d3dDeviceContext->RSSetState(g_d3dRasterizerStateCullBack.Get());
+    g_d3dDeviceContext->DrawIndexed(numFaces * 3, 0, 0);
+
+    transMat = dx::XMMatrixTranslation(-3.0f, -0.5f, 4.0f);
+    objCB.worldMatrix = dx::XMMatrixTranspose(dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot)* scaleMat * transMat);
     g_d3dDeviceContext->UpdateSubresource(g_cbPerObj.Get(), 0, NULL, &objCB, 0, 0);
 
     g_d3dDeviceContext->RSSetState(g_d3dRasterizerStateCullFront.Get());
-    g_d3dDeviceContext->DrawIndexed(36, 0, 0);
+    g_d3dDeviceContext->DrawIndexed(numFaces * 3, 0, 0);
     g_d3dDeviceContext->RSSetState(g_d3dRasterizerStateCullBack.Get());
-    g_d3dDeviceContext->DrawIndexed(36, 0, 0);
+    g_d3dDeviceContext->DrawIndexed(numFaces * 3, 0, 0);
 
-    transMat = dx::XMMatrixTranslation(-2.0f, -0.5f, 4.0f);
-    objCB.worldMatrix = dx::XMMatrixTranspose(dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot) * transMat);
-    g_d3dDeviceContext->UpdateSubresource(g_cbPerObj.Get(), 0, NULL, &objCB, 0, 0);
-
-    g_d3dDeviceContext->RSSetState(g_d3dRasterizerStateCullFront.Get());
-    g_d3dDeviceContext->DrawIndexed(36, 0, 0);
-    g_d3dDeviceContext->RSSetState(g_d3dRasterizerStateCullBack.Get());
-    g_d3dDeviceContext->DrawIndexed(36, 0, 0);
+    ImGui::Text("mouse X: %d \nmouse Y: %d ", mouse.relX, mouse.relY);
 
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
     g_dxgiSwapChain->Present(1, 0);
+
 }
 
 void Update(float deltaTime) {
@@ -767,6 +974,8 @@ void Cleanup() {
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
+
+    delete[] g_Indices;
 
     if (g_d3dDeviceContext) {
         g_d3dDeviceContext->ClearState();
@@ -808,8 +1017,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     Cleanup();
     
 
-    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
-    _CrtDumpMemoryLeaks();
+    //_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
+    //_CrtDumpMemoryLeaks();
 
 
     return returnCode;

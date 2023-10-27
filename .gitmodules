@@ -2,3 +2,6 @@
 	path = external/imgui
 	url = https://github.com/nagard98/imgui.git
 	branch = docking
+[submodule "external/assimp"]
+	path = external/assimp
+	url = https://github.com/assimp/assimp.git
