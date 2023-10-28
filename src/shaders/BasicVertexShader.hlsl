@@ -3,6 +3,7 @@ struct VS_INPUT
     float4 vPosition    : POSITION;
     float2 texCoord : TEXCOORD0;
     float3 vNormal : NORMAL0;
+    float3 tangent : TANGENT0;
 };
 
 struct VS_OUTPUT
@@ -11,6 +12,7 @@ struct VS_OUTPUT
     float2 texCoord : TEXCOORD0;
     float3 vNormal       : NORMAL0;
     float4 posViewSpace : POSITION0;
+    float3x3 tbn : TBNMATRIX;
 };
 
 cbuffer cbPerObj : register(b0)
@@ -35,6 +37,12 @@ VS_OUTPUT vs(VS_INPUT Input)
 {
     VS_OUTPUT Output;
 
+    float3 t = normalize(mul(float4(Input.tangent, 0.0f), mul(worldMatrix, viewMatrix)));
+    float3 n = normalize(mul(float4(Input.vNormal, 0.0f), mul(worldMatrix, viewMatrix)));
+    float3 b = normalize(cross(n, t));
+    
+    Output.tbn = transpose(float3x3(t, b, n));
+    
     Output.posViewSpace = mul(Input.vPosition, mul(worldMatrix, viewMatrix));
     float4x4 WVPMat = mul(worldMatrix, mul(viewMatrix, projMatrix));
     Output.vPosition = mul(Input.vPosition, WVPMat);

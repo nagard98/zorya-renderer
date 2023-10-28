@@ -118,46 +118,47 @@ dx::XMMATRIX g_projMatrix;
 D3D11_INPUT_ELEMENT_DESC vertexLayouts[] = {
     {"position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
     {"texcoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-    {"normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
+    {"normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+    {"tangent", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
 };
 
 Vertex g_Vertices2[] =
 {
     // Front Face
-    Vertex(-1.0f, -1.0f, -1.0f, 0.0f, 1.0f,-1.0f, -1.0f, -1.0f),
-    Vertex(-1.0f,  1.0f, -1.0f, 0.0f, 0.0f,-1.0f,  1.0f, -1.0f),
-    Vertex(1.0f,  1.0f, -1.0f, 1.0f, 0.0f, 1.0f,  1.0f, -1.0f),
-    Vertex(1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f),
+    Vertex(-1.0f, -1.0f, -1.0f, 0.0f, 1.0f,-1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(-1.0f,  1.0f, -1.0f, 0.0f, 0.0f,-1.0f,  1.0f, -1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(1.0f,  1.0f, -1.0f, 1.0f, 0.0f, 1.0f,  1.0f, -1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f),
 
     // Back Face
-    Vertex(-1.0f, -1.0f, 1.0f, 1.0f, 1.0f,-1.0f, -1.0f, 1.0f),
-    Vertex(1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 1.0f, -1.0f, 1.0f),
-    Vertex(1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f,  1.0f, 1.0f),
-    Vertex(-1.0f,  1.0f, 1.0f, 1.0f, 0.0f,-1.0f,  1.0f, 1.0f),
+    Vertex(-1.0f, -1.0f, 1.0f, 1.0f, 1.0f,-1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f,  1.0f, 1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(-1.0f,  1.0f, 1.0f, 1.0f, 0.0f,-1.0f,  1.0f, 1.0f, 1.0f, 1.0f, 1.0f),
 
     // Top Face
-    Vertex(-1.0f, 1.0f, -1.0f, 0.0f, 1.0f,-1.0f, 1.0f, -1.0f),
-    Vertex(-1.0f, 1.0f,  1.0f, 0.0f, 0.0f,-1.0f, 1.0f,  1.0f),
-    Vertex(1.0f, 1.0f,  1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  1.0f),
-    Vertex(1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f),
+    Vertex(-1.0f, 1.0f, -1.0f, 0.0f, 1.0f,-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(-1.0f, 1.0f,  1.0f, 0.0f, 0.0f,-1.0f, 1.0f,  1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(1.0f, 1.0f,  1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f),
 
     // Bottom Face
-    Vertex(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f,-1.0f, -1.0f, -1.0f),
-    Vertex(1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 1.0f, -1.0f, -1.0f),
-    Vertex(1.0f, -1.0f,  1.0f, 0.0f, 0.0f, 1.0f, -1.0f,  1.0f),
-    Vertex(-1.0f, -1.0f,  1.0f, 1.0f, 0.0f,-1.0f, -1.0f,  1.0f),
+    Vertex(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f,-1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(1.0f, -1.0f,  1.0f, 0.0f, 0.0f, 1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(-1.0f, -1.0f,  1.0f, 1.0f, 0.0f,-1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 1.0f),
 
     // Left Face
-    Vertex(-1.0f, -1.0f,  1.0f, 0.0f, 1.0f,-1.0f, -1.0f,  1.0f),
-    Vertex(-1.0f,  1.0f,  1.0f, 0.0f, 0.0f,-1.0f,  1.0f,  1.0f),
-    Vertex(-1.0f,  1.0f, -1.0f, 1.0f, 0.0f,-1.0f,  1.0f, -1.0f),
-    Vertex(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f,-1.0f, -1.0f, -1.0f),
+    Vertex(-1.0f, -1.0f,  1.0f, 0.0f, 1.0f,-1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(-1.0f,  1.0f,  1.0f, 0.0f, 0.0f,-1.0f,  1.0f,  1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(-1.0f,  1.0f, -1.0f, 1.0f, 0.0f,-1.0f,  1.0f, -1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f,-1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f),
 
     // Right Face
-    Vertex(1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 1.0f, -1.0f, -1.0f),
-    Vertex(1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 1.0f,  1.0f, -1.0f),
-    Vertex(1.0f,  1.0f,  1.0f, 1.0f, 0.0f, 1.0f,  1.0f,  1.0f),
-    Vertex(1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 1.0f, -1.0f,  1.0f),
+    Vertex(1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(1.0f,  1.0f, -1.0f, 0.0f, 0.0f, 1.0f,  1.0f, -1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(1.0f,  1.0f,  1.0f, 1.0f, 0.0f, 1.0f,  1.0f,  1.0f, 1.0f, 1.0f, 1.0f),
+    Vertex(1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 1.0f, -1.0f,  1.0f, 1.0f, 1.0f, 1.0f),
 };
 
 WORD g_Indices2[36] =
@@ -527,41 +528,6 @@ HRESULT InitData() {
     HRESULT hr;
     RenderSystem renderSys;
     
-    const aiScene* scene = importer.ReadFile("./shaders/stanford-bunny.obj", aiProcess_GenSmoothNormals | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices);
-
-    if(scene == nullptr)
-    {
-        std::cout << importer.GetErrorString() << std::endl;
-        return E_ABORT;
-    }
-
-    aiMesh *mesh = scene->mMeshes[0];
-    aiMatrix4x4 sM = scene->mRootNode->mTransformation;
-    scaleMat = dx::XMMatrixScaling(/*sM.a1, sM.b2, sM.c3*/20.0f, 20.0f, 20.0f);
-
-    numVertices = mesh->mNumVertices;
-    //g_Vertices = new Vertex[numVertices];
-    renderSys.bufLengths.push_back(numVertices);
-    for (int i = 0; i < numVertices; i++) 
-    {
-        aiVector3D *vert = &(mesh->mVertices[i]);
-        aiVector3D *normal = &(mesh->mNormals[i]);
-        aiVector3D* texture = nullptr;// (mesh->mTextureCoords[i]);
-        //g_Vertices[i] = Vertex(vert->x, vert->y, vert->z, 0.5f, 0.5f ,normal->x, normal->y, normal->z);
-        renderSys.vertices.push_back(Vertex(vert->x, vert->y, vert->z, 0.5f, 0.5f, normal->x, normal->y, normal->z));
-    }
-
-    numFaces = mesh->mNumFaces;
-    g_Indices = new std::uint16_t[numFaces * 3];
-    for (int i = 0; i < numFaces; i++) {
-        aiFace *face = &(mesh->mFaces[i]);
-        for (int j = 0; j < face->mNumIndices; j++) {
-            g_Indices[i * 3 + j] = face->mIndices[j];
-        }
-
-    }
-
-
     //----------------------------Skybox----------------------
     wrl::ComPtr<ID3D11Resource> skyTexture;
     hr = dx::CreateDDSTextureFromFileEx(g_d3dDevice.Get(), L"./shaders/skybox2.dds", 0, D3D11_USAGE_DEFAULT,
@@ -619,6 +585,43 @@ HRESULT InitData() {
 
     //------------------------------------------------------
 
+
+    const aiScene* scene = importer.ReadFile("./shaders/sphere.obj", aiProcess_GenSmoothNormals | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_CalcTangentSpace);
+
+    if (scene == nullptr)
+    {
+        std::cout << importer.GetErrorString() << std::endl;
+        return E_ABORT;
+    }
+
+    aiMesh* mesh = scene->mMeshes[0];
+    aiMatrix4x4 sM = scene->mRootNode->mTransformation;
+    scaleMat = dx::XMMatrixScaling(/*sM.a1, sM.b2, sM.c3*/2.0f, 2.0f, 2.0f);
+
+    numVertices = mesh->mNumVertices;
+    renderSys.bufLengths.push_back(numVertices);
+
+    for (int i = 0; i < numVertices; i++)
+    {
+        aiVector3D* vert = &(mesh->mVertices[i]);
+        aiVector3D* normal = &(mesh->mNormals[i]);
+        aiVector3D* textureCoord = &mesh->mTextureCoords[0][i];
+        aiVector3D* tangent = &mesh->mTangents[i];
+
+        renderSys.vertices.push_back(Vertex(vert->x, vert->y, vert->z, textureCoord->x, textureCoord->y, normal->x, normal->y, normal->z, tangent->x, tangent->y, tangent->z));
+    }
+
+    numFaces = mesh->mNumFaces;
+    g_Indices = new std::uint16_t[numFaces * 3];
+    for (int i = 0; i < numFaces; i++) {
+        aiFace* face = &(mesh->mFaces[i]);
+        for (int j = 0; j < face->mNumIndices; j++) {
+            g_Indices[i * 3 + j] = face->mIndices[j];
+        }
+
+    }
+
+
     wrl::ComPtr<ID3D11InputLayout> vertLayout ;
 
     wrl::ComPtr<ID3DBlob> verShaderBlob ;
@@ -667,10 +670,17 @@ HRESULT InitData() {
 
     g_d3dDeviceContext->IASetIndexBuffer(g_d3dIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
 
+    wrl::ComPtr<ID3D11ShaderResourceView> normalMapView;
+    hr = dx::CreateWICTextureFromFile(g_d3dDevice.Get(), L"./shaders/pav_normal.tif", nullptr, normalMapView.GetAddressOf());
+    RETURN_IF_FAILED(hr);
+
+    g_d3dDeviceContext->PSSetShaderResources(1, 1, normalMapView.GetAddressOf());
+
+
     g_d3dDeviceContext->VSSetShader(g_d3dVertexShader.Get(), 0, 0);
     g_d3dDeviceContext->PSSetShader(g_d3dPixelShader.Get(), 0, 0);
 
-    hr = g_d3dDevice->CreateInputLayout(vertexLayouts, 3, verShaderBlob->GetBufferPointer(), verShaderBlob->GetBufferSize(), vertLayout.GetAddressOf());
+    hr = g_d3dDevice->CreateInputLayout(vertexLayouts, 4, verShaderBlob->GetBufferPointer(), verShaderBlob->GetBufferSize(), vertLayout.GetAddressOf());
     RETURN_IF_FAILED(hr);
 
     g_d3dDeviceContext->IASetInputLayout(vertLayout.Get());
@@ -828,7 +838,7 @@ HRESULT InitData() {
     g_d3dDevice->CreateBlendState(&blendDesc, g_d3dBlendState.GetAddressOf());
 
     
-    hr = dx::CreateWICTextureFromFile(g_d3dDevice.Get(), L"./shaders/glass.png", NULL, textureView.GetAddressOf());
+    hr = dx::CreateWICTextureFromFile(g_d3dDevice.Get(), L"./shaders/pav_albedo.tif", NULL, textureView.GetAddressOf());
     RETURN_IF_FAILED(hr);
 
     D3D11_DEPTH_STENCIL_DESC depthDesc;
@@ -928,7 +938,7 @@ void Render() {
     //models
     g_d3dDeviceContext->OMSetDepthStencilState(NULL, 0);
 
-    transMat = dx::XMMatrixTranslation(0.0f, 0.0f, 5.0f);
+    transMat = dx::XMMatrixTranslation(1.0f, 1.0f, 6.0f);
     objCB.worldMatrix = dx::XMMatrixTranspose(dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rot) * scaleMat * transMat);
     g_d3dDeviceContext->UpdateSubresource(g_cbPerObj.Get(), 0, NULL, &objCB, 0, 0);
     

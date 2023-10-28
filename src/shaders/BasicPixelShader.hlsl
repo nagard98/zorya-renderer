@@ -3,6 +3,7 @@ struct PS_INPUT {
     float2 texCoord : TEXCOORD0;
 	float3 fNormal : NORMAL0;
     float4 posViewSpace : POSITION0;
+    float3x3 tbn : TBNMATRIX;
 };
 
 struct PS_OUTPUT {
@@ -30,6 +31,7 @@ cbuffer light : register(b0)
 };
 
 Texture2D ObjTexture : register(t0);
+Texture2D NormalMap : register(t1);
 SamplerState ObjSamplerState : register(s0);
 
 float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal, float4 tex);
@@ -39,10 +41,13 @@ PS_OUTPUT ps(PS_INPUT input)
 {
 	PS_OUTPUT output;
 
-    input.fNormal = normalize(input.fNormal);
+    //input.fNormal = normalize(input.fNormal);
+    input.fNormal = normalize(NormalMap.Sample(ObjSamplerState, input.texCoord).rgb * 2.0f - 1.0f);
+    input.fNormal = normalize(mul(input.tbn, input.fNormal));
     
     //float4 tex = float4(1.0f, 0.0f, 0.0f, 1.0f);
     float4 tex = ObjTexture.Sample(ObjSamplerState, input.texCoord);
+    //float4 tex = NormalMap.Sample(ObjSamplerState, input.texCoord);
     
     float3 viewDir = -normalize(input.posViewSpace).xyz;
     
