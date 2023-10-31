@@ -14,7 +14,8 @@ add_subdirectory("external/imgui")
 add_subdirectory("external/assimp")
 
 find_package(directxtk CONFIG REQUIRED)
-add_executable(derma WIN32 src/derma.cpp "include/Camera.h" "src/Camera.cpp" "include/Lights.h" "src/Shaders.cpp" "include/Shaders.h" "include/Mesh.h" "src/Mesh.cpp")
+add_executable(derma WIN32 src/derma.cpp "include/Camera.h" "src/Camera.cpp" "include/Lights.h" "src/Shaders.cpp" "include/Shaders.h" "include/Mesh.h" "src/Mesh.cpp" "include/Material.h" "include/Renderer.h"  "include/BufferCache.h" "include/BufferObject.h" "src/BufferObject.cpp" "src/BufferCache.cpp" "include/RenderHardwareInterface.h" "src/RenderHardwareInterface.cpp")
+target_include_directories(derma PRIVATE "include")
 
 target_link_libraries(derma PRIVATE Microsoft::DirectXTK imgui assimp::assimp)
 ADD_DEPENDENCIES(derma copy_shader_files)
