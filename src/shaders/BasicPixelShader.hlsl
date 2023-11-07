@@ -1,7 +1,7 @@
 struct PS_INPUT {
 	float4 fPos		: SV_POSITION;
     float2 texCoord : TEXCOORD0;
-	float3 fNormal : NORMAL0;
+	float3 fNormal : NORMAL;
     float4 posViewSpace : POSITION0;
     float3x3 tbn : TBNMATRIX;
 };
@@ -45,15 +45,12 @@ PS_OUTPUT ps(PS_INPUT input)
     input.fNormal = normalize(NormalMap.Sample(ObjSamplerState, input.texCoord).rgb * 2.0f - 1.0f);
     input.fNormal = normalize(mul(input.tbn, input.fNormal));
     
-    //float4 tex = float4(1.0f, 0.0f, 0.0f, 1.0f);
     float4 tex = ObjTexture.Sample(ObjSamplerState, input.texCoord);
-    //float4 tex = NormalMap.Sample(ObjSamplerState, input.texCoord);
     
     float3 viewDir = -normalize(input.posViewSpace).xyz;
     
-    //float3 col = float3(0.1f, 0.1f, 0.1f) * tex.xyz; //ambient
     float3 col = computeColDirLight(dirLight, viewDir, input.fNormal, tex);
-    
+
     for (int i = 0; i < 1; i++)
     {
         col += computeColPointLight(pointLights[i], input.posViewSpace, input.fNormal, tex);
@@ -72,8 +69,9 @@ float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal
     float3 halfVec = normalize(lDir + viewDir);
     
     float3 diffuseCol = saturate(tex * dot(normal, lDir));
-    float3 specularCol = pow(dot(halfVec, normal), 8) * 0.3f * float3(1.0f, 1.0f, 1.0f);
-    float3 ambCol = float3(0.2f, 0.2f, 0.2f) * tex.xyz;
+    float specAngle = dot(halfVec, normal);
+    float3 specularCol = pow(specAngle < 0.0f ? 0.0f : specAngle, 8) * 0.3f * float3(1.0f, 1.0f, 1.0f);
+    float3 ambCol = float3(0.08f, 0.08f, 0.08f) * tex.rgb;
     
     return saturate(diffuseCol + specularCol + ambCol);
 }
@@ -85,11 +83,12 @@ float3 computeColPointLight(PointLight pLight, float4 fragPos, float3 normal, fl
     lightDir = normalize(lightDir);
     float attenuation = 1 / (pLight.constant + (pLight.lin * dist) + (pLight.quad * pow(dist, 2)));
     
-    float3 halfVec = normalize(-normalize(fragPos.xyz) + lightDir);
+    float3 halfVec = normalize(-normalize(fragPos.xyz) + lightDir.xyz);
     
-    float3 diffCol = saturate(attenuation * tex * dot(lightDir, normal));
-    float3 specCol = attenuation * pow(dot(halfVec, normal), 16) * 0.3f * float3(1.0f,1.0f,1.0f);
-    float3 ambCol = attenuation * float3(0.3f, 0.3f, 0.3f) * tex.xyz;
+    float3 diffCol = saturate(attenuation * tex * dot(lightDir.xyz, normal));
+    float specAngle = dot(halfVec, normal);
+    float3 specCol = attenuation * pow(specAngle < 0.0f ? 0.0f : specAngle, 16) * 0.3f * float3(1.0f, 1.0f, 1.0f);
+    float3 ambCol = attenuation * float3(0.1f, 0.1f, 0.1f) * tex.xyz;
     
-    return saturate(ambCol + diffCol + specCol);
+    return saturate(diffCol + specCol + ambCol);
 }

@@ -2,7 +2,7 @@ struct VS_INPUT
 {
     float4 vPosition    : POSITION;
     float2 texCoord : TEXCOORD0;
-    float3 vNormal : NORMAL0;
+    float3 vNormal : NORMAL;
     float3 tangent : TANGENT0;
 };
 
@@ -10,7 +10,7 @@ struct VS_OUTPUT
 {
     float4 vPosition    : SV_POSITION;
     float2 texCoord : TEXCOORD0;
-    float3 vNormal       : NORMAL0;
+    float3 vNormal       : NORMAL;
     float4 posViewSpace : POSITION0;
     float3x3 tbn : TBNMATRIX;
 };
@@ -47,7 +47,7 @@ VS_OUTPUT vs(VS_INPUT Input)
     float4x4 WVPMat = mul(worldMatrix, mul(viewMatrix, projMatrix));
     Output.vPosition = mul(Input.vPosition, WVPMat);
     Output.texCoord = Input.texCoord;
-    Output.vNormal = mul(Input.vNormal, mul(worldMatrix, viewMatrix));
+    Output.vNormal = mul(float4(Input.vNormal,0.0f), mul(worldMatrix, viewMatrix));
     
     return Output;
 }
