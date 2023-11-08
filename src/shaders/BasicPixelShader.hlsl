@@ -43,7 +43,7 @@ PS_OUTPUT ps(PS_INPUT input)
 
     //input.fNormal = normalize(input.fNormal);
     input.fNormal = normalize(NormalMap.Sample(ObjSamplerState, input.texCoord).rgb * 2.0f - 1.0f);
-    input.fNormal = normalize(mul(input.tbn, input.fNormal));
+    input.fNormal = mul(input.tbn, input.fNormal);
     
     float4 tex = ObjTexture.Sample(ObjSamplerState, input.texCoord);
     
@@ -56,7 +56,8 @@ PS_OUTPUT ps(PS_INPUT input)
         col += computeColPointLight(pointLights[i], input.posViewSpace, input.fNormal, tex);
     }
 
-    output.vCol = float4(saturate(col), tex.w);
+    float gamma = 1 / 2.2f;
+    output.vCol = float4(saturate(pow(col, gamma)), tex.w);
     
 	return output;
 }
