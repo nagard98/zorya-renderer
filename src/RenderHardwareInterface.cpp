@@ -1,7 +1,16 @@
 #include <d3d11_1.h>
 #include "imgui_impl_dx11.h"
 
+#include <iostream>
+#include <cstdint>
+
+#include "RHIState.h"
 #include "RenderHardwareInterface.h"
+#include "Material.h"
+
+#include "WICTextureLoader.h"
+
+namespace dx = DirectX;
 
 RenderHardwareInterface rhi;
 
@@ -14,7 +23,7 @@ RenderHardwareInterface::~RenderHardwareInterface()
 {
 }
 
-HRESULT RenderHardwareInterface::Init(HWND windowHandle)
+HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
 {
     HRESULT hRes = S_OK;
 
@@ -51,7 +60,7 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle)
     scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     scd.BufferDesc.RefreshRate.Numerator = 60;
     scd.BufferDesc.RefreshRate.Denominator = 1;
-    scd.SampleDesc.Count = 1;
+    scd.SampleDesc.Count = MULTISAMPLE_COUNT;
     scd.SampleDesc.Quality = 0;
     scd.Windowed = TRUE;
     scd.OutputWindow = windowHandle;
@@ -166,8 +175,86 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle)
 
     context->RSSetViewports(1, &viewport);
 
+    SetState(initialState);
+
     //TODO: move gui initialization elsewhere
     ImGui_ImplDX11_Init(device.Get(), context.Get());
 
     return S_OK;
+}
+
+void RenderHardwareInterface::SetState(RHIState newState)
+{
+    RHIState stateChanges = newState ^ state;
+
+    // if state hasn't changed from last update, return
+    if (stateChanges == 0) {
+        return;
+    }
+
+    // Searches raster state object in cache
+    if ((stateChanges & RASTER_STATE_MASK) != 0) {
+        RHIState newRastState = newState & RASTER_STATE_MASK;
+        
+        for (int i = 0; i < rastVariants.size(); i++)
+        {
+            if (rastVariants[i].variant == -1){
+                OutputDebugString("WARNING :: Building new raster state\n");
+                ZeroMemory(&tmpRastDesc, sizeof(tmpRastDesc));
+                tmpRastDesc.FillMode = (newRastState & RASTER_FILL_MODE_MASK) == RASTER_FILL_MODE_SOLID ? D3D11_FILL_SOLID : D3D11_FILL_WIREFRAME;
+                tmpRastDesc.AntialiasedLineEnable = (newRastState & RASTER_ANTIALIAS_MASK) == RASTER_ANTIALIAS_MASK;
+                tmpRastDesc.CullMode = (newRastState & RASTER_CULL_MODE_MASK) == RASTER_CULL_FRONT ? D3D11_CULL_FRONT : D3D11_CULL_BACK;
+                tmpRastDesc.MultisampleEnable = (newRastState & RASTER_MULTISAMPLE_MASK) == RASTER_MULTISAMPLE_MASK;
+                tmpRastDesc.ScissorEnable = (newRastState & RASTER_SCISSOR_MASK) == RASTER_SCISSOR_MASK;
+
+                rastVariants[i].variant = newRastState & RASTER_STATE_MASK;
+                device->CreateRasterizerState(&tmpRastDesc, &(rastVariants[i].pStateObject));
+                context->RSSetState(rastVariants[i].pStateObject);
+                break;
+            }
+            else if (rastVariants[i].variant == newRastState) {
+                context->RSSetState(rastVariants[i].pStateObject);
+                break;
+            }
+        }
+    }
+
+    if ((stateChanges & DEPTH_STENCIL_STATE_MASK) != 0) {
+        RHIState newDSState = newState & DEPTH_STENCIL_STATE_MASK;
+
+        for (int i = 0; i < depthStenVariants.size(); i++)
+        {
+            if (depthStenVariants[i].variant == -1) {
+                OutputDebugString("WARNING :: Building new depth stancil state\n");
+                ZeroMemory(&tmpDepthStenDesc, sizeof(tmpDepthStenDesc));
+                tmpDepthStenDesc.DepthEnable = (newDSState & DEPTH_ENABLE_MASK) == DEPTH_ENABLE_MASK;
+                tmpDepthStenDesc.DepthWriteMask = (newDSState & DEPTH_WRITE_ENABLE_MASK) == DEPTH_WRITE_ENABLE_MASK ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO ;
+                tmpDepthStenDesc.DepthFunc = (newDSState & DEPTH_COMP_MASK) == DEPTH_COMP_LESS ? D3D11_COMPARISON_LESS : D3D11_COMPARISON_LESS_EQUAL;
+
+                depthStenVariants[i].variant = newDSState;
+                device->CreateDepthStencilState(&tmpDepthStenDesc, &(depthStenVariants[i].pStateObject));
+                context->OMSetDepthStencilState(depthStenVariants[i].pStateObject, 0.0f);
+                break;
+            }
+            else if (depthStenVariants[i].variant == newDSState) {
+                context->OMSetDepthStencilState(depthStenVariants[i].pStateObject, 0.0f);
+                break;
+            }
+        }
+    }
+
+    state = newState;
+
+}
+
+RHI_RESULT RenderHardwareInterface::LoadTexture(const wchar_t *path, ShaderTexture2D& shaderTexture, bool convertToLinear)
+{
+    HRESULT hRes = dx::CreateWICTextureFromFileEx(device.Get(), context.Get(),
+        path,
+        0,
+        D3D11_USAGE_DEFAULT,
+        D3D11_BIND_SHADER_RESOURCE,
+        0, 0, convertToLinear ? dx::WIC_LOADER_SRGB_DEFAULT : dx::WIC_LOADER_IGNORE_SRGB, NULL, &shaderTexture.resourceView);
+
+    return hRes==S_OK ? RHI_OK : RHI_ERR;
 }

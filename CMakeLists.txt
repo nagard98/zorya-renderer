@@ -14,8 +14,15 @@ add_subdirectory("external/imgui")
 add_subdirectory("external/assimp")
 
 find_package(directxtk CONFIG REQUIRED)
-add_executable(derma WIN32 src/derma.cpp "include/Camera.h" "src/Camera.cpp" "include/Lights.h" "src/Shaders.cpp" "include/Shaders.h" "include/Mesh.h" "src/Mesh.cpp" "include/Material.h" "include/Renderer.h"  "include/BufferCache.h" "include/BufferObject.h" "src/BufferObject.cpp" "src/BufferCache.cpp" "include/RenderHardwareInterface.h" "src/RenderHardwareInterface.cpp")
+add_executable(derma WIN32 src/derma.cpp "include/Camera.h" "src/Camera.cpp" "include/Lights.h" "src/Shaders.cpp" "include/Shaders.h" "include/Model.h"  "include/Material.h" "include/RendererBackend.h"  "include/BufferCache.h" "include/BufferObject.h" "src/BufferObject.cpp" "src/BufferCache.cpp" "include/RenderHardwareInterface.h" "src/RenderHardwareInterface.cpp" "include/RHIState.h" "src/RHIState.cpp" "include/ModelManager.h" "include/RendererFrontend.h" "src/RendererFrontend.cpp" "src/RendererBackend.cpp" "include/ResourceCache.h" "src/ResourceCache.cpp" "src/Model.cpp")
 target_include_directories(derma PRIVATE "include")
+
+set_property (TARGET derma
+  PROPERTY
+    # Enable C++17 standard compliance
+    CXX_STANDARD 17
+)
+
 
 target_link_libraries(derma PRIVATE Microsoft::DirectXTK imgui assimp::assimp)
 ADD_DEPENDENCIES(derma copy_shader_files)

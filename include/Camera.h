@@ -1,3 +1,6 @@
+#ifndef CAMERA_H_
+#define CAMERA_H_
+
 #include <DirectXMath.h>
 
 namespace dx = DirectX;
@@ -42,3 +45,6 @@ private:
 	float _nearZ, _farZ;
 
 };
+
+
+#endif // !CAMERA_H_

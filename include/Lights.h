@@ -16,5 +16,6 @@ struct PointLight {
 
 struct LightCB {
     DirectionalLight dLight;
-    PointLight pointLights[1];
+    int numPLights;
+    PointLight pointLights[16];
 };

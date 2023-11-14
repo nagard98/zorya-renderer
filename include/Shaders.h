@@ -1,5 +1,9 @@
+#ifndef SHADERS_H_
+#define SHADERS_H_
+
 #include <Windows.h>
 #include <d3d11_1.h>
+#include <d3dcompiler.h>
 #include <string>
 
 template<class ShaderClass>
@@ -34,3 +38,5 @@ HRESULT LoadShader(const std::wstring& shaderFilename, const std::string& entryp
 
     return S_OK;
 }
+
+#endif // ! SHADERS_H_
