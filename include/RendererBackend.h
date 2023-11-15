@@ -23,5 +23,7 @@ public:
 	std::hash<std::uint16_t> submeshHash;
 };
 
+extern RendererBackend rb;
+
 #endif // !RENDERER_BACKEND_H_
 

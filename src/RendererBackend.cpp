@@ -7,6 +7,8 @@
 #include "Material.h"
 #include <d3d11_1.h>
 
+RendererBackend rb;
+
 RendererBackend::RendererBackend()
 {
 	matPrmsCB = nullptr;

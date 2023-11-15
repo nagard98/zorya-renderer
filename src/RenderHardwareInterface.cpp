@@ -177,6 +177,72 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
 
     SetState(initialState);
 
+    //TODO:move sampler creation to somewhere else----------------
+    D3D11_SAMPLER_DESC samplerDesc;
+    ZeroMemory(&samplerDesc, sizeof(samplerDesc));
+    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    samplerDesc.MipLODBias = 0.0f;
+    samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    samplerDesc.MinLOD = 0.0f;
+    samplerDesc.MaxLOD = FLT_MAX;
+    samplerDesc.MaxAnisotropy = 16;
+
+    hRes = device->CreateSamplerState(&samplerDesc, &samplerVariants[0].pStateObject);
+    RETURN_IF_FAILED(hRes);
+
+    context->PSSetSamplers(0, 1, &samplerVariants[0].pStateObject);
+    //-----------------------------------------------------------------
+
+
+    //TODO: move depth/stencil view creation somewhere else------------------
+    D3D11_TEXTURE2D_DESC depthStenTexDesc;
+    depthStenTexDesc.MipLevels = 1;
+    depthStenTexDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    depthStenTexDesc.MiscFlags = 0;
+    depthStenTexDesc.CPUAccessFlags = 0;
+    depthStenTexDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthStenTexDesc.Width = rhi.viewport.Width;
+    depthStenTexDesc.Height = rhi.viewport.Height;
+    depthStenTexDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthStenTexDesc.ArraySize = 1;
+    depthStenTexDesc.SampleDesc.Count = MULTISAMPLE_COUNT;
+    depthStenTexDesc.SampleDesc.Quality = 0;
+
+
+    hRes = device->CreateTexture2D(&depthStenTexDesc, NULL, depthStencilBuff.GetAddressOf());
+    RETURN_IF_FAILED(hRes);
+
+    hRes = device->CreateDepthStencilView(depthStencilBuff.Get(), NULL, depthStencilView.GetAddressOf());
+    RETURN_IF_FAILED(hRes);
+
+    context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), depthStencilView.Get());
+    //--------------------------------------------------
+
+    //TODO: move blend desc somewhere else-------------
+    D3D11_RENDER_TARGET_BLEND_DESC targetBlendDesc1;
+    targetBlendDesc1.BlendEnable = true;
+    targetBlendDesc1.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    targetBlendDesc1.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    targetBlendDesc1.BlendOp = D3D11_BLEND_OP_ADD;
+    targetBlendDesc1.SrcBlendAlpha = D3D11_BLEND_ONE;
+    targetBlendDesc1.DestBlendAlpha = D3D11_BLEND_ZERO;
+    targetBlendDesc1.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    targetBlendDesc1.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+
+    D3D11_BLEND_DESC blendDesc;
+    blendDesc.AlphaToCoverageEnable = false;
+    blendDesc.IndependentBlendEnable = false;
+    blendDesc.RenderTarget[0] = targetBlendDesc1;
+
+    hRes = device->CreateBlendState(&blendDesc, &blendVariants[0].pStateObject);
+    RETURN_IF_FAILED(hRes);
+    //rhi.context->OMSetBlendState(blendVariants[0].pStateObject, 0, 0);
+    //---------------------------
+
     //TODO: move gui initialization elsewhere
     ImGui_ImplDX11_Init(device.Get(), context.Get());
 

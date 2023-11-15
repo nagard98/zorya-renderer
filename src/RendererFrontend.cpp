@@ -16,11 +16,17 @@
 
 namespace dx = DirectX;
 
+RendererFrontend rf;
+
 RendererFrontend::RendererFrontend()
 {
 }
 
 RendererFrontend::~RendererFrontend()
+{
+}
+
+void RendererFrontend::InitScene()
 {
 }
 
@@ -92,7 +98,7 @@ ModelHandle_t RendererFrontend::LoadModelFromFile(const std::string& filename)
         submeshHandle.baseVertex = staticSceneVertexData.size();
 
         //TODO:hmmm? evaluate should if i reserve in advance? when?
-        //vertices.reserve(numVertices);
+        staticSceneVertexData.reserve((size_t)submeshHandle.numVertices + (size_t)submeshHandle.baseVertex);
 
         for (int i = 0; i < submeshHandle.numVertices; i++)
         {
@@ -107,6 +113,8 @@ ModelHandle_t RendererFrontend::LoadModelFromFile(const std::string& filename)
         int numFaces = mesh->mNumFaces;
         submeshHandle.numIndexes = numFaces * 3;
         submeshHandle.baseIndex = staticSceneIndexData.size();
+
+        staticSceneIndexData.reserve((size_t)submeshHandle.baseIndex + (size_t)submeshHandle.numIndexes);
 
         for (int i = 0; i < numFaces; i++) {
             aiFace* face = &(mesh->mFaces[i]);
@@ -129,10 +137,9 @@ ModelHandle_t RendererFrontend::LoadModelFromFile(const std::string& filename)
 ViewDesc RendererFrontend::ComputeView()
 {
     std::vector<SubmeshInfo> submeshesInView;
+    submeshesInView.reserve(sceneMeshes.size());
 
     //TODO: implement frustum culling
-    submeshesInView = sceneMeshes;
-
     for (SubmeshInfo &sbPair : sceneMeshes) {
         bool cached = sbPair.bufferHnd.isCached; //bufferCache.isCached(sHnd);
         if (!cached) {
@@ -143,6 +150,8 @@ ViewDesc RendererFrontend::ComputeView()
         if (!cached) {
             sbPair.matHnd = resourceCache.AllocMaterial(materials.at(sbPair.submeshHnd.materialIdx));
         }
+
+        submeshesInView.push_back(sbPair);
     }
 
     //TODO: does move do what I was expecting?

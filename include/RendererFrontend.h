@@ -45,4 +45,7 @@ private:
 	Assimp::Importer importer;
 };
 
+
+extern RendererFrontend rf;
+
 #endif // !RENDERER_FRONTEND_H_

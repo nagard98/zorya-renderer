@@ -24,6 +24,7 @@
 #include "Model.h"
 #include "RHIState.h"
 #include "RenderHardwareInterface.h"
+#include "RendererFrontend.h"
 #include "RendererBackend.h"
 
 #include <assimp/Importer.hpp>
@@ -56,15 +57,10 @@ const BOOL g_enableVSync = TRUE;
 
 Assimp::Importer importer;
 
-wrl::ComPtr<ID3D11DepthStencilView> g_d3dDepthStencilView;
-wrl::ComPtr<ID3D11Texture2D> g_d3dDepthStencilBuffer;
 
-wrl::ComPtr<ID3D11ShaderResourceView> textureView;
 wrl::ComPtr<ID3D11ShaderResourceView> cubemapView;
 
 wrl::ComPtr<ID3D11DepthStencilState> g_d3dDepthStencilStateSkybox;
-
-wrl::ComPtr<ID3D11BlendState> g_d3dBlendState;
 
 wrl::ComPtr<ID3D11InputLayout> g_d3dInputLayout;
 
@@ -75,15 +71,12 @@ wrl::ComPtr<ID3D11Buffer> g_cbPerObj;
 wrl::ComPtr<ID3D11Buffer> g_cbPerCam;
 wrl::ComPtr<ID3D11Buffer> g_cbPerProj;
 wrl::ComPtr<ID3D11Buffer> g_cbLight;
-wrl::ComPtr<ID3D11Buffer> g_cbPerMaterial;
 
-wrl::ComPtr<ID3D11PixelShader> g_d3dPixelShader;
 wrl::ComPtr<ID3D11VertexShader> g_d3dVertexShader;
 
 wrl::ComPtr<ID3D11PixelShader> g_d3dPixelShaderSkybox;
 wrl::ComPtr<ID3D11VertexShader> g_d3dVertexShaderSkybox;
 
-wrl::ComPtr<ID3D11SamplerState> samplerState;
 wrl::ComPtr<ID3D11SamplerState> samplerStateCube;
 
 Camera g_cam;
@@ -281,23 +274,13 @@ HRESULT InitDevice() {
     return rhi.Init(g_windowHandle);
 }
 
-std::vector<std::uint16_t> indices;
-std::vector<Vertex> vertices;
 
-RendererFrontend rf;
-RendererBackend rb;
-
-dx::XMMATRIX scaleMat = scaleMat = dx::XMMatrixScaling(/*sM.a1, sM.b2, sM.c3*/11.0f, 11.0f, 11.0f);
-ViewDesc vDesc;
-
-HRESULT InitData() {
-
+HRESULT LoadSkybox(const wchar_t *skyboxPath) {
     HRESULT hr;
-    //RenderSystem renderSys;
 
     //----------------------------Skybox----------------------
     wrl::ComPtr<ID3D11Resource> skyTexture;
-    hr = dx::CreateDDSTextureFromFileEx(rhi.device.Get(), L"./shaders/assets/skybox_space.dds", 0, D3D11_USAGE_DEFAULT,
+    hr = dx::CreateDDSTextureFromFileEx(rhi.device.Get(), skyboxPath, 0, D3D11_USAGE_DEFAULT,
         D3D11_BIND_SHADER_RESOURCE, 0, D3D11_RESOURCE_MISC_TEXTURECUBE, dx::DX11::DDS_LOADER_DEFAULT, skyTexture.GetAddressOf(), cubemapView.GetAddressOf());
     RETURN_IF_FAILED(hr);
 
@@ -336,80 +319,41 @@ HRESULT InitData() {
     cubeIndexData.SysMemSlicePitch = 0;
 
     hr = rhi.device->CreateBuffer(&cubeIndexBuffDesc, &cubeIndexData, g_d3dIndexBufferSkybox.GetAddressOf());
-    RETURN_IF_FAILED(hr);
+
+    return hr;
     //---------------------------------------------------------------------
+}
+
+
+dx::XMMATRIX scaleMat = scaleMat = dx::XMMatrixScaling(/*sM.a1, sM.b2, sM.c3*/11.0f, 11.0f, 11.0f);
+ViewDesc vDesc;
+
+HRESULT InitData() {
+
+    HRESULT hr;
+    rf.InitScene();
+    rb.Init();
+
+    hr = LoadSkybox(L"./shaders/assets/skybox_space.dds");
+    RETURN_IF_FAILED(hr);
 
     ModelHandle_t mHnd = rf.LoadModelFromFile("./shaders/assets/Human/Models/Head/Head.fbx");//Human/Models/Head/Head.fbx");
 
-    wrl::ComPtr<ID3D11InputLayout> vertLayout ;
-
     wrl::ComPtr<ID3DBlob> verShaderBlob ;
-    wrl::ComPtr<ID3DBlob> pixShaderBlob;
-    
-
     hr = LoadShader<ID3D11VertexShader>(L"./shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), rhi.device.Get());
     RETURN_IF_FAILED(hr);
 
-    hr = LoadShader<ID3D11PixelShader>(L"./shaders/BasicPixelShader.hlsl", "ps", pixShaderBlob.GetAddressOf(), g_d3dPixelShader.GetAddressOf(), rhi.device.Get());
-    RETURN_IF_FAILED(hr);
-
-
-    std::uint32_t strides[] = { sizeof(Vertex) };
-    std::uint32_t offsets[] = { 0 };
-    rhi.context->IASetVertexBuffers(0, 1, (bufferCache.staticCache.vertexBuffers.at(0).buffer).GetAddressOf(), strides, offsets);
-
-    rhi.context->IASetIndexBuffer(bufferCache.staticCache.indexBuffers.at(0).buffer.Get(), DXGI_FORMAT_R16_UINT, 0);
-
-    wrl::ComPtr<ID3D11ShaderResourceView> normalMapView;
-    wrl::ComPtr<ID3D11Resource> normalMap;
-
-    hr = dx::CreateWICTextureFromFileEx(rhi.device.Get(), rhi.context.Get(), L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg", 0, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, dx::WIC_LOADER_IGNORE_SRGB, NULL, normalMapView.GetAddressOf());
-    //hr = dx::CreateWICTextureFromFile(rhi.device.Get(), L"./shaders/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg", normalMap.GetAddressOf(), NULL);
-    RETURN_IF_FAILED(hr);
-
-    //D3D11_SHADER_RESOURCE_VIEW_DESC srvD;
-    //ZeroMemory(&srvD, sizeof(srvD));
-    //srvD.Format = DXGI_FORMAT_UNKNOWN;
-    //srvD.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    //srvD.Texture2D.MipLevels = 1;
-
-    //hr = rhi.device->CreateShaderResourceView(normalMap.Get(), &srvD, normalMapView.GetAddressOf());
-    //RETURN_IF_FAILED(hr);
-
-    rhi.context->PSSetShaderResources(1, 1, normalMapView.GetAddressOf());
-
-
     rhi.context->VSSetShader(g_d3dVertexShader.Get(), 0, 0);
-    rhi.context->PSSetShader(g_d3dPixelShader.Get(), 0, 0);
 
+    wrl::ComPtr<ID3D11InputLayout> vertLayout;
     hr = rhi.device->CreateInputLayout(vertexLayouts, 4, verShaderBlob->GetBufferPointer(), verShaderBlob->GetBufferSize(), vertLayout.GetAddressOf());
     RETURN_IF_FAILED(hr);
 
     rhi.context->IASetInputLayout(vertLayout.Get());
     rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    D3D11_TEXTURE2D_DESC depthStenTexDesc;
-    depthStenTexDesc.MipLevels = 1;
-    depthStenTexDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-    depthStenTexDesc.MiscFlags = 0;
-    depthStenTexDesc.CPUAccessFlags = 0;
-    depthStenTexDesc.Usage = D3D11_USAGE_DEFAULT;
-    depthStenTexDesc.Width = rhi.viewport.Width;
-    depthStenTexDesc.Height = rhi.viewport.Height;
-    depthStenTexDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    depthStenTexDesc.ArraySize = 1;
-    depthStenTexDesc.SampleDesc.Count = MULTISAMPLE_COUNT;
-    depthStenTexDesc.SampleDesc.Quality = 0;
 
-
-    hr = rhi.device->CreateTexture2D(&depthStenTexDesc, NULL, (g_d3dDepthStencilBuffer).GetAddressOf());
-    RETURN_IF_FAILED(hr);
-
-    hr = rhi.device->CreateDepthStencilView(g_d3dDepthStencilBuffer.Get(), NULL, g_d3dDepthStencilView.GetAddressOf());
-    RETURN_IF_FAILED(hr);
-
-    rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), g_d3dDepthStencilView.Get());
-
+    //World transform constant buffer setup---------------------------------------------------
     D3D11_SUBRESOURCE_DATA resourceCbPerObj;
     resourceCbPerObj.pSysMem = &objCB;
     resourceCbPerObj.SysMemPitch = 0;
@@ -422,22 +366,21 @@ HRESULT InitData() {
     cbObjDesc.MiscFlags = 0;
     cbObjDesc.ByteWidth = sizeof(ObjCB);
 
-
     hr = rhi.device->CreateBuffer(&cbObjDesc, &resourceCbPerObj, g_cbPerObj.GetAddressOf());
     RETURN_IF_FAILED(hr);
 
     rhi.context->VSSetConstantBuffers(0, 1, g_cbPerObj.GetAddressOf());
+    //---------------------------------------------------
 
+
+    //View matrix constant buffer setup-------------------------------------------------------------
     dx::XMVECTOR camPos = dx::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
     dx::XMVECTOR camDir = dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
     dx::XMVECTOR camUp = dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    //g_ViewMatrix = dx::XMMatrixLookAtLH(camPos, camDir, camUp);
-
-    //viewCB.viewMatrix = dx::XMMatrixTranspose(g_ViewMatrix);
 
     g_cam = Camera(camPos, camDir, camUp, 60.0f * (3.14f/180.0f), rhi.viewport.Width / rhi.viewport.Height, 1.0f, 100.0f);
 
-    viewCB.viewMatrix = g_cam.getViewMatrix();//dx::XMMatrixTranspose(g_ViewMatrix);
+    viewCB.viewMatrix = g_cam.getViewMatrix();
 
     D3D11_SUBRESOURCE_DATA resourceCbPerCam;
     resourceCbPerCam.pSysMem = &viewCB;
@@ -456,9 +399,10 @@ HRESULT InitData() {
     RETURN_IF_FAILED(hr);
 
     rhi.context->VSSetConstantBuffers(1, 1, g_cbPerCam.GetAddressOf());
+    //----------------------------------------------------------------
 
-    //g_projMatrix = dx::XMMatrixPerspectiveFovLH(0.4f * 3.14f, g_Viewport.Width / g_Viewport.Height, 1.0f, 100.0f);
 
+    //Projection matrix constant buffer setup--------------------------------------
     ProjCB projCB;
     projCB.projMatrix = g_cam.getProjMatrix();
 
@@ -479,7 +423,9 @@ HRESULT InitData() {
     RETURN_IF_FAILED(hr);
 
     rhi.context->VSSetConstantBuffers(2, 1, g_cbPerProj.GetAddressOf());
+    //------------------------------------------------------------------
 
+    //Light constant buffer setup---------------------------------------
     lightCB.dLight.direction = dx::XMVector4Transform(dLight.direction, g_cam.getViewMatrix());
     lightCB.pointLights[0].pos = dx::XMVector4Transform(pLight1.pos, g_cam.getViewMatrix());
     lightCB.pointLights[0].constant = pLight1.constant;
@@ -500,57 +446,8 @@ HRESULT InitData() {
     
     rhi.device->CreateBuffer(&lightBuffDesc, &lightResource, g_cbLight.GetAddressOf());
     rhi.context->PSSetConstantBuffers(0, 1, g_cbLight.GetAddressOf());
+    //---------------------------------------------------------
 
-
-    D3D11_RENDER_TARGET_BLEND_DESC targetBlendDesc1;
-    targetBlendDesc1.BlendEnable = true;
-    targetBlendDesc1.SrcBlend = D3D11_BLEND_SRC_ALPHA;
-    targetBlendDesc1.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-    targetBlendDesc1.BlendOp = D3D11_BLEND_OP_ADD;
-    targetBlendDesc1.SrcBlendAlpha = D3D11_BLEND_ONE;
-    targetBlendDesc1.DestBlendAlpha = D3D11_BLEND_ZERO;
-    targetBlendDesc1.BlendOpAlpha = D3D11_BLEND_OP_ADD;
-    targetBlendDesc1.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-
-
-    D3D11_BLEND_DESC blendDesc;
-    blendDesc.AlphaToCoverageEnable = false;
-    blendDesc.IndependentBlendEnable = false;
-    blendDesc.RenderTarget[0] = targetBlendDesc1;
-
-    rhi.device->CreateBlendState(&blendDesc, g_d3dBlendState.GetAddressOf());
-
-    
-    hr = dx::CreateWICTextureFromFile(rhi.device.Get(), L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg", NULL, textureView.GetAddressOf());
-    RETURN_IF_FAILED(hr);
-
-    /*D3D11_DEPTH_STENCIL_DESC depthDesc;
-    ZeroMemory(&depthDesc, sizeof(D3D11_DEPTH_STENCIL_DESC));
-    depthDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-    depthDesc.DepthEnable = true;
-    depthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    
-    hr = rhi.device->CreateDepthStencilState(&depthDesc, g_d3dDepthStencilStateSkybox.GetAddressOf());
-    RETURN_IF_FAILED(hr);*/
-
-
-    D3D11_SAMPLER_DESC samplerDesc;
-    ZeroMemory(&samplerDesc, sizeof(samplerDesc));
-    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    samplerDesc.MipLODBias = 0.0f;
-    samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    samplerDesc.MinLOD = 0.0f;
-    samplerDesc.MaxLOD = FLT_MAX;
-    samplerDesc.MaxAnisotropy = 16;
-
-    hr = rhi.device->CreateSamplerState(&samplerDesc, samplerState.GetAddressOf());
-    RETURN_IF_FAILED(hr);
-
-    rhi.context->PSSetSamplers(0, 1, samplerState.GetAddressOf());
-    rhi.context->PSSetShaderResources(0, 1, textureView.GetAddressOf());
 
     //Vertex v(1.0f, 1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 2.3, 4.4f, 1.2f, 1.2, 3.5f);
     //std::ofstream of("test.dscene", std::ios::out | std::ios::binary);
@@ -571,7 +468,6 @@ HRESULT InitData() {
     //Vertex v2(0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f);
     //ifs.read((char*)&v2, sizeof(Vertex));
     //ifs.close();
-    rb.Init();
 
     return hr;
 }
@@ -586,24 +482,7 @@ void Render() {
     ImGui::ShowDemoWindow();
 
     rhi.context->ClearRenderTargetView(rhi.renderTargetView.Get(), dx::Colors::Black);
-    rhi.context->ClearDepthStencilView(g_d3dDepthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-
-    //D3D11_SAMPLER_DESC samplerSkyDesc;
-    //ZeroMemory(&samplerSkyDesc, sizeof(samplerSkyDesc));
-    //samplerSkyDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-    //samplerSkyDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-    //samplerSkyDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-    //samplerSkyDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    //samplerSkyDesc.MipLODBias = 0.0f;
-    //samplerSkyDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    //samplerSkyDesc.MinLOD = 0.0f;
-    //samplerSkyDesc.MaxLOD = FLT_MAX;
-    //samplerSkyDesc.MaxAnisotropy = 16;
-    //
-    //wrl::ComPtr<ID3D11SamplerState> samplerSkyState;
-    //g_d3dDevice->CreateSamplerState(&samplerSkyDesc, samplerSkyState.GetAddressOf());
-
-    //rhi.context->PSSetSamplers(0, 1, samplerSkyState.GetAddressOf());
+    rhi.context->ClearDepthStencilView(rhi.depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 
     std::uint32_t strides[] = { sizeof(Vertex) };
@@ -626,6 +505,7 @@ void Render() {
     objCB.worldMatrix = dx::XMMatrixTranspose(transMat);
     rhi.context->UpdateSubresource(g_cbPerObj.Get(), 0, NULL, &objCB, 0, 0);
 
+    //skybox-----------------------------------------------------------
     rhi.context->IASetVertexBuffers(0, 1, g_d3dVertexBufferSkybox.GetAddressOf(), strides, offsets);
     rhi.context->IASetIndexBuffer(g_d3dIndexBufferSkybox.Get(), DXGI_FORMAT_R16_UINT, 0);
 
@@ -633,16 +513,15 @@ void Render() {
     rhi.context->PSSetShader(g_d3dPixelShaderSkybox.Get(), 0, 0);
 
     rhi.context->PSSetShaderResources(0, 1, cubemapView.GetAddressOf());
-
     
-    //rhi.context->OMSetDepthStencilState(g_d3dDepthStencilStateSkybox.Get(), 0);
     RHI_OM_DS_SET_DEPTH_COMP_LESS_EQ(rhiState);
     RHI_RS_SET_CULL_FRONT(rhiState);
     rhi.SetState(rhiState);
     rhi.context->DrawIndexed(36, 0, 0);
+    //---------------------------------------------------------------
 
-    //models
 
+    //models-----------------------------------------------------
     transMat = dx::XMMatrixTranslation(0.0f, -3.0f, 5.0f);
     objCB.worldMatrix = dx::XMMatrixTranspose(dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rot) * scaleMat * transMat);
     rhi.context->UpdateSubresource(g_cbPerObj.Get(), 0, NULL, &objCB, 0, 0);
@@ -654,7 +533,7 @@ void Render() {
     ImGui::SliderFloat("smoothness", &smoothness, 0.0f, 1.0f);
     //TODO: remove parameter smoothness from RenderView; used only for initial development testing
     rb.RenderView(vDesc, smoothness);
-
+    //-------------------------------------------------------------
 
     ImGui::Text("mouse X: %d \nmouse Y: %d ", mouse.relX, mouse.relY);
 

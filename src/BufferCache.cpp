@@ -62,7 +62,7 @@ bool BufferCache::isCached(const SubmeshHandle_t sHnd)
 VertexBuffer BufferCache::GetVertexBuffer(BufferCacheHandle_t bufHnd)
 {
 	if (!((bool)bufHnd.isCached)) {
-		OutputDebugString("ERROR :: the buffer handle specified in BufferCache::GetVertexBuffer is not valid");
+		OutputDebugString("ERROR :: the buffer handle specified in BufferCache::GetVertexBuffer is not valid\n");
 		return VertexBuffer();
 	}
 	
@@ -72,7 +72,7 @@ VertexBuffer BufferCache::GetVertexBuffer(BufferCacheHandle_t bufHnd)
 IndexBuffer BufferCache::GetIndexBuffer(BufferCacheHandle_t bufHnd)
 {
 	if (!((bool)bufHnd.isCached)) {
-		OutputDebugString("ERROR :: the buffer handle specified in BufferCache::GetIndexBuffer is not valid");
+		OutputDebugString("ERROR :: the buffer handle specified in BufferCache::GetIndexBuffer is not valid\n");
 		return IndexBuffer();
 	}
 
