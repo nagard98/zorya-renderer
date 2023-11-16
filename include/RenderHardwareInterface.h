@@ -35,7 +35,7 @@ public:
 	HRESULT Init(HWND windowHandle, RHIState initialState = RHI_DEFAULT_STATE());
 
 	void SetState(RHIState newState);
-	RHI_RESULT LoadTexture(const wchar_t *path, ShaderTexture2D &shaderTexture, bool convertToLinear = true);
+	RHI_RESULT LoadTexture(const wchar_t *path, ShaderTexture2D &shaderTexture, bool convertToLinear = true, size_t maxSize = 0);
 
 	wrl::ComPtr<ID3D11Device> device;
 	wrl::ComPtr<ID3D11DeviceContext> context;

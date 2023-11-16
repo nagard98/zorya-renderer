@@ -8,9 +8,9 @@ namespace dx = DirectX;
 class Camera {
 
 public:
-	Camera::Camera() {};
+	Camera() {};
 
-	Camera::Camera(const dx::XMVECTOR camPos, const dx::XMVECTOR camDir, const dx::XMVECTOR camUp, float fov, float aspectRatio, float nearZ, float farZ){
+	Camera(const dx::XMVECTOR camPos, const dx::XMVECTOR camDir, const dx::XMVECTOR camUp, float fov, float aspectRatio, float nearZ, float farZ){
 		_camPos = camPos;
 		_camDir = camDir;
 		_camUp = camUp;
@@ -23,14 +23,15 @@ public:
 		_projMatrix = dx::XMMatrixPerspectiveFovLH(_fov, _aspectRatio, _nearZ, _farZ);
 	};
 
-	Camera::~Camera() {
+	~Camera() {
 		
 	}
 
-	dx::XMMATRIX Camera::getViewMatrix();
-	dx::XMMATRIX Camera::getProjMatrix();
+	//TODO: why make transpose inside these functions?
+	dx::XMMATRIX getViewMatrix() const;
+	dx::XMMATRIX getProjMatrix() const;
 
-	void Camera::rotate(float aroundX, float aroundY, float aroundZ);
+	void rotate(float aroundX, float aroundY, float aroundZ);
 
 	dx::XMMATRIX _viewMatrix;
 	dx::XMVECTOR _camPos;

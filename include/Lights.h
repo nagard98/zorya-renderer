@@ -1,3 +1,6 @@
+#ifndef LIGHTS_H_
+#define LIGHTS_H_
+
 #include <DirectXMath.h>
 
 namespace dx = DirectX;
@@ -19,3 +22,8 @@ struct LightCB {
     int numPLights;
     PointLight pointLights[16];
 };
+
+extern DirectionalLight dLight;
+extern PointLight pLight1;
+
+#endif

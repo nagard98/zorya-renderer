@@ -13,6 +13,7 @@
 #include "BufferCache.h"
 #include "Material.h"
 #include "ResourceCache.h"
+#include "Camera.h"
 
 namespace dx = DirectX;
 
@@ -28,6 +29,22 @@ RendererFrontend::~RendererFrontend()
 
 void RendererFrontend::InitScene()
 {
+}
+
+//TODO: move somewhere else and use other hashing function; this is temporary
+inline uint32_t hash_str_uint32(const std::string& str) {
+
+    uint32_t hash = 0x811c9dc5;
+    uint32_t prime = 0x1000193;
+
+    for (int i = 0; i < str.size(); ++i) {
+        uint8_t value = str[i];
+        hash = hash ^ value;
+        hash *= prime;
+    }
+
+    return hash;
+
 }
 
 ModelHandle_t RendererFrontend::LoadModelFromFile(const std::string& filename)
@@ -84,11 +101,10 @@ ModelHandle_t RendererFrontend::LoadModelFromFile(const std::string& filename)
         aiColor4D col;
         success = material->Get(AI_MATKEY_BASE_COLOR, col);
         matDesc.baseColor = dx::XMFLOAT4(col.r, col.g, col.b, col.a);
-        matDesc.baseColor = dx::XMFLOAT4(0.5f, 0.0f,0.0f,1.0f);
         matDesc.smoothness = 0.5f;
         matDesc.metalness = 0.0f;
-        matDesc.albedoPath = L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg";
-        matDesc.normalPath = L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
+        matDesc.albedoPath = L""; // L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg";
+        matDesc.normalPath = L""; // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
         matDesc.metalnessMask = L"";
 
         materials.push_back(matDesc);
@@ -124,17 +140,18 @@ ModelHandle_t RendererFrontend::LoadModelFromFile(const std::string& filename)
         }
 
         //TODO: maybe implement move for submeshHandle?
-        sceneMeshes.push_back(SubmeshInfo{ submeshHandle, BufferCacheHandle_t{0,0}, MaterialCacheHandle_t{0,0} });
+        sceneMeshes.push_back(SubmeshInfo{ submeshHandle, BufferCacheHandle_t{0,0}, MaterialCacheHandle_t{0,0}, dx::XMMatrixTranslation(0.0f,0.0f,5.0f) });
     }
 
-    //TODO: maybe offset is not correct; check
-    modelHandle.offsetToStart = sceneMeshes.size();
+    modelHandle.baseMesh = sceneMeshes.size() - 1;
     modelHandle.numMeshes = numMeshes;
+
+    rdEntities.push_back(RenderableEntity{hash_str_uint32(filename) ,modelHandle, scene->GetShortFilename(filename.c_str()), dx::XMMatrixIdentity()});
 
 	return modelHandle;
 }
 
-ViewDesc RendererFrontend::ComputeView()
+ViewDesc RendererFrontend::ComputeView(const Camera& cam)
 {
     std::vector<SubmeshInfo> submeshesInView;
     submeshesInView.reserve(sceneMeshes.size());
@@ -155,5 +172,5 @@ ViewDesc RendererFrontend::ComputeView()
     }
 
     //TODO: does move do what I was expecting?
-    return ViewDesc{std::move(submeshesInView)};
+    return ViewDesc{std::move(submeshesInView), cam};
 }

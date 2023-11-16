@@ -26,6 +26,7 @@
 #include "RenderHardwareInterface.h"
 #include "RendererFrontend.h"
 #include "RendererBackend.h"
+#include "Editor/SceneHierarchy.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -57,6 +58,7 @@ const BOOL g_enableVSync = TRUE;
 
 Assimp::Importer importer;
 
+SceneHierarchy sceneHierarchy;
 
 wrl::ComPtr<ID3D11ShaderResourceView> cubemapView;
 
@@ -82,20 +84,6 @@ wrl::ComPtr<ID3D11SamplerState> samplerStateCube;
 Camera g_cam;
 
 
-enum ConstanBuffer {
-    CB_Application,
-    CB_Frame,
-    CB_Object,
-    CB_Light,
-    NumConstantBuffers
-};
-
-ID3D11Buffer* g_d3dConstanBuffers[NumConstantBuffers];
-
-dx::XMMATRIX g_WorldMatrix;
-dx::XMMATRIX g_ViewMatrix;
-dx::XMMATRIX g_projMatrix;
-
 D3D11_INPUT_ELEMENT_DESC vertexLayouts[] = {
     {"position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
     {"texcoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -103,34 +91,6 @@ D3D11_INPUT_ELEMENT_DESC vertexLayouts[] = {
     {"tangent", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
 };
 
-
-struct ObjCB {
-    
-    dx::XMMATRIX worldMatrix;
-
-};
-
-ObjCB objCB = { dx::XMMatrixTranspose( dx::XMMatrixTranslation(-2.0f, -2.0f, 4.0f) ) };
-
-struct ViewCB {
-
-    dx::XMMATRIX viewMatrix;
-
-};
-
-ViewCB viewCB;
-
-struct ProjCB {
-
-    dx::XMMATRIX projMatrix;
-
-};
-
-
-DirectionalLight dLight = { dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f) };
-PointLight pLight1 = { dx::XMVectorSet(2.0f, 2.0f, 0.0f, 1.0f), 1.0f, 0.22f, 0.20f };
-
-LightCB lightCB;
 
 struct Mouse {
     std::int64_t relX, relY;
@@ -325,8 +285,7 @@ HRESULT LoadSkybox(const wchar_t *skyboxPath) {
 }
 
 
-dx::XMMATRIX scaleMat = scaleMat = dx::XMMatrixScaling(/*sM.a1, sM.b2, sM.c3*/11.0f, 11.0f, 11.0f);
-ViewDesc vDesc;
+dx::XMMATRIX scaleMat = scaleMat = dx::XMMatrixScaling(1.0f, 1.0f, 1.0f);
 
 HRESULT InitData() {
 
@@ -337,7 +296,8 @@ HRESULT InitData() {
     hr = LoadSkybox(L"./shaders/assets/skybox_space.dds");
     RETURN_IF_FAILED(hr);
 
-    ModelHandle_t mHnd = rf.LoadModelFromFile("./shaders/assets/Human/Models/Head/Head.fbx");//Human/Models/Head/Head.fbx");
+    ModelHandle_t mHnd = rf.LoadModelFromFile("./shaders/assets/perry/head.obj");
+    ModelHandle_t mHnd2 = rf.LoadModelFromFile("./shaders/assets/cicada/source/cicada.fbx");
 
     wrl::ComPtr<ID3DBlob> verShaderBlob ;
     hr = LoadShader<ID3D11VertexShader>(L"./shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), rhi.device.Get());
@@ -353,101 +313,13 @@ HRESULT InitData() {
     rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 
-    //World transform constant buffer setup---------------------------------------------------
-    D3D11_SUBRESOURCE_DATA resourceCbPerObj;
-    resourceCbPerObj.pSysMem = &objCB;
-    resourceCbPerObj.SysMemPitch = 0;
-    resourceCbPerObj.SysMemSlicePitch = 0;
-
-    D3D11_BUFFER_DESC cbObjDesc;
-    cbObjDesc.Usage = D3D11_USAGE_DEFAULT;
-    cbObjDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    cbObjDesc.CPUAccessFlags = 0;
-    cbObjDesc.MiscFlags = 0;
-    cbObjDesc.ByteWidth = sizeof(ObjCB);
-
-    hr = rhi.device->CreateBuffer(&cbObjDesc, &resourceCbPerObj, g_cbPerObj.GetAddressOf());
-    RETURN_IF_FAILED(hr);
-
-    rhi.context->VSSetConstantBuffers(0, 1, g_cbPerObj.GetAddressOf());
-    //---------------------------------------------------
-
-
-    //View matrix constant buffer setup-------------------------------------------------------------
+    ////Camera setup-------------------------------------------------------------
     dx::XMVECTOR camPos = dx::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
     dx::XMVECTOR camDir = dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
     dx::XMVECTOR camUp = dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
     g_cam = Camera(camPos, camDir, camUp, 60.0f * (3.14f/180.0f), rhi.viewport.Width / rhi.viewport.Height, 1.0f, 100.0f);
-
-    viewCB.viewMatrix = g_cam.getViewMatrix();
-
-    D3D11_SUBRESOURCE_DATA resourceCbPerCam;
-    resourceCbPerCam.pSysMem = &viewCB;
-    resourceCbPerCam.SysMemPitch = 0;
-    resourceCbPerCam.SysMemSlicePitch = 0;
-
-    D3D11_BUFFER_DESC cbCamDesc;
-    cbCamDesc.Usage = D3D11_USAGE_DEFAULT;
-    cbCamDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    cbCamDesc.CPUAccessFlags = 0;
-    cbCamDesc.MiscFlags = 0;
-    cbCamDesc.ByteWidth = sizeof(viewCB);
-
-
-    hr = rhi.device->CreateBuffer(&cbCamDesc, &resourceCbPerCam, g_cbPerCam.GetAddressOf());
-    RETURN_IF_FAILED(hr);
-
-    rhi.context->VSSetConstantBuffers(1, 1, g_cbPerCam.GetAddressOf());
-    //----------------------------------------------------------------
-
-
-    //Projection matrix constant buffer setup--------------------------------------
-    ProjCB projCB;
-    projCB.projMatrix = g_cam.getProjMatrix();
-
-    D3D11_SUBRESOURCE_DATA resourceCbPerProj;
-    resourceCbPerProj.pSysMem = &projCB;
-    resourceCbPerProj.SysMemPitch = 0;
-    resourceCbPerProj.SysMemSlicePitch = 0;
-
-    D3D11_BUFFER_DESC cbProjDesc;
-    cbProjDesc.Usage = D3D11_USAGE_DEFAULT;
-    cbProjDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    cbProjDesc.CPUAccessFlags = 0;
-    cbProjDesc.MiscFlags = 0;
-    cbProjDesc.ByteWidth = sizeof(projCB);
-
-
-    hr = rhi.device->CreateBuffer(&cbProjDesc, &resourceCbPerProj, g_cbPerProj.GetAddressOf());
-    RETURN_IF_FAILED(hr);
-
-    rhi.context->VSSetConstantBuffers(2, 1, g_cbPerProj.GetAddressOf());
-    //------------------------------------------------------------------
-
-    //Light constant buffer setup---------------------------------------
-    lightCB.dLight.direction = dx::XMVector4Transform(dLight.direction, g_cam.getViewMatrix());
-    lightCB.pointLights[0].pos = dx::XMVector4Transform(pLight1.pos, g_cam.getViewMatrix());
-    lightCB.pointLights[0].constant = pLight1.constant;
-    lightCB.pointLights[0].linear = pLight1.linear;
-    lightCB.pointLights[0].quadratic = pLight1.quadratic;
-    lightCB.numPLights = 0;
-
-    D3D11_SUBRESOURCE_DATA lightResource;
-    lightResource.pSysMem = &lightCB;
-    lightResource.SysMemPitch = 0;
-    lightResource.SysMemSlicePitch = 0;
-
-    D3D11_BUFFER_DESC lightBuffDesc;
-    ZeroMemory(&lightBuffDesc, sizeof(lightBuffDesc));
-    lightBuffDesc.Usage = D3D11_USAGE_DEFAULT;
-    lightBuffDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    lightBuffDesc.ByteWidth = sizeof(lightCB);
-    
-    rhi.device->CreateBuffer(&lightBuffDesc, &lightResource, g_cbLight.GetAddressOf());
-    rhi.context->PSSetConstantBuffers(0, 1, g_cbLight.GetAddressOf());
-    //---------------------------------------------------------
-
+    //-----------------------------------------------------------------------------
 
     //Vertex v(1.0f, 1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 2.3, 4.4f, 1.2f, 1.2, 3.5f);
     //std::ofstream of("test.dscene", std::ios::out | std::ios::binary);
@@ -484,28 +356,17 @@ void Render() {
     rhi.context->ClearRenderTargetView(rhi.renderTargetView.Get(), dx::Colors::Black);
     rhi.context->ClearDepthStencilView(rhi.depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-
     std::uint32_t strides[] = { sizeof(Vertex) };
     std::uint32_t offsets[] = { 0 };
 
-    g_cam.rotate(0.0f, -0.00f, 0.0f);
-    viewCB.viewMatrix = g_cam.getViewMatrix();
-    rhi.context->UpdateSubresource(g_cbPerCam.Get(), 0, NULL, &viewCB, 0, 0);
-    float blendFactor[4] = { 0.5f, 0.5f, 0.5f, 0.5f };
+    //g_cam.rotate(0.0f, -0.00f, 0.0f);    
 
-    //Update light direction with view matrix
-    lightCB.dLight.direction = dx::XMVector4Transform(dLight.direction, g_cam._viewMatrix);
-    lightCB.pointLights[0].pos = dx::XMVector4Transform(pLight1.pos, g_cam._viewMatrix);
-    rhi.context->UpdateSubresource(g_cbLight.Get(), 0, NULL, &lightCB, 0, 0);
-
-    //g_d3dDeviceContexOMSetBlendState(g_d3dBlendState, blendFactor, 0xffffffff);
-    
+    ////skybox-----------------------------------------------------------
+    //Here transMat used to center skybox cubemap
     dx::XMMATRIX transMat = dx::XMMatrixTranslationFromVector(g_cam._camPos);
+    ObjCB tmpOCB{ dx::XMMatrixTranspose(transMat) };
+    rhi.context->UpdateSubresource(rb.objectCB, 0, NULL, &tmpOCB, 0, 0);
 
-    objCB.worldMatrix = dx::XMMatrixTranspose(transMat);
-    rhi.context->UpdateSubresource(g_cbPerObj.Get(), 0, NULL, &objCB, 0, 0);
-
-    //skybox-----------------------------------------------------------
     rhi.context->IASetVertexBuffers(0, 1, g_d3dVertexBufferSkybox.GetAddressOf(), strides, offsets);
     rhi.context->IASetIndexBuffer(g_d3dIndexBufferSkybox.Get(), DXGI_FORMAT_R16_UINT, 0);
 
@@ -518,24 +379,25 @@ void Render() {
     RHI_RS_SET_CULL_FRONT(rhiState);
     rhi.SetState(rhiState);
     rhi.context->DrawIndexed(36, 0, 0);
-    //---------------------------------------------------------------
+    ////---------------------------------------------------------------
 
 
-    //models-----------------------------------------------------
-    transMat = dx::XMMatrixTranslation(0.0f, -3.0f, 5.0f);
-    objCB.worldMatrix = dx::XMMatrixTranspose(dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rot) * scaleMat * transMat);
-    rhi.context->UpdateSubresource(g_cbPerObj.Get(), 0, NULL, &objCB, 0, 0);
-    
+    //models-----------------------------------------------------    
     rhi.context->VSSetShader(g_d3dVertexShader.Get(), 0, 0);
     
-    vDesc = rf.ComputeView();
+    const ViewDesc vDesc = rf.ComputeView(g_cam);
 
-    ImGui::SliderFloat("smoothness", &smoothness, 0.0f, 1.0f);
     //TODO: remove parameter smoothness from RenderView; used only for initial development testing
     rb.RenderView(vDesc, smoothness);
     //-------------------------------------------------------------
 
-    ImGui::Text("mouse X: %d \nmouse Y: %d ", mouse.relX, mouse.relY);
+    ImGui::Begin("Debug");
+    ImGui::SliderFloat("smoothness", &smoothness, 0.0f, 1.0f);
+    ImGui::Text("mouse X: %d \nmouse Y: %d\n ", mouse.relX, mouse.relY);
+    ImGui::End();
+
+    //Scene navigator
+    sceneHierarchy.Render(rf.rdEntities);
 
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -557,7 +419,6 @@ void Cleanup() {
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
-    //delete[] g_Indices;
 
     if (rhi.context) {
         rhi.context->ClearState();

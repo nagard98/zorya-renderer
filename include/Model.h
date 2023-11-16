@@ -16,7 +16,7 @@ namespace dx = DirectX;
 
 
 struct ModelHandle_t {
-    std::uint16_t offsetToStart;
+    std::uint16_t baseMesh;
     std::uint16_t numMeshes;
 };
 
@@ -27,32 +27,6 @@ struct SubmeshHandle_t {
     std::uint32_t numVertices;
     std::uint32_t numIndexes;
 };
-
-struct Model {
-    //std::vector<Submesh> submeshes;
-    //Bound aabb;
-
-};
-
-struct Submesh {
-    ////////SubmeshTriangles submeshTriangles;
-    
-    Material material;
-    SubmeshHandle_t vertices;
-    SubmeshHandle_t indices;
-
-    //TODO: should actually be a single value for both?
-    //BufferCacheHandle_t vertexBuffer;
-    //BufferCacheHandle_t indexBuffer;
-};
-//
-//struct SubmeshTriangles {
-//    std::vector<Vertex> vertices;
-//    std::vector<std::uint16_t> indices;
-//
-//    std::uint64_t vertexBuffer;
-//    std::uint64_t indexBuffer;
-//};
 
 
 struct Vertex

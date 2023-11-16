@@ -313,11 +313,11 @@ void RenderHardwareInterface::SetState(RHIState newState)
 
 }
 
-RHI_RESULT RenderHardwareInterface::LoadTexture(const wchar_t *path, ShaderTexture2D& shaderTexture, bool convertToLinear)
+RHI_RESULT RenderHardwareInterface::LoadTexture(const wchar_t *path, ShaderTexture2D& shaderTexture, bool convertToLinear, size_t maxSize)
 {
     HRESULT hRes = dx::CreateWICTextureFromFileEx(device.Get(), context.Get(),
         path,
-        0,
+        maxSize,
         D3D11_USAGE_DEFAULT,
         D3D11_BIND_SHADER_RESOURCE,
         0, 0, convertToLinear ? dx::WIC_LOADER_SRGB_DEFAULT : dx::WIC_LOADER_IGNORE_SRGB, NULL, &shaderTexture.resourceView);
