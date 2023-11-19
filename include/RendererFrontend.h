@@ -5,20 +5,32 @@
 #include "BufferCache.h"
 #include "ResourceCache.h"
 #include "Camera.h"
+#include "SceneGraph.h"
 
 #include <DirectXMath.h>
 
+#include "assimp/scene.h"
 #include "assimp/Importer.hpp"
 
 #include <string>
 
 namespace dx = DirectX;
 
+//struct RenderableEntityHandle_t {
+//	std::uint32_t index;
+//	std::uint32_t numChildren;
+//	std::uint8_t isValid;
+//};
+
 struct RenderableEntity {
+	bool operator==(const RenderableEntity& r) {
+		return ID == r.ID;
+	}
+
 	std::uint32_t ID;
-	ModelHandle_t modelHnd;
+	SubmeshHandle_t submeshHnd;
 	std::string entityName;
-	dx::XMMATRIX worldTransf;
+	dx::XMMATRIX localWorldTransf;
 	//Bound aabb;
 };
 
@@ -26,11 +38,11 @@ struct SubmeshInfo {
 	SubmeshHandle_t submeshHnd;
 	BufferCacheHandle_t bufferHnd;
 	MaterialCacheHandle_t matHnd;
-	dx::XMMATRIX localWorldTransf;
+	dx::XMMATRIX finalWorldTransf;
 };
 
 struct ViewDesc {
-	std::vector<SubmeshInfo> submeshBufferPairs;
+	std::vector<SubmeshInfo> submeshesInfo;
 	const Camera cam;
 };
 
@@ -43,10 +55,10 @@ public:
 	void InitScene();
 
 	//TODO: probably move somewhere else
-	ModelHandle_t LoadModelFromFile(const std::string& filename);
+	RenderableEntity LoadModelFromFile(const std::string& filename, bool forceFlattenScene = false);
 	ViewDesc ComputeView(const Camera& cam);
 
-	std::vector<RenderableEntity> rdEntities;
+	SceneGraph<RenderableEntity> sceneGraph;
 
 	//TODO: Maybe should be BVH instead of linear list? Remember Frostbite presentation.
 	std::vector<SubmeshInfo> sceneMeshes;  //scene meshes indexed by model handle
@@ -56,7 +68,12 @@ public:
 	std::vector<std::uint16_t> staticSceneIndexData; //mesh index data base indexed by part of submesh handle
 
 private:
+	void LoadNodeChildren(const aiScene* scene, aiNode** children, unsigned int numChildren, RenderableEntity& parentRE);
+	void LoadNodeMeshes(const aiScene* scene, unsigned int* meshesIndices, unsigned int numMeshes, RenderableEntity& parentRE);
 	Assimp::Importer importer;
+
+	SubmeshInfo& findSubmeshInfo(SubmeshHandle_t sHnd);
+	void ParseSceneGraph(const Node<RenderableEntity>* node, const dx::XMMATRIX& parentTransf, std::vector<SubmeshInfo>& submeshesInView);
 };
 
 

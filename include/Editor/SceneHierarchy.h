@@ -9,7 +9,7 @@ public:
 	SceneHierarchy();
 	~SceneHierarchy();
 
-	bool Render(std::vector<RenderableEntity> &entities);
+	void RenderSHierarchy(const std::vector<RenderableEntity> &entities, RenderableEntity* selectedEntity);
 
 	std::uint32_t selectedItem;
 	ImGuiTreeNodeFlags baseFlags;

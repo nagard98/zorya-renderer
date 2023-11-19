@@ -27,6 +27,7 @@
 #include "RendererFrontend.h"
 #include "RendererBackend.h"
 #include "Editor/SceneHierarchy.h"
+#include "SceneGraph.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -106,7 +107,7 @@ bool LoadContent();
 bool UnloadContent();
 
 void Update(float deltaTime);
-void Render();
+void RenderSHierarchy();
 void Cleanup();
 
 int InitApplication(HINSTANCE hInstance, int cmdShow) {
@@ -222,7 +223,7 @@ int Run() {
             deltaTime = std::min<float>(deltaTime, maxTimeStep);
 
             Update(deltaTime);
-            Render();
+            RenderSHierarchy();
         }
     }
 
@@ -296,8 +297,12 @@ HRESULT InitData() {
     hr = LoadSkybox(L"./shaders/assets/skybox_space.dds");
     RETURN_IF_FAILED(hr);
 
-    ModelHandle_t mHnd = rf.LoadModelFromFile("./shaders/assets/perry/head.obj");
-    ModelHandle_t mHnd2 = rf.LoadModelFromFile("./shaders/assets/cicada/source/cicada.fbx");
+    //RenderableEntity mHnd4 = rf.LoadModelFromFile("./shaders/assets/nissan/source/nissan2.obj");
+    //RenderableEntity mHnd5 = rf.LoadModelFromFile("./shaders/assets/cornell/cornell.fbx");
+    RenderableEntity mHnd = rf.LoadModelFromFile("./shaders/assets/perry/head.obj");
+    //RenderableEntity mHnd2 = rf.LoadModelFromFile("./shaders/assets/cicada/source/cicada2.fbx");
+    //RenderableEntity mHnd3 = rf.LoadModelFromFile("./shaders/assets/Human/Models/Head/Head.fbx");
+    //RenderableEntity mHnd5 = rf.LoadModelFromFile("./shaders/assets/cubetest.fbx");
 
     wrl::ComPtr<ID3DBlob> verShaderBlob ;
     hr = LoadShader<ID3D11VertexShader>(L"./shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), rhi.device.Get());
@@ -314,7 +319,7 @@ HRESULT InitData() {
 
 
     ////Camera setup-------------------------------------------------------------
-    dx::XMVECTOR camPos = dx::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+    dx::XMVECTOR camPos = dx::XMVectorSet(0.0f, 0.0f, -2.0f, 0.0f);
     dx::XMVECTOR camDir = dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
     dx::XMVECTOR camUp = dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
@@ -347,7 +352,7 @@ HRESULT InitData() {
 float rot = 0.0f;
 float smoothness = 0.5f;
 
-void Render() {
+void RenderSHierarchy() {
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
@@ -397,7 +402,7 @@ void Render() {
     ImGui::End();
 
     //Scene navigator
-    sceneHierarchy.Render(rf.rdEntities);
+    //sceneHierarchy.RenderSHierarchy(rf.rdEntities, nullptr);
 
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());

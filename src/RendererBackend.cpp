@@ -123,7 +123,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc, float smoothness)
     tmpLCB.numPLights = 0;
     rhi.context->UpdateSubresource(lightsCB, 0, nullptr, &tmpLCB, 0, 0);
 
-	for (SubmeshInfo const &sbPair : viewDesc.submeshBufferPairs) {
+	for (SubmeshInfo const &sbPair : viewDesc.submeshesInfo) {
 		rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
 		rhi.context->IASetIndexBuffer(bufferCache.GetIndexBuffer(sbPair.bufferHnd).buffer.Get(), DXGI_FORMAT_R16_UINT, 0);
 
@@ -136,7 +136,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc, float smoothness)
 		rhi.context->UpdateSubresource(matPrmsCB, 0, nullptr, &mat.matPrms, 0, 0);
 		rhi.context->PSSetConstantBuffers(1, 1, &matPrmsCB);
 
-        ObjCB tmpOCB{ dx::XMMatrixTranspose(sbPair.localWorldTransf) };
+        ObjCB tmpOCB{ dx::XMMatrixTranspose(sbPair.finalWorldTransf) };
         rhi.context->UpdateSubresource(objectCB, 0, nullptr, &tmpOCB, 0, 0);
 
 		RHIState state = RHI_DEFAULT_STATE();

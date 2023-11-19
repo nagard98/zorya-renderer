@@ -17,6 +17,8 @@ public:
 	~ResourceCache();
 
 	MaterialCacheHandle_t AllocMaterial(const MaterialDesc &matDesc);
+	void UpdateMaterialSmoothness(const MaterialCacheHandle_t matHnd, float smoothness );
+	void UpdateMaterialAlbedoMap(const MaterialCacheHandle_t matHnd, const wchar_t* albedoMapPath);
 
 	std::vector<Material> materialCache;
 };

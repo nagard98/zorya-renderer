@@ -5,6 +5,7 @@
 #include <d3d11_1.h>
 #include <wrl/client.h>
 #include <cstdint>
+#include <cassert>
 
 namespace wrl = Microsoft::WRL;
 
@@ -41,4 +42,16 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc)
 	materialCache.push_back(m);
 
 	return MaterialCacheHandle_t{ (std::uint16_t)(materialCache.size() - 1), 1 };
+}
+
+void ResourceCache::UpdateMaterialSmoothness(const MaterialCacheHandle_t matHnd, float smoothness)
+{
+	assert(matHnd.isCached);
+	assert(smoothness >= 0.0f && smoothness <= 1.0f);
+	Material& matCache = materialCache.at(matHnd.index);
+	matCache.matPrms.smoothness = smoothness;
+}
+
+void ResourceCache::UpdateMaterialAlbedoMap(const MaterialCacheHandle_t matHnd, const wchar_t* albedoMapPath)
+{
 }
