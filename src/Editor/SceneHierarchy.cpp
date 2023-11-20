@@ -1,6 +1,8 @@
-#include "Editor/SceneHierarchy.h"
+#include <Editor/SceneHierarchy.h>
 #include "ResourceCache.h"
 #include "imgui.h"
+#include "SceneGraph.h"
+#include "RendererFrontend.h"
 
 SceneHierarchy::SceneHierarchy()
 {
@@ -12,33 +14,39 @@ SceneHierarchy::~SceneHierarchy()
 {
 }
 
-void SceneHierarchy::RenderSHierarchy(const std::vector<RenderableEntity>& entities, RenderableEntity* selectedEntity)
+void SceneHierarchy::RenderSHierarchy(const SceneGraph<RenderableEntity>& entities, std::uint32_t& selectedEntity)
 {
-    ImGuiTreeNodeFlags nodeFlags;
-
     ImGui::Begin("Scene Hierarchy");
 
-    for (const RenderableEntity& entity : entities) {
-        nodeFlags = baseFlags;
-        //if (entity.modelHnd.numMeshes == 1) {
-        //    nodeFlags |= ImGuiTreeNodeFlags_Leaf;
-        //}
-        if (entity.ID == selectedItem) {
-            nodeFlags |= ImGuiTreeNodeFlags_Selected;
-        }
-        bool isNodeOpen = ImGui::TreeNodeEx(entity.entityName.c_str(), nodeFlags);
-        if (ImGui::IsItemClicked()) {
-            selectedItem = entity.ID;
-            //selectedEntity = entity.;
-        }
-        if (isNodeOpen) {
-            ImGui::Text(std::to_string(entity.submeshHnd.baseIndex).c_str());
-            ImGui::TreePop();
-        }
+    for (const Node<RenderableEntity>* entity : entities.rootNode->children) {
+        RenderSHNode(entity);
     }
 
     ImGui::End();
 
+    selectedEntity = selectedItem;
+
+}
+
+void SceneHierarchy::RenderSHNode(const Node<RenderableEntity>* entity)
+{
+    ImGuiTreeNodeFlags nodeFlags = baseFlags;
+    if (entity->children.size() == 0) {
+        nodeFlags |= ImGuiTreeNodeFlags_Leaf;
+    }
+    if (entity->value.ID == selectedItem) {
+        nodeFlags |= ImGuiTreeNodeFlags_Selected;
+    }
+    bool isNodeOpen = ImGui::TreeNodeEx(entity->value.entityName.c_str(), nodeFlags);
+    if (ImGui::IsItemClicked()) {
+        selectedItem = entity->value.ID;
+    }
+    if (isNodeOpen) {
+        for (const Node<RenderableEntity>* childEnt : entity->children) {
+            RenderSHNode(childEnt);
+        }
+        ImGui::TreePop();
+    }
 }
 
 

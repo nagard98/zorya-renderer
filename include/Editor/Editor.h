@@ -2,22 +2,19 @@
 #define EDITOR_H_
 
 #include "SceneHierarchy.h"
-#include "EntityProperties.h"
+#include "EntityOutline.h"
 
+#include <SceneGraph.h>
 #include <RendererFrontend.h>
 #include <vector>
 
 class Editor {
 
 public:
-	Editor();
-	~Editor();
-
-	void RenderEditor(const std::vector<RenderableEntity>& entities);
+	void RenderEditor(RendererFrontend& rf);
 
 	SceneHierarchy sceneHier;
-	EntityProperties entityProps;
-
+	EntityOutline entityProps;
 };
 
 #endif

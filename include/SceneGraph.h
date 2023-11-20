@@ -24,8 +24,7 @@ public:
 		parentNode->children.push_back(newNode);
 	}
 
-private:
-	Node<T>* findNode(Node<T>* startNode, const T& nodeValue) {
+	Node<T>* findNode(Node<T>* startNode, const T& nodeValue) const {
 		if (startNode == nullptr) return nullptr;
 
 		if (startNode->value == nodeValue) return startNode;

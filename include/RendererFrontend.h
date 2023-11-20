@@ -22,6 +22,14 @@ namespace dx = DirectX;
 //	std::uint8_t isValid;
 //};
 
+struct Transform_t {
+	dx::XMFLOAT3 pos;
+	dx::XMFLOAT3 rot;
+	dx::XMFLOAT3 scal;
+};
+
+constexpr Transform_t IDENTITY_TRANSFORM{ dx::XMFLOAT3(0.0f,0.0f,0.0f), dx::XMFLOAT3(0.0f,0.0f,0.0f), dx::XMFLOAT3(1.0f,1.0f,1.0f) };
+
 struct RenderableEntity {
 	bool operator==(const RenderableEntity& r) {
 		return ID == r.ID;
@@ -30,14 +38,15 @@ struct RenderableEntity {
 	std::uint32_t ID;
 	SubmeshHandle_t submeshHnd;
 	std::string entityName;
-	dx::XMMATRIX localWorldTransf;
+	Transform_t localWorldTransf;
+	//dx::XMMATRIX localWorldTransf;
 	//Bound aabb;
 };
 
 struct SubmeshInfo {
 	SubmeshHandle_t submeshHnd;
 	BufferCacheHandle_t bufferHnd;
-	MaterialCacheHandle_t matHnd;
+	MaterialCacheHandle_t matCacheHnd;
 	dx::XMMATRIX finalWorldTransf;
 };
 
@@ -67,12 +76,13 @@ public:
 	std::vector<Vertex> staticSceneVertexData; //mesh vertex data base indexed by part of submesh handle
 	std::vector<std::uint16_t> staticSceneIndexData; //mesh index data base indexed by part of submesh handle
 
+	SubmeshInfo* findSubmeshInfo(SubmeshHandle_t sHnd);
+
 private:
 	void LoadNodeChildren(const aiScene* scene, aiNode** children, unsigned int numChildren, RenderableEntity& parentRE);
-	void LoadNodeMeshes(const aiScene* scene, unsigned int* meshesIndices, unsigned int numMeshes, RenderableEntity& parentRE);
+	RenderableEntity LoadNodeMeshes(const aiScene* scene, unsigned int* meshesIndices, unsigned int numMeshes, RenderableEntity& parentRE, const Transform_t& localTransf = IDENTITY_TRANSFORM);
 	Assimp::Importer importer;
 
-	SubmeshInfo& findSubmeshInfo(SubmeshHandle_t sHnd);
 	void ParseSceneGraph(const Node<RenderableEntity>* node, const dx::XMMATRIX& parentTransf, std::vector<SubmeshInfo>& submeshesInView);
 };
 

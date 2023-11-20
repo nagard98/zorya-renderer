@@ -46,6 +46,7 @@ VS_OUTPUT vs(VS_INPUT Input)
     Output.posViewSpace = mul(Input.vPosition, mul(worldMatrix, viewMatrix));
     float4x4 WVPMat = mul(worldMatrix, mul(viewMatrix, projMatrix));
     Output.vPosition = mul(Input.vPosition, WVPMat);
+
     Output.texCoord = Input.texCoord;
     Output.vNormal = mul(float4(Input.vNormal,0.0f), mul(worldMatrix, viewMatrix));
     

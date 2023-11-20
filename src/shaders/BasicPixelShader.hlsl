@@ -76,11 +76,12 @@ PS_OUTPUT ps(PS_INPUT input)
     float4 tex = 0.0f;
     if (hasAlbedoMap == true)
     {
-        tex = ObjTexture.Sample(ObjSamplerState, input.texCoord);
+        tex = ObjTexture.Sample(ObjSamplerState, input.texCoord) * baseColor;
+
     }
     else
     {
-        tex = baseColor.a == 0.0f ? float4(0.5f, 0.5f, 0.5f, 1.0f) : baseColor;
+        tex = baseColor;
     }
     
     
@@ -93,7 +94,7 @@ PS_OUTPUT ps(PS_INPUT input)
         col += computeColPointLight(pointLights[i], input.posViewSpace, input.fNormal, tex);
     }
 
-    float gamma = 1 / 2.2f;
+    float gamma = 1/2.2f;
     output.vCol = float4(saturate(pow(col, gamma)), tex.w);
     
 	return output;
@@ -101,7 +102,7 @@ PS_OUTPUT ps(PS_INPUT input)
 
 float3 lambertianDiffuse(float3 baseColor, float3 lightColor, float NdotL)
 {
-    return saturate(baseColor * revPi * float3(3.14f, 3.14f, 3.14f) * NdotL);
+    return saturate(baseColor * revPi * lightColor * NdotL);
 }
 
 float3 blinnPhongSpecular(float3 lightColor, float shininess, float HdotN)
@@ -121,7 +122,7 @@ float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal
     float specAngle = max(dot(halfVec, normal), 0.0f);
     float3 specularCol = (1.0f - INNER_REFLECTANCE) * blinnPhongSpecular(1.0f, smoothness * MAX_SHININESS, specAngle) * SPECULAR_STRENGTH;
     
-    float3 ambCol = float3(0.08f, 0.08f, 0.08f) * tex.rgb;
+    float3 ambCol = float3(0.05f, 0.05f, 0.05f) * tex.rgb;
     
     return saturate(diffuseCol + specularCol + ambCol);
 }
@@ -140,7 +141,7 @@ float3 computeColPointLight(PointLight pLight, float4 fragPos, float3 normal, fl
     float specAngle = max(dot(halfVec, normal), 0.0f);
     float3 specCol = (1.0f - INNER_REFLECTANCE) * blinnPhongSpecular(1.0f * attenuation, smoothness * MAX_SHININESS, specAngle) * SPECULAR_STRENGTH;
     
-    float3 ambCol = attenuation * float3(0.1f, 0.1f, 0.1f) * tex.xyz;
+    float3 ambCol = attenuation * float3(0.05f, 0.05f, 0.05f) * tex.xyz;
     
     return saturate(diffCol + specCol + ambCol);
 }

@@ -16,24 +16,47 @@
 #include "ResourceCache.h"
 #include "Camera.h"
 #include "SceneGraph.h"
+#include "Shaders.h"
+
+#include <cstdlib>
 
 namespace dx = DirectX;
 
 RendererFrontend rf;
 
-dx::XMMATRIX buildDXTransform(aiMatrix4x4 assTransf) {
+dx::XMMATRIX mult(const Transform_t& a, const Transform_t& b) {
+    dx::XMMATRIX matTransfA = dx::XMMatrixMultiply(dx::XMMatrixRotationRollPitchYaw(a.rot.x, a.rot.y, a.rot.z), dx::XMMatrixScaling(a.scal.x, a.scal.y, a.scal.z));
+    matTransfA = dx::XMMatrixMultiply(dx::XMMatrixTranslation(a.pos.x, a.pos.y, a.pos.z), matTransfA);
+    
+    dx::XMMATRIX matTransfB = dx::XMMatrixMultiply(dx::XMMatrixRotationRollPitchYaw(b.rot.x, b.rot.y, b.rot.z), dx::XMMatrixScaling(b.scal.x, b.scal.y, b.scal.z));
+    matTransfB = dx::XMMatrixMultiply(dx::XMMatrixTranslation(b.pos.x, b.pos.y, b.pos.z), matTransfB);
+
+    return dx::XMMatrixMultiply(matTransfA, matTransfB);
+}
+
+dx::XMMATRIX mult(const Transform_t& a, const dx::XMMATRIX& b) {
+    dx::XMMATRIX matTransfA = dx::XMMatrixMultiply(dx::XMMatrixRotationRollPitchYaw(a.rot.x, a.rot.y, a.rot.z), dx::XMMatrixScaling(a.scal.x, a.scal.y, a.scal.z));
+    matTransfA = dx::XMMatrixMultiply(dx::XMMatrixTranslation(a.pos.x, a.pos.y, a.pos.z), matTransfA);
+
+    return dx::XMMatrixMultiply(matTransfA, b);
+}
+
+Transform_t buildDXTransform(aiMatrix4x4 assTransf) {
     aiVector3D scal;
     aiQuaternion quat;
     aiVector3D pos;
+    aiVector3D rot;
     assTransf.Decompose(scal, quat, pos);
+    assTransf.Decompose(scal, rot, pos);
 
     dx::XMMATRIX transMat = dx::XMMatrixTranslation(pos.x, pos.y, pos.z);
     dx::XMMATRIX rotMat = dx::XMMatrixRotationQuaternion(dx::XMVectorSet(quat.x, quat.y, quat.z, quat.w));
     dx::XMMATRIX scalMat = dx::XMMatrixScaling(scal.x, scal.y, scal.z);
-    return dx::XMMatrixMultiply(transMat, dx::XMMatrixMultiply(rotMat, scalMat));
+    //return dx::XMMatrixMultiply(transMat, dx::XMMatrixMultiply(rotMat, scalMat));
+    return Transform_t{ dx::XMFLOAT3{pos.x, pos.y, pos.z}, dx::XMFLOAT3{rot.x, rot.y, rot.z}, dx::XMFLOAT3{scal.x, scal.y, scal.z} };
 }
 
-RendererFrontend::RendererFrontend() : sceneGraph( RenderableEntity{ 0,SubmeshHandle_t{0,0,0},"scene", dx::XMMatrixIdentity() } ) {}
+RendererFrontend::RendererFrontend() : sceneGraph( RenderableEntity{ 0,SubmeshHandle_t{0,0,0},"scene", IDENTITY_TRANSFORM } ) {}
    
 RendererFrontend::~RendererFrontend()
 {
@@ -91,7 +114,8 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
 
     aiNode* rootNode = scene->mRootNode;
     
-    dx::XMMATRIX localTransf = buildDXTransform(rootNode->mTransformation);
+    //dx::XMMATRIX localTransf = buildDXTransform(rootNode->mTransformation);
+    Transform_t localTransf = buildDXTransform(rootNode->mTransformation);
     rEnt = RenderableEntity{ hash_str_uint32(scene->GetShortFilename(filename.c_str())), SubmeshHandle_t{0,0,0}, scene->GetShortFilename(filename.c_str()), localTransf };
     sceneGraph.insertNode(RenderableEntity{ 0 }, rEnt);
 
@@ -104,12 +128,17 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
 void RendererFrontend::LoadNodeChildren(const aiScene* scene, aiNode** children, unsigned int numChildren, RenderableEntity& parentRE)
 {
     for (int i = 0; i < numChildren; i++) {
-        dx::XMMATRIX localTransf = buildDXTransform(children[i]->mTransformation);
+        Transform_t localTransf = buildDXTransform(children[i]->mTransformation);
 
-        RenderableEntity rEnt{ hash_str_uint32(children[i]->mName.C_Str()), SubmeshHandle_t{0,0,0}, children[i]->mName.C_Str(), localTransf };
-        sceneGraph.insertNode(parentRE, rEnt);
-
-        LoadNodeMeshes(scene, children[i]->mMeshes, children[i]->mNumMeshes, rEnt);
+        RenderableEntity rEnt;
+        if (children[i]->mNumMeshes == 1) {
+            rEnt = LoadNodeMeshes(scene, children[i]->mMeshes, children[i]->mNumMeshes, parentRE, localTransf);
+        }
+        else {
+            rEnt = RenderableEntity{ hash_str_uint32(children[i]->mName.C_Str()), SubmeshHandle_t{ 0,0,0 }, children[i]->mName.C_Str(), localTransf };
+            sceneGraph.insertNode(parentRE, rEnt);
+            LoadNodeMeshes(scene, children[i]->mMeshes, children[i]->mNumMeshes, rEnt);
+        }
 
         if (children[i]->mNumChildren > 0) {
             LoadNodeChildren(scene, children[i]->mChildren, children[i]->mNumChildren, rEnt);
@@ -117,12 +146,13 @@ void RendererFrontend::LoadNodeChildren(const aiScene* scene, aiNode** children,
     }
 }
 
-void RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned int* meshesIndices, unsigned int numMeshes, RenderableEntity& parentRE)
+RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned int* meshesIndices, unsigned int numMeshes, RenderableEntity& parentRE, const Transform_t& localTransf)
 {
     //assert(numMeshes <= 1);
     aiReturn success;
 
     SubmeshHandle_t submeshHandle{ 0,0,0,0 };
+    RenderableEntity rEnt{};
 
     for (int j = 0; j < numMeshes; j++) {
         //assert(numMeshes <= 1);
@@ -137,7 +167,7 @@ void RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned int* meshes
         }
 
         MaterialDesc matDesc;
-        matDesc.shaderType = SHADER_TYPE::STANDARD;
+        matDesc.shaderType = PShaderID::STANDARD;
 
         aiString diffTexName;
         int count = material->GetTextureCount(aiTextureType_DIFFUSE);
@@ -148,20 +178,19 @@ void RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned int* meshes
             }
 
         }
-
         //TODO: implement reading material info in material desc
         aiColor4D col;
         success = material->Get(AI_MATKEY_BASE_COLOR, col);
-        matDesc.baseColor = dx::XMFLOAT4(col.r, col.g, col.b, col.a);
+        matDesc.baseColor = dx::XMFLOAT4(1.0f,1.0f,1.0f,1.0f);
         matDesc.smoothness = 0.5f;
         matDesc.metalness = 0.0f;
-        matDesc.albedoPath = L""; // L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg";
-        matDesc.normalPath = L""; // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
-        matDesc.metalnessMask = L"";
+        wcscpy(matDesc.albedoPath, L""); // L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg";
+        wcscpy(matDesc.normalPath, L""); // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
+        wcscpy(matDesc.metalnessMask, L"");
 
         materials.push_back(matDesc);
 
-        submeshHandle.materialIdx = materials.size() - 1;
+        submeshHandle.matDescIdx = materials.size() - 1;
         submeshHandle.numVertices = mesh->mNumVertices;
         submeshHandle.baseVertex = staticSceneVertexData.size();
 
@@ -192,40 +221,42 @@ void RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned int* meshes
         }
 
         //TODO: maybe implement move for submeshHandle?
-        sceneMeshes.push_back(SubmeshInfo{ submeshHandle, BufferCacheHandle_t{0,0}, MaterialCacheHandle_t{0,0}, dx::XMMatrixIdentity() });
+        sceneMeshes.emplace_back(SubmeshInfo{ submeshHandle, BufferCacheHandle_t{0,0}, MaterialCacheHandle_t{0, UPDATE_MAT_MAPS | UPDATE_MAT_PRMS | IS_FIRST_MAT_ALLOC}, dx::XMMatrixIdentity() });
 
-        RenderableEntity rEnt{ hash_str_uint32(std::to_string(submeshHandle.baseVertex)), submeshHandle, mesh->mName.C_Str(), dx::XMMatrixIdentity() };
+        rEnt = RenderableEntity{ hash_str_uint32(std::to_string(submeshHandle.baseVertex)), submeshHandle, mesh->mName.C_Str(), localTransf };
         sceneGraph.insertNode(parentRE, rEnt);
     }
+
+    return rEnt;
 }
 
-SubmeshInfo& RendererFrontend::findSubmeshInfo(SubmeshHandle_t sHnd) {
+SubmeshInfo* RendererFrontend::findSubmeshInfo(SubmeshHandle_t sHnd) {
     for (SubmeshInfo& sbInfo : sceneMeshes) {
         //TODO: make better comparison
-        if (sbInfo.submeshHnd.baseVertex == sHnd.baseVertex) {
-            return sbInfo;
+        if (sbInfo.submeshHnd.baseVertex == sHnd.baseVertex && sbInfo.submeshHnd.numVertices == sHnd.numVertices) {
+            return &sbInfo;
         }
     }
-    assert(false);
+    return nullptr;
 }
 
 void RendererFrontend::ParseSceneGraph(const Node<RenderableEntity>* node, const dx::XMMATRIX& parentTransf, std::vector<SubmeshInfo>& submeshesInView) {
-    dx::XMMATRIX newTransf = dx::XMMatrixMultiply(node->value.localWorldTransf, parentTransf);
+    dx::XMMATRIX newTransf = mult(node->value.localWorldTransf, parentTransf);
     if (node->value.submeshHnd.numVertices > 0) {
-        SubmeshInfo& sbPair = findSubmeshInfo(node->value.submeshHnd);
+        SubmeshInfo* sbPair = findSubmeshInfo(node->value.submeshHnd);
         //TODO: implement frustum culling
 
-        bool cached = sbPair.bufferHnd.isCached; //bufferCache.isCached(sHnd);
+        bool cached = sbPair->bufferHnd.isCached; 
         if (!cached) {
-            sbPair.bufferHnd = bufferCache.AllocStaticGeom(sbPair.submeshHnd, staticSceneIndexData.data() + sbPair.submeshHnd.baseIndex, staticSceneVertexData.data() + sbPair.submeshHnd.baseVertex);
+            sbPair->bufferHnd = bufferCache.AllocStaticGeom(sbPair->submeshHnd, staticSceneIndexData.data() + sbPair->submeshHnd.baseIndex, staticSceneVertexData.data() + sbPair->submeshHnd.baseVertex);
         }
 
-        cached = sbPair.matHnd.isCached;
+        cached = (sbPair->matCacheHnd.isCached & (UPDATE_MAT_MAPS | UPDATE_MAT_PRMS)) == 0;
         if (!cached) {
-            sbPair.matHnd = resourceCache.AllocMaterial(materials.at(sbPair.submeshHnd.materialIdx));
+            sbPair->matCacheHnd = resourceCache.AllocMaterial(materials.at(sbPair->submeshHnd.matDescIdx), sbPair->matCacheHnd);
         }
-        sbPair.finalWorldTransf = newTransf;
-        submeshesInView.push_back(sbPair);
+        sbPair->finalWorldTransf = newTransf;
+        submeshesInView.push_back(*sbPair);
         
     }
     

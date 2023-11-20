@@ -21,7 +21,7 @@ struct ModelHandle_t {
 };
 
 struct SubmeshHandle_t {
-    std::uint16_t materialIdx;
+    std::uint16_t matDescIdx;
     std::uint32_t baseVertex;
     std::uint32_t baseIndex;
     std::uint32_t numVertices;

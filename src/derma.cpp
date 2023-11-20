@@ -26,7 +26,7 @@
 #include "RenderHardwareInterface.h"
 #include "RendererFrontend.h"
 #include "RendererBackend.h"
-#include "Editor/SceneHierarchy.h"
+#include <Editor/Editor.h>
 #include "SceneGraph.h"
 
 #include <assimp/Importer.hpp>
@@ -59,7 +59,7 @@ const BOOL g_enableVSync = TRUE;
 
 Assimp::Importer importer;
 
-SceneHierarchy sceneHierarchy;
+Editor editor;
 
 wrl::ComPtr<ID3D11ShaderResourceView> cubemapView;
 
@@ -293,15 +293,16 @@ HRESULT InitData() {
     HRESULT hr;
     rf.InitScene();
     rb.Init();
+    shaders.Init();
 
     hr = LoadSkybox(L"./shaders/assets/skybox_space.dds");
     RETURN_IF_FAILED(hr);
 
     //RenderableEntity mHnd4 = rf.LoadModelFromFile("./shaders/assets/nissan/source/nissan2.obj");
     //RenderableEntity mHnd5 = rf.LoadModelFromFile("./shaders/assets/cornell/cornell.fbx");
-    RenderableEntity mHnd = rf.LoadModelFromFile("./shaders/assets/perry/head.obj");
-    //RenderableEntity mHnd2 = rf.LoadModelFromFile("./shaders/assets/cicada/source/cicada2.fbx");
-    //RenderableEntity mHnd3 = rf.LoadModelFromFile("./shaders/assets/Human/Models/Head/Head.fbx");
+    //RenderableEntity mHnd = rf.LoadModelFromFile("./shaders/assets/perry/head.obj");
+    RenderableEntity mHnd2 = rf.LoadModelFromFile("./shaders/assets/cicada/source/cicada.fbx");
+    RenderableEntity mHnd3 = rf.LoadModelFromFile("./shaders/assets/Human/Models/Head/Head.fbx");
     //RenderableEntity mHnd5 = rf.LoadModelFromFile("./shaders/assets/cubetest.fbx");
 
     wrl::ComPtr<ID3DBlob> verShaderBlob ;
@@ -350,7 +351,6 @@ HRESULT InitData() {
 }
 
 float rot = 0.0f;
-float smoothness = 0.5f;
 
 void RenderSHierarchy() {
     ImGui_ImplDX11_NewFrame();
@@ -393,16 +393,15 @@ void RenderSHierarchy() {
     const ViewDesc vDesc = rf.ComputeView(g_cam);
 
     //TODO: remove parameter smoothness from RenderView; used only for initial development testing
-    rb.RenderView(vDesc, smoothness);
+    rb.RenderView(vDesc);
     //-------------------------------------------------------------
 
     ImGui::Begin("Debug");
-    ImGui::SliderFloat("smoothness", &smoothness, 0.0f, 1.0f);
     ImGui::Text("mouse X: %d \nmouse Y: %d\n ", mouse.relX, mouse.relY);
     ImGui::End();
 
-    //Scene navigator
-    //sceneHierarchy.RenderSHierarchy(rf.rdEntities, nullptr);
+    //editor
+    editor.RenderEditor(rf);
 
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());

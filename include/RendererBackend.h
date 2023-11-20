@@ -38,7 +38,7 @@ public:
 	//TODO: change return type to custom wrapper
 	HRESULT Init();
 
-	void RenderView(const ViewDesc& viewDesc, float smootness);
+	void RenderView(const ViewDesc& viewDesc);
 
 	ID3D11Buffer* matPrmsCB;
 	ID3D11Buffer* lightsCB;

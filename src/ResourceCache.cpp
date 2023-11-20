@@ -1,6 +1,7 @@
 #include "ResourceCache.h"
 #include "RenderHardwareInterface.h"
 #include "Shaders.h"
+#include "Material.h"
 
 #include <d3d11_1.h>
 #include <wrl/client.h>
@@ -19,29 +20,36 @@ ResourceCache::~ResourceCache()
 {
 }
 
-MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc)
+MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, MaterialCacheHandle_t& matCacheHnd)
 {
-	Material m;
-	rhi.LoadTexture(matDesc.albedoPath, m.albedoMap);
-	rhi.LoadTexture(matDesc.normalPath, m.normalMap, false);
-	rhi.LoadTexture(matDesc.metalnessMask, m.metalnessMap);
+	Material* m;
+	int matIndex = matCacheHnd.index;
+	if ((matCacheHnd.isCached & IS_FIRST_MAT_ALLOC) == IS_FIRST_MAT_ALLOC) {
+		materialCache.push_back(Material{});
+		matIndex = materialCache.size() - 1;
+	}
 
-	m.matPrms.hasAlbedoMap = m.albedoMap.resourceView != nullptr;
-	m.matPrms.hasNormalMap = m.normalMap.resourceView != nullptr;
-	m.matPrms.hasMetalnessMap = m.metalnessMap.resourceView != nullptr;
+	m = &materialCache.at(matIndex);
+	m->model.shader = shaders.pixelShaders.at((std::uint8_t)PShaderID::STANDARD);
 
-	m.matPrms.baseColor = matDesc.baseColor;
-	m.matPrms.metalness = matDesc.metalness;
-	m.matPrms.smoothness = matDesc.smoothness;
+	if ((matCacheHnd.isCached & UPDATE_MAT_MAPS)) {
+		
+		rhi.LoadTexture(matDesc.albedoPath, m->albedoMap);
+		rhi.LoadTexture(matDesc.normalPath, m->normalMap, false);
+		rhi.LoadTexture(matDesc.metalnessMask, m->metalnessMap);
+	}
 
-	wrl::ComPtr<ID3DBlob> blob;
-	//TODO:implement correctly instead of hard coding
-	HRESULT hRes = LoadShader<ID3D11PixelShader>(L"./shaders/BasicPixelShader.hlsl", "ps", blob.GetAddressOf(), &m.model.shader, rhi.device.Get());
+	if ((matCacheHnd.isCached & UPDATE_MAT_PRMS)) {
+		m->matPrms.hasAlbedoMap = m->albedoMap.resourceView != nullptr;
+		m->matPrms.hasNormalMap = m->normalMap.resourceView != nullptr;
+		m->matPrms.hasMetalnessMap = m->metalnessMap.resourceView != nullptr;
 
-	//TODO::implement std::move
-	materialCache.push_back(m);
+		m->matPrms.baseColor = matDesc.baseColor;
+		m->matPrms.metalness = matDesc.metalness;
+		m->matPrms.smoothness = matDesc.smoothness;
+	}
 
-	return MaterialCacheHandle_t{ (std::uint16_t)(materialCache.size() - 1), 1 };
+	return MaterialCacheHandle_t{ (std::uint16_t)matIndex, NO_UPDATE_MAT };
 }
 
 void ResourceCache::UpdateMaterialSmoothness(const MaterialCacheHandle_t matHnd, float smoothness)

@@ -3,27 +3,32 @@
 
 #include <DirectXMath.h>
 #include <string>
+#include <cstdint>
+#include "Shaders.h"
 
 #include <d3d11.h>
 
 namespace dx = DirectX;
 
-enum class SHADER_TYPE {
-	STANDARD
-};
+
+constexpr std::uint8_t NO_UPDATE_MAT = 0;
+constexpr std::uint8_t UPDATE_MAT_PRMS = 1;
+constexpr std::uint8_t UPDATE_MAT_MAPS = 2;
+constexpr std::uint8_t IS_FIRST_MAT_ALLOC = 4;
+
 
 struct MaterialDesc {
-	SHADER_TYPE shaderType;
+	PShaderID shaderType;
 
-	const wchar_t* albedoPath;
+	wchar_t albedoPath[128];
 	dx::XMFLOAT4 baseColor;
 
 	float smoothness;
 
 	float metalness;
-	const wchar_t* metalnessMask;
+	wchar_t metalnessMask[128];
 
-	const wchar_t* normalPath;
+	wchar_t normalPath[128];
 };
 
 struct Texture2D {

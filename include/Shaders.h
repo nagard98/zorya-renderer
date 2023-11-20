@@ -5,6 +5,35 @@
 #include <d3d11_1.h>
 #include <d3dcompiler.h>
 #include <string>
+#include <cstdint>
+#include <vector>
+
+enum class VShaderID : std::uint8_t {
+    STANDARD,
+    SKYBOX,
+    NUM_SHADERS
+};
+
+enum class PShaderID : std::uint8_t {
+    STANDARD,
+    SKYBOX,
+    NUM_SHADERS
+};
+
+class Shaders {
+public:
+
+    HRESULT Init();
+    HRESULT BuildDefaultShaders();
+
+    std::vector<ID3D11VertexShader*> vertexShaders;
+    std::vector<ID3D11PixelShader*> pixelShaders;
+};
+
+extern Shaders shaders;
+
+extern std::vector<ID3D11VertexShader*> vertexShaders;
+extern std::vector<ID3D11PixelShader*> pixelShaders;
 
 template<class ShaderClass>
 HRESULT CreateShader(ID3DBlob* pShaderBlob, ShaderClass** pShader, ID3D11Device* g_d3dDevice);
@@ -37,6 +66,11 @@ HRESULT LoadShader(const std::wstring& shaderFilename, const std::string& entryp
     }
 
     return S_OK;
+}
+
+template<class ShaderClass>
+HRESULT InitShaders() {
+
 }
 
 #endif // ! SHADERS_H_

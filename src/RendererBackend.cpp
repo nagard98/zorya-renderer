@@ -101,7 +101,7 @@ HRESULT RendererBackend::Init()
 	
 }
 
-void RendererBackend::RenderView(const ViewDesc& viewDesc, float smoothness)
+void RendererBackend::RenderView(const ViewDesc& viewDesc)
 {
 
 	std::uint32_t strides[] = { sizeof(Vertex) };
@@ -127,12 +127,11 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc, float smoothness)
 		rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
 		rhi.context->IASetIndexBuffer(bufferCache.GetIndexBuffer(sbPair.bufferHnd).buffer.Get(), DXGI_FORMAT_R16_UINT, 0);
 
-		Material &mat = resourceCache.materialCache.at(sbPair.matHnd.index);
+		Material &mat = resourceCache.materialCache.at(sbPair.matCacheHnd.index);
 		rhi.context->PSSetShaderResources(0, 1, &mat.albedoMap.resourceView);
 		rhi.context->PSSetShaderResources(1, 1, &mat.normalMap.resourceView);
 		rhi.context->PSSetShader(mat.model.shader, 0, 0);
 
-		mat.matPrms.smoothness = smoothness;
 		rhi.context->UpdateSubresource(matPrmsCB, 0, nullptr, &mat.matPrms, 0, 0);
 		rhi.context->PSSetConstantBuffers(1, 1, &matPrmsCB);
 
@@ -141,7 +140,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc, float smoothness)
 
 		RHIState state = RHI_DEFAULT_STATE();
 		RHI_RS_SET_CULL_BACK(state);
-		RHI_OM_DS_SET_DEPTH_COMP_LESS_EQ(state);
+		RHI_OM_DS_SET_DEPTH_COMP_LESS(state);
 
 		rhi.SetState(state);
 
