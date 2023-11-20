@@ -11,7 +11,7 @@
 
 namespace wrl = Microsoft::WRL;
 
-#define MULTISAMPLE_COUNT 4
+#define MULTISAMPLE_COUNT 1
 
 #define RETURN_IF_FAILED(hResult) { if(FAILED(hResult)) return hResult; }
 
@@ -41,6 +41,7 @@ public:
 	wrl::ComPtr<ID3D11DeviceContext> context;
 	wrl::ComPtr<IDXGISwapChain> swapChain;
 	wrl::ComPtr<ID3D11RenderTargetView> renderTargetView;
+	wrl::ComPtr<ID3D11ShaderResourceView> renderTargetShaderResourceView;
 	wrl::ComPtr<ID3D11DepthStencilView> depthStencilView;
 
 	D3D_FEATURE_LEVEL featureLevel; //feature level found for device

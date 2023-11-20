@@ -65,7 +65,7 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     scd.Windowed = TRUE;
     scd.OutputWindow = windowHandle;
     scd.BufferCount = 1;
-    scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_SHADER_INPUT;
 
     for (UINT driverIndex = 0; driverIndex < driverTypesNum; driverIndex++) {
         hRes = D3D11CreateDeviceAndSwapChain(
@@ -161,7 +161,34 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     hRes = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.GetAddressOf()));
     RETURN_IF_FAILED(hRes);
 
-    hRes = (device)->CreateRenderTargetView(backBuffer.Get(), nullptr, renderTargetView.GetAddressOf());
+    hRes = device->CreateRenderTargetView(backBuffer.Get(), nullptr, renderTargetView.GetAddressOf());
+    RETURN_IF_FAILED(hRes);
+
+
+    ID3D11Texture2D* rtTexture = nullptr;
+    D3D11_TEXTURE2D_DESC rtTexDesc;
+    ZeroMemory(&rtTexDesc, sizeof(rtTexDesc));
+    rtTexDesc.Format = scd.BufferDesc.Format;
+    rtTexDesc.Height = scd.BufferDesc.Height;
+    rtTexDesc.Width = scd.BufferDesc.Width;
+    rtTexDesc.MipLevels = 1;
+    rtTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    rtTexDesc.Usage = D3D11_USAGE_DEFAULT;
+    rtTexDesc.ArraySize = 1;
+    rtTexDesc.SampleDesc.Count = 1;
+    rtTexDesc.SampleDesc.Quality = 0;
+
+    hRes = rhi.device->CreateTexture2D(&rtTexDesc, nullptr, &rtTexture);
+    RETURN_IF_FAILED(hRes);
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    srvDesc.Texture2D.MipLevels = -1;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+
+    ID3D11ShaderResourceView* srvv = nullptr;
+    hRes = device->CreateShaderResourceView(rtTexture, &srvDesc, rhi.renderTargetShaderResourceView.GetAddressOf());
     RETURN_IF_FAILED(hRes);
 
     (context)->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), nullptr);

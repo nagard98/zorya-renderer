@@ -49,8 +49,8 @@
 namespace dx = DirectX;
 namespace wrl = Microsoft::WRL;
 
-const LONG g_windowWidth = 1280;
-const LONG g_windowHeight = 720;
+const LONG g_windowWidth = 1600;
+const LONG g_windowHeight = 900;
 LPCSTR g_windowClassName = "DirectXWindowClass";
 LPCSTR g_windowName = "Derma";
 HWND g_windowHandle = 0;
@@ -301,7 +301,7 @@ HRESULT InitData() {
     //RenderableEntity mHnd4 = rf.LoadModelFromFile("./shaders/assets/nissan/source/nissan2.obj");
     //RenderableEntity mHnd5 = rf.LoadModelFromFile("./shaders/assets/cornell/cornell.fbx");
     //RenderableEntity mHnd = rf.LoadModelFromFile("./shaders/assets/perry/head.obj");
-    RenderableEntity mHnd2 = rf.LoadModelFromFile("./shaders/assets/cicada/source/cicada.fbx");
+    //RenderableEntity mHnd2 = rf.LoadModelFromFile("./shaders/assets/cicada/source/cicada.fbx");
     RenderableEntity mHnd3 = rf.LoadModelFromFile("./shaders/assets/Human/Models/Head/Head.fbx");
     //RenderableEntity mHnd5 = rf.LoadModelFromFile("./shaders/assets/cubetest.fbx");
 
@@ -356,7 +356,9 @@ void RenderSHierarchy() {
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
-    ImGui::ShowDemoWindow();
+    //ImGui::ShowDemoWindow();
+
+    //rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), rhi.depthStencilView.Get());
 
     rhi.context->ClearRenderTargetView(rhi.renderTargetView.Get(), dx::Colors::Black);
     rhi.context->ClearDepthStencilView(rhi.depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
@@ -391,17 +393,21 @@ void RenderSHierarchy() {
     rhi.context->VSSetShader(g_d3dVertexShader.Get(), 0, 0);
     
     const ViewDesc vDesc = rf.ComputeView(g_cam);
-
-    //TODO: remove parameter smoothness from RenderView; used only for initial development testing
     rb.RenderView(vDesc);
     //-------------------------------------------------------------
 
-    ImGui::Begin("Debug");
-    ImGui::Text("mouse X: %d \nmouse Y: %d\n ", mouse.relX, mouse.relY);
-    ImGui::End();
+    //ImGui::Begin("Debug");
+    //ImGui::Text("mouse X: %d \nmouse Y: %d\n ", mouse.relX, mouse.relY);
+    //ImGui::End();
+
+    ID3D11Resource* srvTexture = nullptr;
+    ID3D11Resource* rtTexture = nullptr;
+    rhi.renderTargetShaderResourceView->GetResource(&srvTexture);
+    rhi.renderTargetView->GetResource(&rtTexture);
+    rhi.context->ResolveSubresource(srvTexture, 0, rtTexture, 0, DXGI_FORMAT_R8G8B8A8_UNORM);
 
     //editor
-    editor.RenderEditor(rf);
+    editor.RenderEditor(rf, rhi.renderTargetShaderResourceView.Get());
 
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());

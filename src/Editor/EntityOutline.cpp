@@ -22,8 +22,6 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 {
 	float angles[3] = { dx::XM_2PI * 2.0f,0.0f,0.0f };
 
-	ImGui::Begin("Entity Outline");
-
 	ImGui::SeparatorText("Transform");
 	{
 		ImGui::DragFloat3("Position", &entity.localWorldTransf.pos.x, 0.01f);
@@ -73,8 +71,5 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 			}
 		}
 	}
-
-
-	ImGui::End();
 
 }

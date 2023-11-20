@@ -16,13 +16,10 @@ SceneHierarchy::~SceneHierarchy()
 
 void SceneHierarchy::RenderSHierarchy(const SceneGraph<RenderableEntity>& entities, std::uint32_t& selectedEntity)
 {
-    ImGui::Begin("Scene Hierarchy");
 
     for (const Node<RenderableEntity>* entity : entities.rootNode->children) {
         RenderSHNode(entity);
     }
-
-    ImGui::End();
 
     selectedEntity = selectedItem;
 
