@@ -85,6 +85,8 @@ inline uint32_t hash_str_uint32(const std::string& str) {
 RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename, bool forceFlattenScene)
 {
     
+    importer.SetPropertyInteger(AI_CONFIG_PP_SLM_VERTEX_LIMIT, 65535);
+    importer.SetPropertyInteger(AI_CONFIG_PP_SLM_TRIANGLE_LIMIT, 65535);
     const aiScene* scene = importer.ReadFile(filename, 
         aiProcess_FindInvalidData |
         aiProcess_GenSmoothNormals | 
@@ -92,6 +94,7 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
         aiProcess_JoinIdenticalVertices | 
         aiProcess_CalcTangentSpace |
         aiProcess_GenBoundingBoxes |
+        aiProcess_SplitLargeMeshes |
         (forceFlattenScene ? aiProcess_PreTransformVertices : 0) |
         aiProcess_ConvertToLeftHanded
     );

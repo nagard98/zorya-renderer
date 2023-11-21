@@ -302,8 +302,9 @@ HRESULT InitData() {
     //RenderableEntity mHnd5 = rf.LoadModelFromFile("./shaders/assets/cornell/cornell.fbx");
     //RenderableEntity mHnd = rf.LoadModelFromFile("./shaders/assets/perry/head.obj");
     //RenderableEntity mHnd2 = rf.LoadModelFromFile("./shaders/assets/cicada/source/cicada.fbx");
-    RenderableEntity mHnd3 = rf.LoadModelFromFile("./shaders/assets/Human/Models/Head/Head.fbx");
-    //RenderableEntity mHnd5 = rf.LoadModelFromFile("./shaders/assets/cubetest.fbx");
+    //RenderableEntity mHnd3 = rf.LoadModelFromFile("./shaders/assets/Human/Models/Head/Head.fbx");
+    //RenderableEntity mHnd6 = rf.LoadModelFromFile("./shaders/assets/cubetest.fbx");
+    RenderableEntity mHnd7 = rf.LoadModelFromFile("./shaders/assets/nile/source/nile.obj");
 
     wrl::ComPtr<ID3DBlob> verShaderBlob ;
     hr = LoadShader<ID3D11VertexShader>(L"./shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), rhi.device.Get());
@@ -320,7 +321,7 @@ HRESULT InitData() {
 
 
     ////Camera setup-------------------------------------------------------------
-    dx::XMVECTOR camPos = dx::XMVectorSet(0.0f, 0.0f, -2.0f, 0.0f);
+    dx::XMVECTOR camPos = dx::XMVectorSet(0.0f, 0.0f, -5.0f, 0.0f);
     dx::XMVECTOR camDir = dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
     dx::XMVECTOR camUp = dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 

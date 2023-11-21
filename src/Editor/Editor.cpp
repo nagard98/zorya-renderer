@@ -71,8 +71,21 @@ void Editor::RenderEditor(RendererFrontend& rf, const ID3D11ShaderResourceView* 
 
 	ImGui::Begin("Scene");
 	{
+		float aspectRatio = 16.0f / 9.0f;
+		float padding = 20.0f;
 		ImVec2 size = ImGui::DockBuilderGetNode(sceneId)->Size;
-		size.y = (size.x * 900.0f) / 1600.0f;
+		ImVec2 center = ImVec2(size.x / 2, size.y / 2);
+
+		if (size.x / size.y > aspectRatio) {
+			size.x = (size.y * 1600.0f) / 900.0f;
+		}else{
+			size.y = (size.x * 900.0f) / 1600.0f;
+		}
+		size.x -= (2 * padding);
+		size.y -= (2 * padding);
+		
+		ImGui::SetCursorPos(ImVec2(center.x - (size.x / 2.0f), center.y - (size.y / 2.0f)));
+
 		ImGui::Image((void*)rtSRV, size);
 	}
 	ImGui::End();
