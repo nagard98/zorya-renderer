@@ -77,9 +77,9 @@ void Editor::RenderEditor(RendererFrontend& rf, const ID3D11ShaderResourceView* 
 		ImVec2 center = ImVec2(size.x / 2, size.y / 2);
 
 		if (size.x / size.y > aspectRatio) {
-			size.x = (size.y * 1600.0f) / 900.0f;
+			size.x = (size.y * 1280.0f) / 720.0f;
 		}else{
-			size.y = (size.x * 900.0f) / 1600.0f;
+			size.y = (size.x * 720.0f) / 1280.0f;
 		}
 		size.x -= (2 * padding);
 		size.y -= (2 * padding);

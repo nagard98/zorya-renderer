@@ -49,8 +49,8 @@
 namespace dx = DirectX;
 namespace wrl = Microsoft::WRL;
 
-const LONG g_windowWidth = 1600;
-const LONG g_windowHeight = 900;
+const LONG g_windowWidth = 1280;
+const LONG g_windowHeight = 720;
 LPCSTR g_windowClassName = "DirectXWindowClass";
 LPCSTR g_windowName = "Derma";
 HWND g_windowHandle = 0;
@@ -295,7 +295,7 @@ HRESULT InitData() {
     rb.Init();
     shaders.Init();
 
-    hr = LoadSkybox(L"./shaders/assets/skybox_space.dds");
+    hr = LoadSkybox(L"./shaders/assets/skybox.dds");
     RETURN_IF_FAILED(hr);
 
     //RenderableEntity mHnd4 = rf.LoadModelFromFile("./shaders/assets/nissan/source/nissan2.obj");
@@ -304,7 +304,9 @@ HRESULT InitData() {
     //RenderableEntity mHnd2 = rf.LoadModelFromFile("./shaders/assets/cicada/source/cicada.fbx");
     //RenderableEntity mHnd3 = rf.LoadModelFromFile("./shaders/assets/Human/Models/Head/Head.fbx");
     //RenderableEntity mHnd6 = rf.LoadModelFromFile("./shaders/assets/cubetest.fbx");
-    RenderableEntity mHnd7 = rf.LoadModelFromFile("./shaders/assets/nile/source/nile.obj");
+    //RenderableEntity mHnd7 = rf.LoadModelFromFile("./shaders/assets/nile/source/nile.obj");
+    RenderableEntity mHnd8 = rf.LoadModelFromFile("./shaders/assets/nixdorf/scene.gltf");
+    //RenderableEntity mHnd9 = rf.LoadModelFromFile("./shaders/assets/ye-gameboy/scene.gltf");
 
     wrl::ComPtr<ID3DBlob> verShaderBlob ;
     hr = LoadShader<ID3D11VertexShader>(L"./shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), rhi.device.Get());

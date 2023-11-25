@@ -84,9 +84,10 @@ inline uint32_t hash_str_uint32(const std::string& str) {
 
 RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename, bool forceFlattenScene)
 {
-    
+
     importer.SetPropertyInteger(AI_CONFIG_PP_SLM_VERTEX_LIMIT, 65535);
     importer.SetPropertyInteger(AI_CONFIG_PP_SLM_TRIANGLE_LIMIT, 65535);
+
     const aiScene* scene = importer.ReadFile(filename, 
         aiProcess_FindInvalidData |
         aiProcess_GenSmoothNormals | 
@@ -94,20 +95,20 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
         aiProcess_JoinIdenticalVertices | 
         aiProcess_CalcTangentSpace |
         aiProcess_GenBoundingBoxes |
-        aiProcess_SplitLargeMeshes |
+        //aiProcess_OptimizeGraph |
         (forceFlattenScene ? aiProcess_PreTransformVertices : 0) |
         aiProcess_ConvertToLeftHanded
     );
 
     aiReturn success;
 
-    RenderableEntity rEnt{ 0,0,0,0 };
+    RenderableEntity rootEnt{ 0,0,0,0 };
     SubmeshHandle_t submeshHandle{ 0,0,0,0 };
 
     if (scene == nullptr)
     {
         std::cout << importer.GetErrorString() << std::endl;
-        return rEnt;
+        return rootEnt;
     }
     
     float unitScaleFactor = 1.0f;
@@ -117,14 +118,28 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
 
     aiNode* rootNode = scene->mRootNode;
     
-    //dx::XMMATRIX localTransf = buildDXTransform(rootNode->mTransformation);
     Transform_t localTransf = buildDXTransform(rootNode->mTransformation);
-    rEnt = RenderableEntity{ hash_str_uint32(scene->GetShortFilename(filename.c_str())), SubmeshHandle_t{0,0,0}, scene->GetShortFilename(filename.c_str()), localTransf };
-    sceneGraph.insertNode(RenderableEntity{ 0 }, rEnt);
+    rootEnt = RenderableEntity{ hash_str_uint32(scene->GetShortFilename(filename.c_str())), SubmeshHandle_t{0,0,0}, scene->GetShortFilename(filename.c_str()), localTransf };
+    sceneGraph.insertNode(RenderableEntity{ 0 }, rootEnt);
+    
+    materials.resize(materials.size() + scene->mNumMaterials);
+    size_t sepIndex = filename.find_last_of("/");
+    aiString basePath = aiString(filename.substr(0, sepIndex));
+    scene->mMetaData->Add("basePath", basePath);
 
-    LoadNodeChildren(scene, rootNode->mChildren, rootNode->mNumChildren, rEnt);
+    //RenderableEntity rEnt{};
+    //if (rootNode->mNumMeshes == 1) {
+    //    rEnt = LoadNodeMeshes(scene, rootNode->mMeshes, rootNode->mNumMeshes, rootEnt, localTransf);
+    //}
+    //else {
+    //    rEnt = RenderableEntity{ hash_str_uint32(rootNode->mName.C_Str()), SubmeshHandle_t{ 0,0,0 }, rootNode->mName.C_Str(), localTransf };
+    //    sceneGraph.insertNode(rootEnt, rEnt);
+    //    LoadNodeMeshes(scene, rootNode->mMeshes, rootNode->mNumMeshes, rEnt);
+    //}
+    
+    LoadNodeChildren(scene, rootNode->mChildren, rootNode->mNumChildren, rootEnt);
 
-	return rEnt;
+	return rootEnt;
 }
 
 
@@ -143,61 +158,114 @@ void RendererFrontend::LoadNodeChildren(const aiScene* scene, aiNode** children,
             LoadNodeMeshes(scene, children[i]->mMeshes, children[i]->mNumMeshes, rEnt);
         }
 
-        if (children[i]->mNumChildren > 0) {
-            LoadNodeChildren(scene, children[i]->mChildren, children[i]->mNumChildren, rEnt);
-        }
+        LoadNodeChildren(scene, children[i]->mChildren, children[i]->mNumChildren, rEnt);
+        
     }
 }
 
 RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned int* meshesIndices, unsigned int numMeshes, RenderableEntity& parentRE, const Transform_t& localTransf)
 {
-    //assert(numMeshes <= 1);
     aiReturn success;
 
     SubmeshHandle_t submeshHandle{ 0,0,0,0 };
     RenderableEntity rEnt{};
 
-    for (int j = 0; j < numMeshes; j++) {
-        //assert(numMeshes <= 1);
+    aiString basePath;
+    scene->mMetaData->Get("basePath", basePath);
 
+    for (int j = 0; j < numMeshes; j++) {
         aiMesh* mesh = scene->mMeshes[meshesIndices[j]];
 
+        //TODO: implement reading material info in material desc-------------------------
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
-        aiColor3D diffCol(0.0f, 0.0f, 0.0f);
-        if (AI_SUCCESS != material->Get(AI_MATKEY_COLOR_DIFFUSE, diffCol)) {
-            OutputDebugString(importer.GetErrorString());
-        }
+        std::uint16_t matDescId = materials.size() - scene->mNumMaterials + mesh->mMaterialIndex;
+        MaterialDesc& matDesc = materials.at(matDescId);
+        MaterialCacheHandle_t initMatCacheHnd{ 0, NO_UPDATE_MAT};
 
-        MaterialDesc matDesc;
-        matDesc.shaderType = PShaderID::STANDARD;
+        if (matDesc.shaderType == PShaderID::UNDEFINED) {
+            wchar_t tmpString[128];
 
-        aiString diffTexName;
-        int count = material->GetTextureCount(aiTextureType_DIFFUSE);
-        if (count > 0) {
-            success = material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), diffTexName);
-            if (!success) {
+            aiColor3D diffCol(0.0f, 0.0f, 0.0f);
+            if (AI_SUCCESS != material->Get(AI_MATKEY_COLOR_DIFFUSE, diffCol)) {
                 OutputDebugString(importer.GetErrorString());
             }
 
+            matDesc.shaderType = PShaderID::STANDARD;
+
+            aiString diffTexName;
+            int count = material->GetTextureCount(aiTextureType_DIFFUSE);
+            if (count > 0) {
+                success = material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), diffTexName);
+                if (!(aiReturn_SUCCESS == success)) {
+                    OutputDebugString(importer.GetErrorString());
+                }
+                else {
+                    aiString albedoPath = aiString(basePath);
+                    albedoPath.Append("/");
+                    albedoPath.Append(diffTexName.C_Str());
+                    mbstowcs(tmpString, albedoPath.C_Str(), 128);
+                    wcscpy(matDesc.albedoPath, tmpString); // L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg";
+                }
+            }
+
+            aiString normTexName;
+            count = material->GetTextureCount(aiTextureType_NORMALS);
+            if (count > 0) {
+                success = material->Get(AI_MATKEY_TEXTURE(aiTextureType_NORMALS, 0), normTexName);
+                if (!(aiReturn_SUCCESS == success)) {
+                    OutputDebugString(importer.GetErrorString());
+                }
+                else {
+                    aiString NormalMapPath = aiString(basePath);
+                    NormalMapPath.Append("/");
+                    NormalMapPath.Append(normTexName.C_Str());
+                    mbstowcs(tmpString, NormalMapPath.C_Str(), 128);
+                    wcscpy(matDesc.normalPath, tmpString);
+                    // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
+                }
+            }
+
+            aiColor4D col;
+            success = material->Get(AI_MATKEY_COLOR_DIFFUSE, col);
+            if (aiReturn_SUCCESS == success) {
+                matDesc.baseColor = dx::XMFLOAT4(col.r, col.g, col.b, col.a);
+            }
+            else {
+                matDesc.baseColor = dx::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+            }
+
+            float roughness = 0.0f;
+            success = material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
+            if (aiReturn_SUCCESS == success) {
+                //TODO:: do correct conversion roughness surface
+                matDesc.smoothness = roughness;
+            }
+            else {
+                matDesc.smoothness = 0.5f;
+            }
+
+            float metalness = 0.0f;
+            success = material->Get(AI_MATKEY_METALLIC_FACTOR, metalness);
+            if (aiReturn_SUCCESS == success) {
+                matDesc.metalness = metalness;
+            }
+            else {
+                matDesc.metalness = 0.0f;
+            }
+
+
+            wcscpy(matDesc.metalnessMask, L"");
+
+            initMatCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS | IS_FIRST_MAT_ALLOC;
         }
-        //TODO: implement reading material info in material desc
-        aiColor4D col;
-        success = material->Get(AI_MATKEY_BASE_COLOR, col);
-        matDesc.baseColor = dx::XMFLOAT4(1.0f,1.0f,1.0f,1.0f);
-        matDesc.smoothness = 0.5f;
-        matDesc.metalness = 0.0f;
-        wcscpy(matDesc.albedoPath, L""); // L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg";
-        wcscpy(matDesc.normalPath, L""); // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
-        wcscpy(matDesc.metalnessMask, L"");
+        //---------------------------------------------------
 
-        materials.push_back(matDesc);
-
-        submeshHandle.matDescIdx = materials.size() - 1;
+        submeshHandle.matDescIdx = matDescId;
         submeshHandle.numVertices = mesh->mNumVertices;
         submeshHandle.baseVertex = staticSceneVertexData.size();
 
-        //TODO:hmmm? evaluate should if i reserve in advance? when?
+        //TODO: hmmm? evaluate should if i reserve in advance? when?
         staticSceneVertexData.reserve((size_t)submeshHandle.numVertices + (size_t)submeshHandle.baseVertex);
 
         for (int i = 0; i < submeshHandle.numVertices; i++)
@@ -224,7 +292,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
         }
 
         //TODO: maybe implement move for submeshHandle?
-        sceneMeshes.emplace_back(SubmeshInfo{ submeshHandle, BufferCacheHandle_t{0,0}, MaterialCacheHandle_t{0, UPDATE_MAT_MAPS | UPDATE_MAT_PRMS | IS_FIRST_MAT_ALLOC}, dx::XMMatrixIdentity() });
+        sceneMeshes.emplace_back(SubmeshInfo{ submeshHandle, BufferCacheHandle_t{0,0}, initMatCacheHnd, dx::XMMatrixIdentity() });
 
         rEnt = RenderableEntity{ hash_str_uint32(std::to_string(submeshHandle.baseVertex)), submeshHandle, mesh->mName.C_Str(), localTransf };
         sceneGraph.insertNode(parentRE, rEnt);

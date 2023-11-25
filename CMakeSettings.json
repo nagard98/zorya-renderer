@@ -9,7 +9,6 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "msvc_x64_x64" ],
-      "cmakeToolchain": "E:/source/repos/vcpkg/scripts/buildsystems/vcpkg.cmake",
       "variables": [
         {
           "name": "BUILD_SHARED_LIBS",
@@ -17,7 +16,7 @@
           "type": "BOOL"
         }
       ],
-      "cmakeExecutable": "E:/Program Files (x86)/CMake/bin/cmake.exe"
+      "cmakeExecutable": "C:/Program Files/CMake/bin/cmake.exe"
     }
   ]
 }

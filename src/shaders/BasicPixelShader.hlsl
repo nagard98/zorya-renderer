@@ -46,7 +46,7 @@ cbuffer matPrms : register(b1)
 
 #define MAX_SHININESS 64
 #define SPECULAR_STRENGTH 0.3f
-#define INNER_REFLECTANCE 0.9f
+#define INNER_REFLECTANCE 0.5f
 
 static const float revPi = 1 / 3.14159f;
 
