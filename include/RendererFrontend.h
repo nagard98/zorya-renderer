@@ -64,7 +64,7 @@ public:
 	void InitScene();
 
 	//TODO: probably move somewhere else
-	RenderableEntity LoadModelFromFile(const std::string& filename, bool forceFlattenScene = false);
+	RenderableEntity LoadModelFromFile(const std::string& filename, bool optimizeGraph = false, bool forceFlattenScene = false);
 	ViewDesc ComputeView(const Camera& cam);
 
 	SceneGraph<RenderableEntity> sceneGraph;

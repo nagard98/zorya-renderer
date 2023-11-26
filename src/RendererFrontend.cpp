@@ -82,7 +82,7 @@ inline uint32_t hash_str_uint32(const std::string& str) {
 
 }
 
-RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename, bool forceFlattenScene)
+RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename, bool optimizeGraph, bool forceFlattenScene)
 {
 
     importer.SetPropertyInteger(AI_CONFIG_PP_SLM_VERTEX_LIMIT, 65535);
@@ -95,7 +95,7 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
         aiProcess_JoinIdenticalVertices | 
         aiProcess_CalcTangentSpace |
         aiProcess_GenBoundingBoxes |
-        //aiProcess_OptimizeGraph |
+        (optimizeGraph ? aiProcess_OptimizeGraph : 0) |
         (forceFlattenScene ? aiProcess_PreTransformVertices : 0) |
         aiProcess_ConvertToLeftHanded
     );
@@ -117,27 +117,13 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
     }
 
     aiNode* rootNode = scene->mRootNode;
-    
-    Transform_t localTransf = buildDXTransform(rootNode->mTransformation);
-    rootEnt = RenderableEntity{ hash_str_uint32(scene->GetShortFilename(filename.c_str())), SubmeshHandle_t{0,0,0}, scene->GetShortFilename(filename.c_str()), localTransf };
-    sceneGraph.insertNode(RenderableEntity{ 0 }, rootEnt);
-    
+
     materials.resize(materials.size() + scene->mNumMaterials);
     size_t sepIndex = filename.find_last_of("/");
     aiString basePath = aiString(filename.substr(0, sepIndex));
     scene->mMetaData->Add("basePath", basePath);
 
-    //RenderableEntity rEnt{};
-    //if (rootNode->mNumMeshes == 1) {
-    //    rEnt = LoadNodeMeshes(scene, rootNode->mMeshes, rootNode->mNumMeshes, rootEnt, localTransf);
-    //}
-    //else {
-    //    rEnt = RenderableEntity{ hash_str_uint32(rootNode->mName.C_Str()), SubmeshHandle_t{ 0,0,0 }, rootNode->mName.C_Str(), localTransf };
-    //    sceneGraph.insertNode(rootEnt, rEnt);
-    //    LoadNodeMeshes(scene, rootNode->mMeshes, rootNode->mNumMeshes, rEnt);
-    //}
-    
-    LoadNodeChildren(scene, rootNode->mChildren, rootNode->mNumChildren, rootEnt);
+    LoadNodeChildren(scene, &rootNode, 1, RenderableEntity{ 0 });
 
 	return rootEnt;
 }
