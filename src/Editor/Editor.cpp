@@ -17,11 +17,36 @@ Editor::Editor()
 	sceneId = -1;
 }
 
+enum ClickableMenuItem {
+	IMPORT = 0
+};
+
 void Editor::RenderEditor(RendererFrontend& rf, const ID3D11ShaderResourceView* rtSRV)
 {
-	ImGui::BeginMainMenuBar();
-	ImGui::MenuItem("File");
-	ImGui::EndMainMenuBar();
+	bool clicked[] = {false};
+
+	if (ImGui::BeginMainMenuBar()) {
+		if (ImGui::BeginMenu("File")) {
+			if (ImGui::MenuItem("Import", "CTRL+I", &clicked[IMPORT])) {
+			}
+			ImGui::EndMenu();
+		}
+		ImGui::EndMainMenuBar();
+	}
+
+	if (clicked[IMPORT]) {
+		ImGui::OpenPopup("import_model");
+	}
+
+	if (ImGui::BeginPopupModal("import_model", NULL)) {
+		if (ImGui::InputText("model path", textBuff, 128)) {
+		}
+		if (ImGui::Button("Import")) {
+			ImGui::CloseCurrentPopup();
+			rf.LoadModelFromFile(std::string(textBuff));
+		}
+		ImGui::EndPopup();
+	}
 
 	ImGuiID dockspaceID	= ImGui::DockSpaceOverViewport();
 	if (firstLoop) {

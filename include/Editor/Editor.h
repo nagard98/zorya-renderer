@@ -23,6 +23,7 @@ public:
 	bool firstLoop;
 	ImGuiID sceneId;
 
+	char textBuff[128];
 };
 
 #endif
