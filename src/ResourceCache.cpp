@@ -46,7 +46,8 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 
 		m->matPrms.baseColor = matDesc.baseColor;
 		m->matPrms.metalness = matDesc.metalness;
-		m->matPrms.smoothness = matDesc.smoothness;
+		//TODO: change matPrms name smoothness to roughness
+		m->matPrms.smoothness = 1.0 - matDesc.smoothness;
 	}
 
 	return MaterialCacheHandle_t{ (std::uint16_t)matIndex, NO_UPDATE_MAT };

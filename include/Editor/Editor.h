@@ -15,6 +15,7 @@ class Editor {
 
 public:
 	Editor();
+	void Init(const ImGuiID& dockspaceID);
 
 	void RenderEditor(RendererFrontend& rf, const ID3D11ShaderResourceView* rtSRV);
 

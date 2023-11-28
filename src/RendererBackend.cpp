@@ -120,7 +120,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
     tmpLCB.pointLights[0].constant = pLight1.constant;
     tmpLCB.pointLights[0].linear = pLight1.linear;
     tmpLCB.pointLights[0].quadratic = pLight1.quadratic;
-    tmpLCB.numPLights = 0;
+    tmpLCB.numPLights = 1;
     rhi.context->UpdateSubresource(lightsCB, 0, nullptr, &tmpLCB, 0, 0);
 
 	for (SubmeshInfo const &sbPair : viewDesc.submeshesInfo) {

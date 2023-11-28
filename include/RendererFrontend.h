@@ -56,12 +56,9 @@ struct ViewDesc {
 };
 
 class RendererFrontend {
-	//std::vector<SubmeshHandle> submeshHandles; //indexed by model handle
+
 public:
 	RendererFrontend();
-	~RendererFrontend();
-
-	void InitScene();
 
 	//TODO: probably move somewhere else
 	RenderableEntity LoadModelFromFile(const std::string& filename, bool optimizeGraph = false, bool forceFlattenScene = false);

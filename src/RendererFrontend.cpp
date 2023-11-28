@@ -58,14 +58,6 @@ Transform_t buildDXTransform(aiMatrix4x4 assTransf) {
 
 RendererFrontend::RendererFrontend() : sceneGraph( RenderableEntity{ 0,SubmeshHandle_t{0,0,0},"scene", IDENTITY_TRANSFORM } ) {}
    
-RendererFrontend::~RendererFrontend()
-{
-}
-
-void RendererFrontend::InitScene()
-{
-}
-
 //TODO: move somewhere else and use other hashing function; this is temporary
 inline uint32_t hash_str_uint32(const std::string& str) {
 
@@ -172,8 +164,8 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
         if (matDesc.shaderType == PShaderID::UNDEFINED) {
             wchar_t tmpString[128];
 
-            aiColor3D diffCol(0.0f, 0.0f, 0.0f);
-            if (AI_SUCCESS != material->Get(AI_MATKEY_COLOR_DIFFUSE, diffCol)) {
+            aiColor3D diffuse(0.0f, 0.0f, 0.0f);
+            if (AI_SUCCESS != material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse)) {
                 OutputDebugString(importer.GetErrorString());
             }
 
@@ -225,7 +217,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
             success = material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
             if (aiReturn_SUCCESS == success) {
                 //TODO:: do correct conversion roughness surface
-                matDesc.smoothness = roughness;
+                matDesc.smoothness = 1.0f - roughness;
             }
             else {
                 matDesc.smoothness = 0.5f;

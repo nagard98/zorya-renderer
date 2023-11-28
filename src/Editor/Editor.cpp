@@ -15,6 +15,27 @@ Editor::Editor()
 {
 	firstLoop = true;
 	sceneId = -1;
+	strncpy(textBuff, "\0", 128);
+}
+
+void Editor::Init(const ImGuiID& dockspaceID) {
+	ImVec2 workSize = ImGui::GetMainViewport()->WorkSize;
+
+	ImGui::DockBuilderRemoveNode(dockspaceID);
+	ImGui::DockBuilderAddNode(dockspaceID, ImGuiDockNodeFlags_DockSpace);
+	ImGui::DockBuilderSetNodeSize(dockspaceID, workSize);
+
+	sceneId = dockspaceID;
+	ImGuiID leftId = ImGui::DockBuilderSplitNode(sceneId, ImGuiDir_Left, 0.15f, nullptr, &sceneId);
+	ImGuiID rightId = ImGui::DockBuilderSplitNode(sceneId, ImGuiDir_Right, 0.20f, nullptr, &sceneId);
+	ImGuiID bottomId = ImGui::DockBuilderSplitNode(sceneId, ImGuiDir_Down, 0.30f, nullptr, &sceneId);
+
+	ImGui::DockBuilderDockWindow("Hierarchy", leftId);
+	ImGui::DockBuilderDockWindow("Entity Outline", rightId);
+	ImGui::DockBuilderDockWindow("Asset Explorer", bottomId);
+	ImGui::DockBuilderDockWindow("Scene", sceneId);
+
+	ImGui::DockBuilderFinish(dockspaceID);
 }
 
 enum ClickableMenuItem {
@@ -50,24 +71,7 @@ void Editor::RenderEditor(RendererFrontend& rf, const ID3D11ShaderResourceView* 
 
 	ImGuiID dockspaceID	= ImGui::DockSpaceOverViewport();
 	if (firstLoop) {
-		ImVec2 workSize = ImGui::GetMainViewport()->WorkSize;
-
-		ImGui::DockBuilderRemoveNode(dockspaceID);
-		ImGui::DockBuilderAddNode(dockspaceID, ImGuiDockNodeFlags_DockSpace);
-		ImGui::DockBuilderSetNodeSize(dockspaceID, workSize);
-
-		sceneId = dockspaceID;
-		ImGuiID leftId = ImGui::DockBuilderSplitNode(sceneId, ImGuiDir_Left, 0.15f, nullptr, &sceneId);
-		ImGuiID rightId = ImGui::DockBuilderSplitNode(sceneId, ImGuiDir_Right, 0.20f, nullptr, &sceneId);
-		ImGuiID bottomId = ImGui::DockBuilderSplitNode(sceneId, ImGuiDir_Down, 0.30f, nullptr, &sceneId);
-
-		ImGui::DockBuilderDockWindow("Hierarchy", leftId);
-		ImGui::DockBuilderDockWindow("Entity Outline", rightId);
-		ImGui::DockBuilderDockWindow("Asset Explorer", bottomId);
-		ImGui::DockBuilderDockWindow("Scene", sceneId);
-
-		ImGui::DockBuilderFinish(dockspaceID);
-
+		Init(dockspaceID);
 		firstLoop = false;
 	}
 
