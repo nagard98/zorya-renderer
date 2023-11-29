@@ -25,34 +25,47 @@ namespace dx = DirectX;
 RendererFrontend rf;
 
 dx::XMMATRIX mult(const Transform_t& a, const Transform_t& b) {
-    dx::XMMATRIX matTransfA = dx::XMMatrixMultiply(dx::XMMatrixRotationRollPitchYaw(a.rot.x, a.rot.y, a.rot.z), dx::XMMatrixScaling(a.scal.x, a.scal.y, a.scal.z));
-    matTransfA = dx::XMMatrixMultiply(dx::XMMatrixTranslation(a.pos.x, a.pos.y, a.pos.z), matTransfA);
-    
-    dx::XMMATRIX matTransfB = dx::XMMatrixMultiply(dx::XMMatrixRotationRollPitchYaw(b.rot.x, b.rot.y, b.rot.z), dx::XMMatrixScaling(b.scal.x, b.scal.y, b.scal.z));
-    matTransfB = dx::XMMatrixMultiply(dx::XMMatrixTranslation(b.pos.x, b.pos.y, b.pos.z), matTransfB);
+    dx::XMMATRIX rotTransfA = dx::XMMatrixMultiply(
+        dx::XMMatrixRotationX(a.rot.x),
+        dx::XMMatrixMultiply(dx::XMMatrixRotationY(a.rot.y), dx::XMMatrixRotationZ(a.rot.z)));
+    dx::XMMATRIX matTransfA = dx::XMMatrixMultiply(dx::XMMatrixScaling(a.scal.x, a.scal.y, a.scal.z), rotTransfA);
+    matTransfA = dx::XMMatrixMultiply(matTransfA, dx::XMMatrixTranslation(a.pos.x, a.pos.y, a.pos.z));
+
+    dx::XMMATRIX rotTransfB = dx::XMMatrixMultiply(
+        dx::XMMatrixRotationX(b.rot.x),
+        dx::XMMatrixMultiply(dx::XMMatrixRotationY(b.rot.y), dx::XMMatrixRotationZ(b.rot.z)));
+    dx::XMMATRIX matTransfB = dx::XMMatrixMultiply(dx::XMMatrixScaling(b.scal.x, b.scal.y, b.scal.z), rotTransfB);
+    matTransfB = dx::XMMatrixMultiply(matTransfB, dx::XMMatrixTranslation(b.pos.x, b.pos.y, b.pos.z));
 
     return dx::XMMatrixMultiply(matTransfA, matTransfB);
 }
 
 dx::XMMATRIX mult(const Transform_t& a, const dx::XMMATRIX& b) {
-    dx::XMMATRIX matTransfA = dx::XMMatrixMultiply(dx::XMMatrixRotationRollPitchYaw(a.rot.x, a.rot.y, a.rot.z), dx::XMMatrixScaling(a.scal.x, a.scal.y, a.scal.z));
-    matTransfA = dx::XMMatrixMultiply(dx::XMMatrixTranslation(a.pos.x, a.pos.y, a.pos.z), matTransfA);
+    dx::XMMATRIX rotTransfA = dx::XMMatrixMultiply(
+        dx::XMMatrixRotationX(a.rot.x),
+        dx::XMMatrixMultiply(dx::XMMatrixRotationY(a.rot.y), dx::XMMatrixRotationZ(a.rot.z)));
+    dx::XMMATRIX matTransfA = dx::XMMatrixMultiply(dx::XMMatrixScaling(a.scal.x, a.scal.y, a.scal.z) , rotTransfA);
+    matTransfA = dx::XMMatrixMultiply(matTransfA, dx::XMMatrixTranslation(a.pos.x, a.pos.y, a.pos.z));
 
     return dx::XMMatrixMultiply(matTransfA, b);
 }
 
-Transform_t buildDXTransform(aiMatrix4x4 assTransf) {
+dx::XMMATRIX mult(const dx::XMMATRIX& a, const Transform_t& b) {
+    dx::XMMATRIX rotTransfB = dx::XMMatrixMultiply(
+        dx::XMMatrixRotationX(b.rot.x),
+        dx::XMMatrixMultiply(dx::XMMatrixRotationY(b.rot.y), dx::XMMatrixRotationZ(b.rot.z)));
+    dx::XMMATRIX matTransfB = dx::XMMatrixMultiply(dx::XMMatrixScaling(b.scal.x, b.scal.y, b.scal.z), rotTransfB);
+    matTransfB = dx::XMMatrixMultiply(matTransfB, dx::XMMatrixTranslation(b.pos.x, b.pos.y, b.pos.z));
+
+    return dx::XMMatrixMultiply(a, matTransfB);
+}
+
+Transform_t buildTransform(aiMatrix4x4 assTransf) {
     aiVector3D scal;
-    aiQuaternion quat;
     aiVector3D pos;
     aiVector3D rot;
-    assTransf.Decompose(scal, quat, pos);
     assTransf.Decompose(scal, rot, pos);
 
-    dx::XMMATRIX transMat = dx::XMMatrixTranslation(pos.x, pos.y, pos.z);
-    dx::XMMATRIX rotMat = dx::XMMatrixRotationQuaternion(dx::XMVectorSet(quat.x, quat.y, quat.z, quat.w));
-    dx::XMMATRIX scalMat = dx::XMMatrixScaling(scal.x, scal.y, scal.z);
-    //return dx::XMMatrixMultiply(transMat, dx::XMMatrixMultiply(rotMat, scalMat));
     return Transform_t{ dx::XMFLOAT3{pos.x, pos.y, pos.z}, dx::XMFLOAT3{rot.x, rot.y, rot.z}, dx::XMFLOAT3{scal.x, scal.y, scal.z} };
 }
 
@@ -124,7 +137,7 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
 void RendererFrontend::LoadNodeChildren(const aiScene* scene, aiNode** children, unsigned int numChildren, RenderableEntity& parentRE)
 {
     for (int i = 0; i < numChildren; i++) {
-        Transform_t localTransf = buildDXTransform(children[i]->mTransformation);
+        Transform_t localTransf = buildTransform(children[i]->mTransformation);
 
         RenderableEntity rEnt;
         if (children[i]->mNumMeshes == 1) {

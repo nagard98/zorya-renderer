@@ -305,9 +305,9 @@ HRESULT InitData() {
     //RenderableEntity mHnd6 = rf.LoadModelFromFile("./shaders/assets/cubetest.fbx");
     //RenderableEntity mHnd7 = rf.LoadModelFromFile("./shaders/assets/nile/source/nile.obj");
     //RenderableEntity mHnd8 = rf.LoadModelFromFile("./shaders/assets/nixdorf/scene.gltf");
-    //RenderableEntity mHnd9 = rf.LoadModelFromFile("./shaders/assets/ye-gameboy/scene.gltf", true);
+    RenderableEntity mHnd9 = rf.LoadModelFromFile("./shaders/assets/ye-gameboy/scene.gltf", true);
     //RenderableEntity mHnd10 = rf.LoadModelFromFile("./shaders/assets/old_tv/scene.gltf", true);
-    RenderableEntity mHnd11 = rf.LoadModelFromFile("./shaders/assets/sphere.dae", true);
+    //RenderableEntity mHnd11 = rf.LoadModelFromFile("./shaders/assets/sphere.dae", true);
     //RenderableEntity mHnd12 = rf.LoadModelFromFile("./shaders/assets/mori_knob/testObj.obj", true);
 
     wrl::ComPtr<ID3DBlob> verShaderBlob ;
