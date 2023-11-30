@@ -18,6 +18,8 @@
 #include "imgui_impl_dx11.h"
 #include "imgui_impl_win32.h"
 
+#include <Editor/Logger.h>
+
 #include "Camera.h"
 #include "Lights.h"
 #include "Shaders.h"

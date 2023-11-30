@@ -12,3 +12,4 @@ _deps
 build
 .vs/
 src/shaders/assets
+*_old*

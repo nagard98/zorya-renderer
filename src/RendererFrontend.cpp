@@ -1,5 +1,7 @@
 #include "RendererFrontend.h"
 
+#include "Editor/Logger.h"
+
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
 #include "assimp/scene.h"
@@ -112,7 +114,7 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
 
     if (scene == nullptr)
     {
-        std::cout << importer.GetErrorString() << std::endl;
+        Logger::AddLog(Logger::Channel::ERR, "%s\n", importer.GetErrorString());
         return rootEnt;
     }
     
@@ -129,6 +131,8 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
     scene->mMetaData->Add("basePath", basePath);
 
     LoadNodeChildren(scene, &rootNode, 1, RenderableEntity{ 0 });
+
+    Logger::AddLog(Logger::Channel::TRACE, "Imported model %s\n", scene->GetShortFilename(filename.c_str()));
 
 	return rootEnt;
 }
@@ -179,7 +183,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
 
             aiColor3D diffuse(0.0f, 0.0f, 0.0f);
             if (AI_SUCCESS != material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse)) {
-                OutputDebugString(importer.GetErrorString());
+                Logger::AddLog(Logger::Channel::ERR, "%s\n", importer.GetErrorString());
             }
 
             matDesc.shaderType = PShaderID::STANDARD;
@@ -189,7 +193,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
             if (count > 0) {
                 success = material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), diffTexName);
                 if (!(aiReturn_SUCCESS == success)) {
-                    OutputDebugString(importer.GetErrorString());
+                    Logger::AddLog(Logger::Channel::ERR, "%s\n", importer.GetErrorString());
                 }
                 else {
                     aiString albedoPath = aiString(basePath);
@@ -205,7 +209,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
             if (count > 0) {
                 success = material->Get(AI_MATKEY_TEXTURE(aiTextureType_NORMALS, 0), normTexName);
                 if (!(aiReturn_SUCCESS == success)) {
-                    OutputDebugString(importer.GetErrorString());
+                    Logger::AddLog(Logger::Channel::ERR, "%s\n", importer.GetErrorString());
                 }
                 else {
                     aiString NormalMapPath = aiString(basePath);

@@ -7,6 +7,7 @@
 #include "RHIState.h"
 #include "RenderHardwareInterface.h"
 #include "Material.h"
+#include "Editor/Logger.h"
 
 #include "WICTextureLoader.h"
 
@@ -292,7 +293,7 @@ void RenderHardwareInterface::SetState(RHIState newState)
         for (int i = 0; i < rastVariants.size(); i++)
         {
             if (rastVariants[i].variant == -1){
-                OutputDebugString("WARNING :: Building new raster state\n");
+                Logger::AddLog(Logger::Channel::TRACE, "Building new raster state\n");
                 ZeroMemory(&tmpRastDesc, sizeof(tmpRastDesc));
                 tmpRastDesc.FillMode = (newRastState & RASTER_FILL_MODE_MASK) == RASTER_FILL_MODE_SOLID ? D3D11_FILL_SOLID : D3D11_FILL_WIREFRAME;
                 tmpRastDesc.AntialiasedLineEnable = (newRastState & RASTER_ANTIALIAS_MASK) == RASTER_ANTIALIAS_MASK;
@@ -318,7 +319,7 @@ void RenderHardwareInterface::SetState(RHIState newState)
         for (int i = 0; i < depthStenVariants.size(); i++)
         {
             if (depthStenVariants[i].variant == -1) {
-                OutputDebugString("WARNING :: Building new depth stancil state\n");
+                Logger::AddLog(Logger::Channel::TRACE, "Building new depth stancil state\n");
                 ZeroMemory(&tmpDepthStenDesc, sizeof(tmpDepthStenDesc));
                 tmpDepthStenDesc.DepthEnable = (newDSState & DEPTH_ENABLE_MASK) == DEPTH_ENABLE_MASK;
                 tmpDepthStenDesc.DepthWriteMask = (newDSState & DEPTH_WRITE_ENABLE_MASK) == DEPTH_WRITE_ENABLE_MASK ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO ;

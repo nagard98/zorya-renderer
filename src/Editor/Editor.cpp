@@ -1,6 +1,7 @@
 #include "Editor/Editor.h"
 #include "Editor/SceneHierarchy.h"
 #include "Editor/EntityOutline.h"
+#include "Editor/Logger.h"
 
 #include <vector>
 #include <RendererFrontend.h>
@@ -33,6 +34,7 @@ void Editor::Init(const ImGuiID& dockspaceID) {
 	ImGui::DockBuilderDockWindow("Hierarchy", leftId);
 	ImGui::DockBuilderDockWindow("Entity Outline", rightId);
 	ImGui::DockBuilderDockWindow("Asset Explorer", bottomId);
+	ImGui::DockBuilderDockWindow("Logger", bottomId);
 	ImGui::DockBuilderDockWindow("Scene", sceneId);
 
 	ImGui::DockBuilderFinish(dockspaceID);
@@ -94,8 +96,16 @@ void Editor::RenderEditor(RendererFrontend& rf, const ID3D11ShaderResourceView* 
 	}
 	ImGui::End();
 
+	ImGui::Begin("Logger");
+	{
+		Logger::RenderLogs();
+	}
+	ImGui::End();
+
 	ImGui::Begin("Asset Explorer");
-	{}
+	{
+
+	}
 	ImGui::End();
 
 	ImGui::Begin("Scene");
