@@ -343,6 +343,20 @@ void RenderHardwareInterface::SetState(RHIState newState)
 
 RHI_RESULT RenderHardwareInterface::LoadTexture(const wchar_t *path, ShaderTexture2D& shaderTexture, bool convertToLinear, size_t maxSize)
 {
+    if (shaderTexture.resourceView != nullptr) {
+        ID3D11ShaderResourceView* nullViews[3] = { nullptr };
+        context->PSSetShaderResources(0,3, nullViews);
+        
+        ID3D11Resource* textureRes = nullptr;
+        shaderTexture.resourceView->GetResource(&textureRes);
+        
+        shaderTexture.resourceView->Release();
+        shaderTexture.resourceView = nullptr;
+        
+        textureRes->Release();
+        textureRes = nullptr;
+    }
+
     HRESULT hRes = dx::CreateWICTextureFromFileEx(device.Get(), context.Get(),
         path,
         maxSize,
