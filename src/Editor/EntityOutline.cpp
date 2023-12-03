@@ -1,9 +1,11 @@
 #include "Editor/EntityOutline.h"
+#include "Editor/Logger.h"
 #include "RendererFrontend.h"
 #include "Material.h"
 
 #include "DirectXMath.h"
 #include <cassert>
+#include <variant>
 
 #include "imgui.h"
 
@@ -42,27 +44,21 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 		assert(matDesc != nullptr);
 		ImGui::SeparatorText("Material");
 		{
+
 			ImGui::ColorEdit4("Base Color", &matDesc->baseColor.x);
 			if (ImGui::IsItemEdited()) {
 				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
 			}
 
-			ImGui::SliderFloat("Smoothness", &matDesc->smoothness, 0, 1);
-			if (ImGui::IsItemEdited()) {
-				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
-			}
-
-			ImGui::SliderFloat("Metalness", &matDesc->metalness, 0, 1);
-			if (ImGui::IsItemEdited()) {
-				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
-			}
-			
 			wcstombs(tmpCharBuff, matDesc->albedoPath, 128);
 			ImGui::InputText("Albedo Map", tmpCharBuff, 128);
 			if (ImGui::IsItemDeactivatedAfterEdit()) {
 				mbstowcs(matDesc->albedoPath, tmpCharBuff, 128);
 				smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
 			}
+
+			ImGui::Spacing();
+			ImGui::Spacing();
 
 			wcstombs(tmpCharBuff, matDesc->normalPath, 128);
 			ImGui::InputText("Normal Map", tmpCharBuff, 128);
@@ -71,12 +67,95 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 				smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
 			}
 
-			wcstombs(tmpCharBuff, matDesc->metalnessMask, 128);
-			ImGui::InputText("Metalness Mask", tmpCharBuff, 128);
-			if (ImGui::IsItemDeactivatedAfterEdit()) {
-				mbstowcs(matDesc->metalnessMask, tmpCharBuff, 128);
-				smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
+			ImGui::Spacing();
+			ImGui::Spacing();
+			
+			{
+				static int smoothnessMode = 0;
+
+				if ((matDesc->unionTags & SMOOTHNESS_IS_MAP) == SMOOTHNESS_IS_MAP) {
+					smoothnessMode = 1;
+				}
+				else {
+					smoothnessMode = 0;
+				}
+
+				if (ImGui::RadioButton("Value", &smoothnessMode, 0)) {
+					//Logger::AddLog(Logger::Channel::TRACE, "Clicked Radio V\n");
+					matDesc->smoothnessValue = 0.0f;
+					matDesc->unionTags &= ~SMOOTHNESS_IS_MAP;
+					smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+				}
+				ImGui::SameLine();
+				if (ImGui::RadioButton("Texture", &smoothnessMode, 1)) {
+					//Logger::AddLog(Logger::Channel::TRACE, "Clicked Radio T\n");
+					mbstowcs(matDesc->smoothnessMap, "\0", 128);
+					matDesc->unionTags |= SMOOTHNESS_IS_MAP;
+					smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
+				}
+
+				if (smoothnessMode == 0) {
+					ImGui::SliderFloat("Smoothness", &(matDesc->smoothnessValue), 0, 1);
+					if (ImGui::IsItemEdited()) {
+						smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+					}
+				}
+				else {
+					wcstombs(tmpCharBuff, matDesc->smoothnessMap, 128);
+					ImGui::InputText("Smoothness Map", tmpCharBuff, 128);
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						mbstowcs(matDesc->smoothnessMap, tmpCharBuff, 128);
+						smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
+					}
+				}
 			}
+
+
+			ImGui::Spacing();
+			ImGui::Spacing();
+
+			if (ImGui::BeginChild("metalness")) {
+				static int metalnessMode = 0;
+
+				if ((matDesc->unionTags & METALNESS_IS_MAP) == METALNESS_IS_MAP) {
+					metalnessMode = 1;
+				}
+				else {
+					metalnessMode = 0;
+				}
+
+				if (ImGui::RadioButton("Value", &metalnessMode, 0)) {
+					//Logger::AddLog(Logger::Channel::TRACE, "Clicked Radio V %3d\n", metalnessMode);
+					matDesc->metalnessValue = 0.0f;
+					matDesc->unionTags &= ~METALNESS_IS_MAP;
+					smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+				}
+				ImGui::SameLine();
+				if (ImGui::RadioButton("Texture", &metalnessMode, 1)) {
+					//Logger::AddLog(Logger::Channel::TRACE, "Clicked Radio T %3d\n", metalnessMode);
+					mbstowcs(matDesc->metalnessMap, "\0", 128);
+					matDesc->unionTags |= METALNESS_IS_MAP;
+					smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
+				}
+
+				if (metalnessMode == 0) {
+					ImGui::SliderFloat("Metalness", &matDesc->metalnessValue, 0, 1);
+					if (ImGui::IsItemEdited()) {
+						smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+					}
+				}
+				else {
+					wcstombs(tmpCharBuff, matDesc->metalnessMap, 128);
+					ImGui::InputTextWithHint("Metalness Mask", "Insert Path", tmpCharBuff, 128);
+					if (ImGui::IsItemDeactivatedAfterEdit()) {
+						mbstowcs(matDesc->metalnessMap, tmpCharBuff, 128);
+						smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
+					}
+				}
+			}
+			ImGui::EndChild();
+			
+
 		}
 	}
 

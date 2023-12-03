@@ -39,9 +39,10 @@ cbuffer matPrms : register(b1)
     bool hasAlbedoMap;
     bool hasMetalnessMap;
     bool hasNormalMap;
+    bool hasSmoothnessMap;
     
-    float roughness;
-    float metallic;
+    float cb_roughness;
+    float cb_metallic;
 }
 
 #define MAX_SHININESS 64
@@ -53,10 +54,12 @@ static const float gamma = 1.0f/2.2f;
 
 Texture2D ObjTexture : register(t0);
 Texture2D NormalMap : register(t1);
+Texture2D MetalnessMap : register(t2);
+Texture2D SmoothnessMap : register(t3);
 SamplerState ObjSamplerState : register(s0);
 
-float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal, float4 tex);
-float3 computeColPointLight(PointLight pLight, float4 fragPos, float3 normal, float3 viewDir, float4 tex);
+float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal, float4 tex, float metalness, float roughness);
+float3 computeColPointLight(PointLight pLight, float4 fragPos, float3 normal, float3 viewDir, float4 tex, float metalness, float roughness);
 
 float Fd_Lambertian();
 float Fd_Burley(float VdotN, float LdotN, float LdotH, float linRoughness);
@@ -82,6 +85,18 @@ PS_OUTPUT ps(PS_INPUT input)
         input.fNormal = normalize(input.fNormal);
     }
     
+    float metalness = cb_metallic;
+    if (hasMetalnessMap == true)
+    {
+        metalness = MetalnessMap.Sample(ObjSamplerState, input.texCoord).r;
+    }
+    
+    float rougnhness = cb_roughness;
+    if (hasSmoothnessMap == true)
+    {
+        rougnhness = SmoothnessMap.Sample(ObjSamplerState, input.texCoord).g;
+    }
+    
     float4 tex = 0.0f;
     if (hasAlbedoMap == true)
     {
@@ -94,11 +109,11 @@ PS_OUTPUT ps(PS_INPUT input)
     
     float3 viewDir = -normalize(input.posViewSpace).xyz;
     
-    float3 col = dirLight.dir.w == 0.0f ? computeColDirLight(dirLight, viewDir, input.fNormal, tex) : float3(0.0f, 0.0f, 0.0f);
+    float3 col = dirLight.dir.w == 0.0f ? computeColDirLight(dirLight, viewDir, input.fNormal, tex, metalness, rougnhness) : float3(0.0f, 0.0f, 0.0f);
 
-    for (int i = 0; i < numPLights; i++)
+    for (int i = 0; i < 0; i++)
     {
-        col += computeColPointLight(pointLights[i], input.posViewSpace, input.fNormal, viewDir, tex);
+        col += computeColPointLight(pointLights[i], input.posViewSpace, input.fNormal, viewDir, tex, metalness, rougnhness);
     }
 
     output.vCol = float4(saturate(pow(col, gamma)), 1.0f);
@@ -148,7 +163,7 @@ float V_SmithGGXCorrelated(float NdotL, float NdotV, float alphaG) {
     return 0.5f / (lambdaV + lambdaL);
 }
 
-float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal, float4 tex)
+float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal, float4 tex, float metalness, float roughness)
 {
     float3 lDir = -normalize(dLight.dir.xyz);
     //float3 lRef = reflect(lDir, normal);
@@ -167,7 +182,7 @@ float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal
 
     //float3 specular = float3(1.0f, 1.0f, 1.0f) * Fs_BlinnPhong((1.0f - roughness) * MAX_SHININESS, specAngle) * SPECULAR_STRENGTH;
     float reflectance = 0.35f;
-    float3 f0 = 0.16f * reflectance * reflectance * (1.0f - metallic) + tex.rgb * metallic;
+    float3 f0 = 0.16f * reflectance * reflectance * (1.0f - metalness) + tex.rgb * metalness;
 
     float D = D_GGX(NdotH, linRoughness);
     float3 F = F_Schlick(f0, 1.0f, LdotH);
@@ -180,7 +195,7 @@ float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal
     return saturate(ambCol + (diffuse + specular) * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi);
 }
 
-float3 computeColPointLight(PointLight pLight, float4 fragPos, float3 normal, float3 viewDir, float4 tex)
+float3 computeColPointLight(PointLight pLight, float4 fragPos, float3 normal, float3 viewDir, float4 tex, float metalness, float roughness)
 {
     float4 lDir = pLight.pos - fragPos;
     float dist = length(lDir);
@@ -200,7 +215,7 @@ float3 computeColPointLight(PointLight pLight, float4 fragPos, float3 normal, fl
 
     //float3 specular = (1.0f - INNER_REFLECTANCE) * Fs_BlinnPhong(roughness * MAX_SHININESS, NdotH) * SPECULAR_STRENGTH;
     float reflectance = 0.35f;
-    float3 f0 = 0.16f * reflectance * reflectance * (1.0f - metallic) + tex.rgb * metallic;
+    float3 f0 = 0.16f * reflectance * reflectance * (1.0f - metalness) + tex.rgb * metalness;
 
     float D = D_GGX(NdotH, linRoughness);
     float3 F = F_Schlick(f0, 1.0f, LdotH);

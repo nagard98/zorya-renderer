@@ -293,8 +293,12 @@ dx::XMMATRIX scaleMat = scaleMat = dx::XMMatrixScaling(1.0f, 1.0f, 1.0f);
 HRESULT InitData() {
 
     HRESULT hr;
-    rb.Init();
-    shaders.Init();
+    
+    hr = rb.Init();
+    RETURN_IF_FAILED(hr);
+
+    hr = shaders.Init();
+    RETURN_IF_FAILED(hr);
 
     hr = LoadSkybox(L"./shaders/assets/skybox.dds");
     RETURN_IF_FAILED(hr);
@@ -307,10 +311,12 @@ HRESULT InitData() {
     //RenderableEntity mHnd6 = rf.LoadModelFromFile("./shaders/assets/cubetest.fbx");
     //RenderableEntity mHnd7 = rf.LoadModelFromFile("./shaders/assets/nile/source/nile.obj");
     //RenderableEntity mHnd8 = rf.LoadModelFromFile("./shaders/assets/nixdorf/scene.gltf");
-    RenderableEntity mHnd9 = rf.LoadModelFromFile("./shaders/assets/ye-gameboy/scene.gltf", true);
+    //RenderableEntity mHnd9 = rf.LoadModelFromFile("./shaders/assets/ye-gameboy/scene.gltf", true);
     //RenderableEntity mHnd10 = rf.LoadModelFromFile("./shaders/assets/old_tv/scene.gltf", true);
     //RenderableEntity mHnd11 = rf.LoadModelFromFile("./shaders/assets/sphere.dae", true);
     //RenderableEntity mHnd12 = rf.LoadModelFromFile("./shaders/assets/mori_knob/testObj.obj", true);
+    //RenderableEntity mHnd13 = rf.LoadModelFromFile("./shaders/assets/cl-gameboy-gltf/scene.gltf", true);
+    //RenderableEntity mHnd14 = rf.LoadModelFromFile("./shaders/assets/cl-gameboy-fbx/source/GameBoy_low_01_Fbx.fbx");
 
     wrl::ComPtr<ID3DBlob> verShaderBlob ;
     hr = LoadShader<ID3D11VertexShader>(L"./shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), rhi.device.Get());
@@ -363,7 +369,7 @@ void RenderSHierarchy() {
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
-    //ImGui::ShowDemoWindow();
+    ImGui::ShowDemoWindow();
 
     //rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), rhi.depthStencilView.Get());
 

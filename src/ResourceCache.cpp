@@ -7,6 +7,7 @@
 #include <wrl/client.h>
 #include <cstdint>
 #include <cassert>
+#include <variant>
 
 namespace wrl = Microsoft::WRL;
 
@@ -33,10 +34,16 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 	m->model.shader = shaders.pixelShaders.at((std::uint8_t)PShaderID::STANDARD);
 
 	if ((matCacheHnd.isCached & UPDATE_MAT_MAPS)) {
-		
 		rhi.LoadTexture(matDesc.albedoPath, m->albedoMap);
 		rhi.LoadTexture(matDesc.normalPath, m->normalMap, false);
-		rhi.LoadTexture(matDesc.metalnessMask, m->metalnessMap);
+		if ((matDesc.unionTags & METALNESS_IS_MAP) == METALNESS_IS_MAP) {
+			rhi.LoadTexture(matDesc.metalnessMap, m->metalnessMap, false);
+			m->matPrms.hasMetalnessMap = true;
+		}
+		if ((matDesc.unionTags & SMOOTHNESS_IS_MAP) == SMOOTHNESS_IS_MAP) {
+			rhi.LoadTexture(matDesc.smoothnessMap, m->smoothnessMap, false);
+			m->matPrms.hasSmoothnessMap = true;
+		}
 	}
 
 	if ((matCacheHnd.isCached & UPDATE_MAT_PRMS)) {
@@ -45,9 +52,17 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 		m->matPrms.hasMetalnessMap = m->metalnessMap.resourceView != nullptr;
 
 		m->matPrms.baseColor = matDesc.baseColor;
-		m->matPrms.metalness = matDesc.metalness;
+
+		if ((matDesc.unionTags & METALNESS_IS_MAP) == 0) {
+			m->matPrms.metalness = matDesc.metalnessValue;
+			m->matPrms.hasMetalnessMap = false;
+		}
 		//TODO: change matPrms name smoothness to roughness
-		m->matPrms.smoothness = 1.0 - matDesc.smoothness;
+		if ((matDesc.unionTags & SMOOTHNESS_IS_MAP) == 0) {
+			m->matPrms.smoothness = 1.0f - matDesc.smoothnessValue;
+			m->matPrms.hasSmoothnessMap = false;
+		}
+
 	}
 
 	return MaterialCacheHandle_t{ (std::uint16_t)matIndex, NO_UPDATE_MAT };

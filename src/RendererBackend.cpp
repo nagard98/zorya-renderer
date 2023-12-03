@@ -42,6 +42,7 @@ HRESULT RendererBackend::Init()
 	matCbDesc.Usage = D3D11_USAGE_DEFAULT;
 
 	HRESULT hr = rhi.device->CreateBuffer(&matCbDesc, nullptr, &matPrmsCB);
+    
     RETURN_IF_FAILED(hr);
 
     //World transform constant buffer setup---------------------------------------------------
@@ -99,6 +100,7 @@ HRESULT RendererBackend::Init()
     rhi.context->PSSetConstantBuffers(0, 1, &lightsCB);
     //---------------------------------------------------------
 	
+    return S_OK;
 }
 
 void RendererBackend::RenderView(const ViewDesc& viewDesc)
@@ -130,6 +132,8 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
 		Material &mat = resourceCache.materialCache.at(sbPair.matCacheHnd.index);
 		rhi.context->PSSetShaderResources(0, 1, &mat.albedoMap.resourceView);
 		rhi.context->PSSetShaderResources(1, 1, &mat.normalMap.resourceView);
+        rhi.context->PSSetShaderResources(2, 1, &mat.metalnessMap.resourceView);
+        rhi.context->PSSetShaderResources(3, 1, &mat.smoothnessMap.resourceView);
 		rhi.context->PSSetShader(mat.model.shader, 0, 0);
 
 		rhi.context->UpdateSubresource(matPrmsCB, 0, nullptr, &mat.matPrms, 0, 0);

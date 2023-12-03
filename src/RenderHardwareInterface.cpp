@@ -87,7 +87,7 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
         if (SUCCEEDED(hRes)) break;
     }
 
-    if (FAILED(hRes)) return hRes;
+    RETURN_IF_FAILED(hRes);
 
 
 
@@ -108,7 +108,7 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
         }
     }
 
-    if (FAILED(hRes)) return hRes;
+    RETURN_IF_FAILED(hRes);
 
     //IDXGIFactory2* dxgiFactory2 = nullptr;
     //hRes = dxgiFactory1->QueryInterface(__uuidof(IDXGIFactory2), reinterpret_cast<void**>(&dxgiFactory2));

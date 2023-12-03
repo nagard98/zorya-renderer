@@ -8,7 +8,7 @@
 
 struct MaterialCacheHandle_t {
 	std::uint16_t index;
-	std::uint8_t isCached;
+	MatUpdateFlags_ isCached;
 };
 
 class ResourceCache {

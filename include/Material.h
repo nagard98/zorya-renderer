@@ -5,28 +5,40 @@
 #include <string>
 #include <cstdint>
 #include "Shaders.h"
+#include <variant>
 
 #include <d3d11.h>
 
 namespace dx = DirectX;
 
+typedef std::uint8_t MatUpdateFlags_;
 
-constexpr std::uint8_t NO_UPDATE_MAT = 0;
-constexpr std::uint8_t UPDATE_MAT_PRMS = 1;
-constexpr std::uint8_t UPDATE_MAT_MAPS = 2;
-constexpr std::uint8_t IS_FIRST_MAT_ALLOC = 4;
+constexpr MatUpdateFlags_ NO_UPDATE_MAT = 0;
+constexpr MatUpdateFlags_ UPDATE_MAT_PRMS = 1;
+constexpr MatUpdateFlags_ UPDATE_MAT_MAPS = 2;
+constexpr MatUpdateFlags_ IS_FIRST_MAT_ALLOC = 4;
 
+typedef std::uint8_t MatDescFlags_;
+
+constexpr MatDescFlags_ SMOOTHNESS_IS_MAP = 1;
+constexpr MatDescFlags_ METALNESS_IS_MAP = 2;
 
 struct MaterialDesc {
 	PShaderID shaderType;
+	MatDescFlags_ unionTags;
 
 	wchar_t albedoPath[128];
 	dx::XMFLOAT4 baseColor;
 
-	float smoothness;
+	union {
+		float smoothnessValue;
+		wchar_t smoothnessMap[128];
+	};
 
-	float metalness;
-	wchar_t metalnessMask[128];
+	union {
+		float metalnessValue;
+		wchar_t metalnessMap[128];
+	};
 
 	wchar_t normalPath[128];
 };
@@ -49,11 +61,12 @@ struct MaterialParams {
 	std::uint32_t hasAlbedoMap;
 	std::uint32_t hasMetalnessMap;
 	std::uint32_t hasNormalMap;
+	std::uint32_t hasSmoothnessMap;
 
 	float smoothness;
 	float metalness;
 
-	std::uint8_t pad[12];
+	std::uint8_t pad[8];
 
 };
 
@@ -63,6 +76,7 @@ struct Material {
 	ShaderTexture2D albedoMap;
 	ShaderTexture2D metalnessMap;
 	ShaderTexture2D normalMap;
+	ShaderTexture2D smoothnessMap;
 
 	MaterialParams matPrms;
 };

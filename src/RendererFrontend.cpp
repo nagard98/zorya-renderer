@@ -230,27 +230,64 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                 matDesc.baseColor = dx::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
             }
 
-            float roughness = 0.0f;
-            success = material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
-            if (aiReturn_SUCCESS == success) {
-                //TODO:: do correct conversion roughness surface
-                matDesc.smoothness = 1.0f - roughness;
+            aiString roughTexName;
+            count = material->GetTextureCount(aiTextureType_DIFFUSE_ROUGHNESS);
+            if (count > 0) {
+                success = material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE_ROUGHNESS, 0), roughTexName);
+                if (!(aiReturn_SUCCESS == success)) {
+                    Logger::AddLog(Logger::Channel::ERR, "%s\n", importer.GetErrorString());
+                }
+                else {
+                    aiString roughnessMapPath = aiString(basePath);
+                    roughnessMapPath.Append("/");
+                    roughnessMapPath.Append(roughTexName.C_Str());
+                    mbstowcs(tmpString, roughnessMapPath.C_Str(), 128);
+                    wcscpy(matDesc.smoothnessMap, tmpString);
+                    matDesc.unionTags |= SMOOTHNESS_IS_MAP;
+                    // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
+                }
             }
             else {
-                matDesc.smoothness = 0.5f;
+                float roughness = 0.0f;
+                success = material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
+                if (aiReturn_SUCCESS == success) {
+                    //TODO:: do correct conversion roughness surface
+                    matDesc.smoothnessValue = 1.0f - roughness;
+                }
+                else {
+                    matDesc.smoothnessValue = 0.5f;
+                }
             }
 
-            float metalness = 0.0f;
-            success = material->Get(AI_MATKEY_METALLIC_FACTOR, metalness);
-            if (aiReturn_SUCCESS == success) {
-                matDesc.metalness = metalness;
+            aiString metTexName;
+            count = material->GetTextureCount(aiTextureType_METALNESS);
+            if (count > 0) {
+                success = material->Get(AI_MATKEY_TEXTURE(aiTextureType_METALNESS, 0), metTexName);
+                if (!(aiReturn_SUCCESS == success)) {
+                    Logger::AddLog(Logger::Channel::ERR, "%s\n", importer.GetErrorString());
+                }
+                else {
+                    aiString metalnessMapPath = aiString(basePath);
+                    metalnessMapPath.Append("/");
+                    metalnessMapPath.Append(metTexName.C_Str());
+                    mbstowcs(tmpString, metalnessMapPath.C_Str(), 128);
+                    wcscpy(matDesc.metalnessMap, tmpString);
+                    matDesc.unionTags |= METALNESS_IS_MAP;
+                    // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
+                }
             }
             else {
-                matDesc.metalness = 0.0f;
+                float metalness = 0.0f;
+                success = material->Get(AI_MATKEY_METALLIC_FACTOR, metalness);
+                if (aiReturn_SUCCESS == success) {
+                    matDesc.metalnessValue = metalness;
+                }
+                else {
+                    matDesc.metalnessValue = 0.0f;
+                }
             }
 
-
-            wcscpy(matDesc.metalnessMask, L"");
+            //wcscpy(matDesc.metalnessMask, L"");
 
             initMatCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS | IS_FIRST_MAT_ALLOC;
         }
