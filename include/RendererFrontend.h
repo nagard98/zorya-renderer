@@ -77,7 +77,7 @@ public:
 
 private:
 	void LoadNodeChildren(const aiScene* scene, aiNode** children, unsigned int numChildren, RenderableEntity& parentRE);
-	RenderableEntity LoadNodeMeshes(const aiScene* scene, unsigned int* meshesIndices, unsigned int numMeshes, RenderableEntity& parentRE, const Transform_t& localTransf = IDENTITY_TRANSFORM);
+	RenderableEntity LoadNodeMeshes(const aiScene* scene, unsigned int* meshesIndices, unsigned int numMeshes, RenderableEntity& parentRE, Transform_t localTransf = IDENTITY_TRANSFORM);
 	Assimp::Importer importer;
 
 	void ParseSceneGraph(const Node<RenderableEntity>* node, const dx::XMMATRIX& parentTransf, std::vector<SubmeshInfo>& submeshesInView);

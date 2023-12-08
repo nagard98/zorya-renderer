@@ -22,8 +22,11 @@ HRESULT Shaders::BuildDefaultShaders() {
 
     hRes = LoadShader<ID3D11VertexShader>(L"./shaders/BasicVertexShader.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::STANDARD), rhi.device.Get());
     RETURN_IF_FAILED(hRes);
+    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/DepthVertexShader.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::DEPTH), rhi.device.Get());
+    RETURN_IF_FAILED(hRes);
     hRes = LoadShader<ID3D11VertexShader>(L"./shaders/SkyboxVertexShader.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::SKYBOX), rhi.device.Get());
     RETURN_IF_FAILED(hRes);
+
 
     LoadShader<ID3D11PixelShader>(L"./shaders/BasicPixelShader.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::STANDARD), rhi.device.Get());
     RETURN_IF_FAILED(hRes);

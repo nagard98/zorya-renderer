@@ -90,7 +90,6 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     RETURN_IF_FAILED(hRes);
 
 
-
     wrl::ComPtr<IDXGIFactory1> dxgiFactory1;
     {
         wrl::ComPtr<IDXGIDevice> dxgiDevice;
@@ -102,9 +101,7 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
 
             if (SUCCEEDED(hRes)) {
                 adapter->GetParent(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(dxgiFactory1.GetAddressOf()));
-                //adapter->Release();
             }
-            //dxgiDevice->Release();
         }
     }
 
@@ -208,9 +205,13 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     //TODO:move sampler creation to somewhere else----------------
     D3D11_SAMPLER_DESC samplerDesc;
     ZeroMemory(&samplerDesc, sizeof(samplerDesc));
-    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    //samplerDesc.BorderColor[0] = 1.0f;
+    //samplerDesc.BorderColor[1] = 1.0f;
+    //samplerDesc.BorderColor[2] = 1.0f;
+    //samplerDesc.BorderColor[3] = 1.0f;
     samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
     samplerDesc.MipLODBias = 0.0f;
     samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
@@ -234,16 +235,21 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     depthStenTexDesc.Usage = D3D11_USAGE_DEFAULT;
     depthStenTexDesc.Width = rhi.viewport.Width;
     depthStenTexDesc.Height = rhi.viewport.Height;
-    depthStenTexDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthStenTexDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
     depthStenTexDesc.ArraySize = 1;
     depthStenTexDesc.SampleDesc.Count = MULTISAMPLE_COUNT;
     depthStenTexDesc.SampleDesc.Quality = 0;
 
+    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+    dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    dsvDesc.Flags = 0;
+    dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    dsvDesc.Texture2D.MipSlice = 0;
 
     hRes = device->CreateTexture2D(&depthStenTexDesc, NULL, depthStencilBuff.GetAddressOf());
     RETURN_IF_FAILED(hRes);
 
-    hRes = device->CreateDepthStencilView(depthStencilBuff.Get(), NULL, depthStencilView.GetAddressOf());
+    hRes = device->CreateDepthStencilView(depthStencilBuff.Get(), &dsvDesc, depthStencilView.GetAddressOf());
     RETURN_IF_FAILED(hRes);
 
     context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), depthStencilView.Get());

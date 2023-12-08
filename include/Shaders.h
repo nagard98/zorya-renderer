@@ -11,6 +11,7 @@
 enum class VShaderID : std::uint8_t {
     STANDARD,
     SKYBOX,
+    DEPTH,
     NUM_SHADERS
 };
 

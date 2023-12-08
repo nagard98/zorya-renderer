@@ -117,11 +117,6 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
         Logger::AddLog(Logger::Channel::ERR, "%s\n", importer.GetErrorString());
         return rootEnt;
     }
-    
-    float unitScaleFactor = 1.0f;
-    if (scene->mMetaData->HasKey("UnitScaleFactor")) {
-        scene->mMetaData->Get<float>("UnitScaleFactor", unitScaleFactor);
-    }
 
     aiNode* rootNode = scene->mRootNode;
 
@@ -158,7 +153,7 @@ void RendererFrontend::LoadNodeChildren(const aiScene* scene, aiNode** children,
     }
 }
 
-RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned int* meshesIndices, unsigned int numMeshes, RenderableEntity& parentRE, const Transform_t& localTransf)
+RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned int* meshesIndices, unsigned int numMeshes, RenderableEntity& parentRE, Transform_t localTransf)
 {
     aiReturn success;
 
@@ -167,6 +162,15 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
 
     aiString basePath;
     scene->mMetaData->Get("basePath", basePath);
+
+    float unitScaleFactor = 1.0f;
+    if (scene->mMetaData->HasKey("UnitScaleFactor")) {
+        scene->mMetaData->Get<float>("UnitScaleFactor", unitScaleFactor);
+    }
+
+    localTransf.scal.x /= unitScaleFactor;
+    localTransf.scal.y /= unitScaleFactor;
+    localTransf.scal.z /= unitScaleFactor;
 
     for (int j = 0; j < numMeshes; j++) {
         aiMesh* mesh = scene->mMeshes[meshesIndices[j]];
@@ -200,7 +204,9 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     albedoPath.Append("/");
                     albedoPath.Append(diffTexName.C_Str());
                     mbstowcs(tmpString, albedoPath.C_Str(), 128);
-                    wcscpy(matDesc.albedoPath, tmpString); // L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg";
+                    wcscpy(matDesc.albedoPath, tmpString);
+                    //wcscpy(matDesc.albedoPath, L"");
+                    // L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg";
                 }
             }
 
@@ -217,6 +223,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     NormalMapPath.Append(normTexName.C_Str());
                     mbstowcs(tmpString, NormalMapPath.C_Str(), 128);
                     wcscpy(matDesc.normalPath, tmpString);
+                    //wcscpy(matDesc.normalPath, L"");
                     // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
                 }
             }
@@ -243,8 +250,8 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     roughnessMapPath.Append(roughTexName.C_Str());
                     mbstowcs(tmpString, roughnessMapPath.C_Str(), 128);
                     wcscpy(matDesc.smoothnessMap, tmpString);
+                    //wcscpy(matDesc.smoothnessMap, L"");
                     matDesc.unionTags |= SMOOTHNESS_IS_MAP;
-                    // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
                 }
             }
             else {
@@ -272,8 +279,8 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     metalnessMapPath.Append(metTexName.C_Str());
                     mbstowcs(tmpString, metalnessMapPath.C_Str(), 128);
                     wcscpy(matDesc.metalnessMap, tmpString);
+                    //wcscpy(matDesc.metalnessMap, L"");
                     matDesc.unionTags |= METALNESS_IS_MAP;
-                    // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
                 }
             }
             else {
@@ -287,8 +294,6 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                 }
             }
 
-            //wcscpy(matDesc.metalnessMask, L"");
-
             initMatCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS | IS_FIRST_MAT_ALLOC;
         }
         //---------------------------------------------------
@@ -299,6 +304,8 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
 
         //TODO: hmmm? evaluate should if i reserve in advance? when?
         staticSceneVertexData.reserve((size_t)submeshHandle.numVertices + (size_t)submeshHandle.baseVertex);
+        bool hasTangents = mesh->HasTangentsAndBitangents();
+        bool hasTexCoords = mesh->HasTextureCoords(0);
 
         for (int i = 0; i < submeshHandle.numVertices; i++)
         {
@@ -307,7 +314,12 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
             aiVector3D* textureCoord = &mesh->mTextureCoords[0][i];
             aiVector3D* tangent = &mesh->mTangents[i];
 
-            staticSceneVertexData.push_back(Vertex(vert->x , vert->y, vert->z, textureCoord->x, textureCoord->y, normal->x, normal->y, normal->z, tangent->x, tangent->y, tangent->z));
+
+            staticSceneVertexData.push_back(Vertex(
+                vert->x, vert->y, vert->z,
+                hasTexCoords ? textureCoord->x : 0.0f, hasTexCoords ? textureCoord->y : 0.0f,
+                normal->x, normal->y, normal->z,
+                hasTangents ? tangent->x : 0.0f, hasTangents ? tangent->y : 0.0f, hasTangents ? tangent->z : 0.0f));
         }
 
         int numFaces = mesh->mNumFaces;

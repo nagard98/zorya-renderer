@@ -12,6 +12,8 @@ struct VS_OUTPUT
     float2 texCoord : TEXCOORD0;
     float3 vNormal       : NORMAL;
     float4 posViewSpace : POSITION0;
+    float4 posLightSpace : POSITION1;
+    float4 posWorldSpace : POSITION2;
     float3x3 tbn : TBNMATRIX;
 };
 
@@ -29,6 +31,35 @@ cbuffer cbPerProj : register(b2)
 {
     float4x4 projMatrix;
 };
+
+
+struct DirectionalLight
+{
+    float4 dir;
+};
+
+struct PointLight
+{
+    float4 pos;
+    
+    float constant;
+    float lin;
+    float quad;
+};
+
+cbuffer cbLight : register(b3)
+{
+    DirectionalLight dirLight;
+    
+    int numPLights;
+    PointLight pointLights[16];
+};
+
+cbuffer cbDirShadowMatrixes : register(b4)
+{
+    float4x4 dirViewMat;
+    float4x4 dirProjMat;
+}
 
 //--------------------------------------------------------------------------------------
 // Vertex Shader
@@ -49,6 +80,9 @@ VS_OUTPUT vs(VS_INPUT Input)
 
     Output.texCoord = Input.texCoord;
     Output.vNormal = mul(float4(Input.vNormal,0.0f), mul(worldMatrix, viewMatrix));
+    
+    Output.posWorldSpace = mul(Input.vPosition, worldMatrix);
+    Output.posLightSpace = mul(Input.vPosition, mul(worldMatrix, mul(dirViewMat, dirProjMat)));
     
     return Output;
 }
