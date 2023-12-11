@@ -17,13 +17,14 @@ public:
 	Editor();
 	void Init(const ImGuiID& dockspaceID);
 
-	void RenderEditor(RendererFrontend& rf, const ID3D11ShaderResourceView* rtSRV);
+	void RenderEditor(RendererFrontend& rf, Camera& editorCam, const ID3D11ShaderResourceView* rtSRV);
 
 	SceneHierarchy sceneHier;
 	EntityOutline entityProps;
 	bool firstLoop;
 	ImGuiID sceneId;
 
+	bool isSceneClicked;
 	char textBuff[128];
 };
 

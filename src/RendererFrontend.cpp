@@ -19,48 +19,14 @@
 #include "Camera.h"
 #include "SceneGraph.h"
 #include "Shaders.h"
+#include "Lights.h"
+#include "Transform.h"
 
 #include <cstdlib>
 
 namespace dx = DirectX;
 
 RendererFrontend rf;
-
-dx::XMMATRIX mult(const Transform_t& a, const Transform_t& b) {
-    dx::XMMATRIX rotTransfA = dx::XMMatrixMultiply(
-        dx::XMMatrixRotationX(a.rot.x),
-        dx::XMMatrixMultiply(dx::XMMatrixRotationY(a.rot.y), dx::XMMatrixRotationZ(a.rot.z)));
-    dx::XMMATRIX matTransfA = dx::XMMatrixMultiply(dx::XMMatrixScaling(a.scal.x, a.scal.y, a.scal.z), rotTransfA);
-    matTransfA = dx::XMMatrixMultiply(matTransfA, dx::XMMatrixTranslation(a.pos.x, a.pos.y, a.pos.z));
-
-    dx::XMMATRIX rotTransfB = dx::XMMatrixMultiply(
-        dx::XMMatrixRotationX(b.rot.x),
-        dx::XMMatrixMultiply(dx::XMMatrixRotationY(b.rot.y), dx::XMMatrixRotationZ(b.rot.z)));
-    dx::XMMATRIX matTransfB = dx::XMMatrixMultiply(dx::XMMatrixScaling(b.scal.x, b.scal.y, b.scal.z), rotTransfB);
-    matTransfB = dx::XMMatrixMultiply(matTransfB, dx::XMMatrixTranslation(b.pos.x, b.pos.y, b.pos.z));
-
-    return dx::XMMatrixMultiply(matTransfA, matTransfB);
-}
-
-dx::XMMATRIX mult(const Transform_t& a, const dx::XMMATRIX& b) {
-    dx::XMMATRIX rotTransfA = dx::XMMatrixMultiply(
-        dx::XMMatrixRotationX(a.rot.x),
-        dx::XMMatrixMultiply(dx::XMMatrixRotationY(a.rot.y), dx::XMMatrixRotationZ(a.rot.z)));
-    dx::XMMATRIX matTransfA = dx::XMMatrixMultiply(dx::XMMatrixScaling(a.scal.x, a.scal.y, a.scal.z) , rotTransfA);
-    matTransfA = dx::XMMatrixMultiply(matTransfA, dx::XMMatrixTranslation(a.pos.x, a.pos.y, a.pos.z));
-
-    return dx::XMMatrixMultiply(matTransfA, b);
-}
-
-dx::XMMATRIX mult(const dx::XMMATRIX& a, const Transform_t& b) {
-    dx::XMMATRIX rotTransfB = dx::XMMatrixMultiply(
-        dx::XMMatrixRotationX(b.rot.x),
-        dx::XMMatrixMultiply(dx::XMMatrixRotationY(b.rot.y), dx::XMMatrixRotationZ(b.rot.z)));
-    dx::XMMATRIX matTransfB = dx::XMMatrixMultiply(dx::XMMatrixScaling(b.scal.x, b.scal.y, b.scal.z), rotTransfB);
-    matTransfB = dx::XMMatrixMultiply(matTransfB, dx::XMMatrixTranslation(b.pos.x, b.pos.y, b.pos.z));
-
-    return dx::XMMatrixMultiply(a, matTransfB);
-}
 
 Transform_t buildTransform(aiMatrix4x4 assTransf) {
     aiVector3D scal;
@@ -71,7 +37,7 @@ Transform_t buildTransform(aiMatrix4x4 assTransf) {
     return Transform_t{ dx::XMFLOAT3{pos.x, pos.y, pos.z}, dx::XMFLOAT3{rot.x, rot.y, rot.z}, dx::XMFLOAT3{scal.x, scal.y, scal.z} };
 }
 
-RendererFrontend::RendererFrontend() : sceneGraph( RenderableEntity{ 0,SubmeshHandle_t{0,0,0},"scene", IDENTITY_TRANSFORM } ) {}
+RendererFrontend::RendererFrontend() : sceneGraph(RenderableEntity{ 0,EntityType::COLLECTION, SubmeshHandle_t{0,0,0},"scene", IDENTITY_TRANSFORM }) {}
    
 //TODO: move somewhere else and use other hashing function; this is temporary
 inline uint32_t hash_str_uint32(const std::string& str) {
@@ -109,7 +75,7 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
 
     aiReturn success;
 
-    RenderableEntity rootEnt{ 0,0,0,0 };
+    RenderableEntity rootEnt{ 0,EntityType::UNDEFINED,0,0,0 };
     SubmeshHandle_t submeshHandle{ 0,0,0,0 };
 
     if (scene == nullptr)
@@ -132,6 +98,88 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
 	return rootEnt;
 }
 
+RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx::XMVECTOR direction)
+{
+        LightHandle_t lightHnd;
+        lightHnd.index = sceneLights.size();
+        lightHnd.tag = LightType::DIRECTIONAL;
+        sceneLights.emplace_back(LightInfo{ LightType::DIRECTIONAL, DirectionalLight{direction}, dx::XMMatrixIdentity() });
+
+        //TODO:decide what to hash for id
+        RenderableEntity rEnt;
+        rEnt.ID= hash_str_uint32(std::string("dir_light_")+std::to_string( sceneLights.size()));
+        rEnt.entityName = "Dir Light";
+        rEnt.lightHnd = lightHnd;
+        rEnt.tag = EntityType::LIGHT;
+        rEnt.localWorldTransf = IDENTITY_TRANSFORM;
+
+    if (attachTo == nullptr) {
+        sceneGraph.insertNode(RenderableEntity{ 0 }, rEnt);
+        return rEnt;
+    }
+    else {
+        assert(false);
+    }
+
+}
+
+RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx::XMVECTOR direction, dx::XMVECTOR position, float cutoffAngle)
+{
+    LightHandle_t lightHnd;
+    lightHnd.index = sceneLights.size();
+    lightHnd.tag = LightType::SPOT;
+
+    LightInfo& lightInfo = sceneLights.emplace_back();
+    lightInfo.tag = LightType::SPOT;
+    lightInfo.spotLight = SpotLight{ position,direction, std::cos(cutoffAngle) };
+    lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
+
+    //TODO:decide what to hash for id
+    RenderableEntity rEnt;
+    rEnt.ID = hash_str_uint32(std::string("spot_light_") + std::to_string(sceneLights.size()));
+    rEnt.entityName = "Spot Light";
+    rEnt.lightHnd = lightHnd;
+    rEnt.tag = EntityType::LIGHT;
+    rEnt.localWorldTransf = IDENTITY_TRANSFORM;
+
+    if (attachTo == nullptr) {
+        sceneGraph.insertNode(RenderableEntity{ 0 }, rEnt);
+        return rEnt;
+    }
+    else {
+        assert(false);
+    }
+
+}
+
+RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx::XMVECTOR position, float constant, float linear, float quadratic)
+{
+    LightHandle_t lightHnd;
+    lightHnd.index = sceneLights.size();
+    lightHnd.tag = LightType::POINT;
+
+    LightInfo& lightInfo = sceneLights.emplace_back();
+    lightInfo.tag = LightType::POINT;
+    lightInfo.pointLight = PointLight{ position, constant, linear, quadratic};
+    lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
+
+    //TODO:decide what to hash for id
+    RenderableEntity rEnt;
+    rEnt.ID = hash_str_uint32(std::string("point_light_") + std::to_string(sceneLights.size()));
+    rEnt.entityName = "Point Light";
+    rEnt.lightHnd = lightHnd;
+    rEnt.tag = EntityType::LIGHT;
+    rEnt.localWorldTransf = IDENTITY_TRANSFORM;
+
+    if (attachTo == nullptr) {
+        sceneGraph.insertNode(RenderableEntity{ 0 }, rEnt);
+        return rEnt;
+    }
+    else {
+        assert(false);
+    }
+}
+
 
 void RendererFrontend::LoadNodeChildren(const aiScene* scene, aiNode** children, unsigned int numChildren, RenderableEntity& parentRE)
 {
@@ -143,7 +191,7 @@ void RendererFrontend::LoadNodeChildren(const aiScene* scene, aiNode** children,
             rEnt = LoadNodeMeshes(scene, children[i]->mMeshes, children[i]->mNumMeshes, parentRE, localTransf);
         }
         else {
-            rEnt = RenderableEntity{ hash_str_uint32(children[i]->mName.C_Str()), SubmeshHandle_t{ 0,0,0 }, children[i]->mName.C_Str(), localTransf };
+            rEnt = RenderableEntity{ hash_str_uint32(children[i]->mName.C_Str()), EntityType::COLLECTION, SubmeshHandle_t{ 0,0,0 }, children[i]->mName.C_Str(), localTransf };
             sceneGraph.insertNode(parentRE, rEnt);
             LoadNodeMeshes(scene, children[i]->mMeshes, children[i]->mNumMeshes, rEnt);
         }
@@ -338,7 +386,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
         //TODO: maybe implement move for submeshHandle?
         sceneMeshes.emplace_back(SubmeshInfo{ submeshHandle, BufferCacheHandle_t{0,0}, initMatCacheHnd, dx::XMMatrixIdentity() });
 
-        rEnt = RenderableEntity{ hash_str_uint32(std::to_string(submeshHandle.baseVertex)), submeshHandle, mesh->mName.C_Str(), localTransf };
+        rEnt = RenderableEntity{ hash_str_uint32(std::to_string(submeshHandle.baseVertex)), EntityType::MESH, submeshHandle, mesh->mName.C_Str(), localTransf };
         sceneGraph.insertNode(parentRE, rEnt);
     }
 
@@ -355,28 +403,34 @@ SubmeshInfo* RendererFrontend::findSubmeshInfo(SubmeshHandle_t sHnd) {
     return nullptr;
 }
 
-void RendererFrontend::ParseSceneGraph(const Node<RenderableEntity>* node, const dx::XMMATRIX& parentTransf, std::vector<SubmeshInfo>& submeshesInView) {
+void RendererFrontend::ParseSceneGraph(const Node<RenderableEntity>* node, const dx::XMMATRIX& parentTransf, std::vector<SubmeshInfo>& submeshesInView, std::vector<LightInfo>& lightsInView) {
     dx::XMMATRIX newTransf = mult(node->value.localWorldTransf, parentTransf);
-    if (node->value.submeshHnd.numVertices > 0) {
-        SubmeshInfo* sbPair = findSubmeshInfo(node->value.submeshHnd);
-        //TODO: implement frustum culling
+    if (node->value.tag == EntityType::LIGHT) {
+        LightInfo& lightInfo = sceneLights.at(node->value.lightHnd.index);
+        lightInfo.finalWorldTransf = newTransf;
+        lightsInView.push_back(lightInfo);
+    }
+    else {
+        if (node->value.submeshHnd.numVertices > 0) {
+            SubmeshInfo* sbPair = findSubmeshInfo(node->value.submeshHnd);
+            //TODO: implement frustum culling
 
-        bool cached = sbPair->bufferHnd.isCached; 
-        if (!cached) {
-            sbPair->bufferHnd = bufferCache.AllocStaticGeom(sbPair->submeshHnd, staticSceneIndexData.data() + sbPair->submeshHnd.baseIndex, staticSceneVertexData.data() + sbPair->submeshHnd.baseVertex);
-        }
+            bool cached = sbPair->bufferHnd.isCached;
+            if (!cached) {
+                sbPair->bufferHnd = bufferCache.AllocStaticGeom(sbPair->submeshHnd, staticSceneIndexData.data() + sbPair->submeshHnd.baseIndex, staticSceneVertexData.data() + sbPair->submeshHnd.baseVertex);
+            }
 
-        cached = (sbPair->matCacheHnd.isCached & (UPDATE_MAT_MAPS | UPDATE_MAT_PRMS)) == 0;
-        if (!cached) {
-            sbPair->matCacheHnd = resourceCache.AllocMaterial(materials.at(sbPair->submeshHnd.matDescIdx), sbPair->matCacheHnd);
+            cached = (sbPair->matCacheHnd.isCached & (UPDATE_MAT_MAPS | UPDATE_MAT_PRMS)) == 0;
+            if (!cached) {
+                sbPair->matCacheHnd = resourceCache.AllocMaterial(materials.at(sbPair->submeshHnd.matDescIdx), sbPair->matCacheHnd);
+            }
+            sbPair->finalWorldTransf = newTransf;
+            submeshesInView.push_back(*sbPair);
         }
-        sbPair->finalWorldTransf = newTransf;
-        submeshesInView.push_back(*sbPair);
-        
     }
     
     for (Node<RenderableEntity>* n : node->children) {
-        ParseSceneGraph(n, newTransf, submeshesInView);
+        ParseSceneGraph(n, newTransf, submeshesInView, lightsInView);
     }
     
 }
@@ -386,10 +440,40 @@ ViewDesc RendererFrontend::ComputeView(const Camera& cam)
     std::vector<SubmeshInfo> submeshesInView;
     submeshesInView.reserve(sceneMeshes.size());
     
+    std::vector<LightInfo> lightsInView;
+    
     Node<RenderableEntity>* root = sceneGraph.rootNode;
 
-    ParseSceneGraph(root, dx::XMMatrixIdentity(), submeshesInView);
+    ParseSceneGraph(root, dx::XMMatrixIdentity(), submeshesInView, lightsInView);
+
+    std::uint8_t numDirLights = 0;
+    std::uint8_t numPointLights = 0;
+    std::uint8_t numSpotLights = 0;
+
+    for (const LightInfo& lightInfo : lightsInView) {
+        switch (lightInfo.tag)
+        {
+            case LightType::DIRECTIONAL:
+            {
+                numDirLights += 1;
+                break;
+            }
+            
+            case LightType::POINT:
+            {
+                numPointLights += 1;
+                break;
+            }
+
+            case LightType::SPOT:
+            {
+                numSpotLights += 1;
+                break;
+            }
+
+        }
+    }
 
     //TODO: does move do what I was expecting?
-    return ViewDesc{std::move(submeshesInView), cam};
+    return ViewDesc{std::move(submeshesInView), std::move(lightsInView), numDirLights, numPointLights, numSpotLights, cam};
 }

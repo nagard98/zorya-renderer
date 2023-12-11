@@ -51,7 +51,7 @@ public:
 	HRESULT Init();
 
 	void RenderView(const ViewDesc& viewDesc);
-	void RenderShadowMaps(const std::vector<SubmeshInfo>& submeshesInfo, DirShadowCB& dirShadowCB, OmniDirShadowCB& cbOmniDirShad);
+	void RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& dirShadowCB, OmniDirShadowCB& cbOmniDirShad);
 
 	ID3D11Buffer* matPrmsCB;
 	ID3D11Buffer* lightsCB;
@@ -76,7 +76,7 @@ public:
 	ID3D11DepthStencilView* shadowCubeMapDSV[6 * 2];
 
 	//TODO: what did I intend to do with this?
-	std::hash<std::uint16_t> submeshHash;
+	//std::hash<std::uint16_t> submeshHash;
 };
 
 extern RendererBackend rb;

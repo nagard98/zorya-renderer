@@ -79,7 +79,7 @@ cbuffer omniDirShadowMatrixes : register(b2)
 
 #define MAX_SHININESS 64
 #define SPECULAR_STRENGTH 0.3f
-#define INNER_REFLECTANCE 1.0f
+#define INNER_REFLECTANCE 0.5f
 
 static const float revPi = 1 / 3.14159f;
 static const float gamma = 1.0f / 2.2f;
@@ -99,11 +99,11 @@ SamplerState ObjSamplerState : register(s0);
 
 float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal, float4 tex, float metalness, float roughness);
 float3 computeColPointLight(PointLight pLight, float4 posLightViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float4 tex, float metalness, float roughness);
-float3 computeColSpotLight(float4 posFragViewSpace, float3 normal, float metalness, float roughness);
+float3 computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float roughness);
 
 float computeShadowing(float4 posLightSpace, float bias, float NdotL);
-float computeSpotShadowing(float4 posWorldSpace, float4 posFragViewSpace, float minBias, float maxBias);
-float computeOmniShadowing(float4 posWorldSpace, float4 posViewSpace, float3 normalViewSpace, float minBias, float maxBias);
+float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragViewSpace, float minBias, float maxBias);
+float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewSpace, float3 normalViewSpace, float minBias, float maxBias);
 
 float3 brdf(float VdotN, float LdotN, float LdotH, float NdotH, float linRoughness, float metalness);
 
@@ -160,12 +160,15 @@ PS_OUTPUT ps(PS_INPUT input)
     float shadowing = computeShadowing(input.posLightSpace, 0.01f, 0.0f);
     float3 radExitance = dirLight.dir.w == 0.0f ? computeColDirLight(dirLight, viewDir, input.fNormal, tex, metalness, linRoughness) * shadowing : float3(0.0f, 0.0f, 0.0f);
     
-    shadowing = computeSpotShadowing(input.posWorldSpace, input.posViewSpace, 0.005f, 0.01f);
-    radExitance += computeColSpotLight(input.posViewSpace, input.fNormal, metalness, linRoughness) * shadowing;
+    for (int i = 0; i < numSpotLights; i++)
+    {
+        shadowing = computeSpotShadowing(i, input.posWorldSpace, input.posViewSpace, 0.005f, 0.01f);
+        radExitance += computeColSpotLight(i, input.posViewSpace, input.fNormal, metalness, linRoughness) * shadowing;
+    }
     
     for (int i = 0; i < numPLights; i++)
     {
-        shadowing = computeOmniShadowing(input.posWorldSpace, input.posViewSpace, input.fNormal, 0.005f, 0.01f);
+        shadowing = computeOmniShadowing(i, input.posWorldSpace, input.posViewSpace, input.fNormal, 0.005f, 0.01f);
         radExitance += computeColPointLight(pointLights[i], posPointLightViewSpace[i], input.posViewSpace, input.fNormal, viewDir, tex, metalness, linRoughness) * shadowing;
     }
     
@@ -248,98 +251,85 @@ float computeShadowing(float4 posLightSpace, float bias, float NdotL)
     return shadowingSampled;
 }
 
-float computeSpotShadowing(float4 posWorldSpace, float4 posFragViewSpace, float minBias, float maxBias)
+float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragViewSpace, float minBias, float maxBias)
 {
     float shadowingSampled = 1.0f;
-    float allLightShadowing = 0.0f;
-    float correctedBias = 0.004f; // max(0.001f, bias * (1.0f - abs(NdotL)));
-    
-    for (int i = 0; i < numSpotLights; i++)
+    float correctedBias = 0.008f; // max(0.001f, bias * (1.0f - abs(NdotL)));
+        
+    float3 lightDir = normalize(posSpotLightViewSpace[lightIndex] - posFragViewSpace);
+    float cosAngle = dot(-lightDir, normalize(dirSpotLightViewSpace[lightIndex].xyz));
+    if (cosAngle > spotLights[lightIndex].cosCutoffAngle)
     {
-        shadowingSampled = 1.0f;
+        float4 posLightSpace = mul(posWorldSpace, mul(spotLightViewMat[lightIndex], spotLightProjMat[lightIndex]));
+        float3 ndcPosLightSpace = (posLightSpace.xyz / posLightSpace.w);
         
-        float3 lightDir = normalize(posSpotLightViewSpace[i] - posFragViewSpace);
-        float cosAngle = dot(-lightDir, normalize(dirSpotLightViewSpace[i].xyz));
-        if (cosAngle > spotLights[i].cosCutoffAngle)
-        {
-            float4 posLightSpace = mul(posWorldSpace, mul(spotLightViewMat[i], spotLightProjMat[i]));
-            float3 ndcPosLightSpace = (posLightSpace.xyz / posLightSpace.w);
-        
-            if (ndcPosLightSpace.x < 1.0f && ndcPosLightSpace.y < 1.0f && ndcPosLightSpace.z < 1.0f &&
+        if (ndcPosLightSpace.x < 1.0f && ndcPosLightSpace.y < 1.0f && ndcPosLightSpace.z < 1.0f &&
             ndcPosLightSpace.x > -1.0f && ndcPosLightSpace.y > -1.0f && ndcPosLightSpace.z > 0.0f)
-            {
-                //float3 sampleDir = posWorldSpace - float4(pointLights[0].posWorldSpace.x, 0.0f, 0.0f, 1.0f);
-                float2 normCoords = (ndcPosLightSpace.xy * 0.5f) + 0.5f;
+        {
+            //float3 sampleDir = posWorldSpace - float4(pointLights[0].posWorldSpace.x, 0.0f, 0.0f, 1.0f);
+            float2 normCoords = (ndcPosLightSpace.xy * 0.5f) + 0.5f;
                 
-                //DirectX maps the near plane to 0, not -1
-                float currentDepth = ndcPosLightSpace.z;
-                float2 shadowMapUVF = float2(normCoords.x, 1.0f - normCoords.y);
+            //DirectX maps the near plane to 0, not -1
+            float currentDepth = ndcPosLightSpace.z;
+            float2 shadowMapUVF = float2(normCoords.x, 1.0f - normCoords.y);
     
-                //Brute force 16 samples
-                for (float i = -1.5; i <= 1.5; i += 1.0f)
+            //Brute force 16 samples
+            for (float i = -1.5; i <= 1.5; i += 1.0f)
+            {
+                for (float j = -1.5; j <= 1.5; j += 1.0f)
                 {
-                    for (float j = -1.5; j <= 1.5; j += 1.0f)
-                    {
-                        float2 offset = float2(i, j) * texScale;
-                        float sampledDepth = SpotShadowMap.Sample(ObjSamplerState, shadowMapUVF + offset).r;
-                        shadowingSampled += sampledDepth < currentDepth - correctedBias ? lightDec : 0.0f;
-                    }
+                    float2 offset = float2(i, j) * texScale;
+                    float sampledDepth = SpotShadowMap.Sample(ObjSamplerState, shadowMapUVF + offset).r;
+                    shadowingSampled += sampledDepth < currentDepth - correctedBias ? lightDec : 0.0f;
                 }
             }
         }
-        
-        allLightShadowing += shadowingSampled;
     }
     
-    return allLightShadowing / numSpotLights;
+    return shadowingSampled;
 }
 
-float computeOmniShadowing(float4 posWorldSpace, float4 posViewSpace, float3 normalViewSpace, float minBias, float maxBias)
+float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewSpace, float3 normalViewSpace, float minBias, float maxBias)
 {
-    float shadowingSampled = 1.0f;
-    float allLightShadowing = 0.0f;
-    
-    for (int lightIndex = 0; lightIndex < numPLights; lightIndex++)
+    float shadowingSampled = 1.0f;   
+
+    float3 lightDir = normalize(posPointLightViewSpace[lightIndex] - posViewSpace);
+    float LdotN = saturate(dot(lightDir, normalViewSpace));
+    float correctedBias = max(minBias, maxBias * (1.0f - LdotN));
+        
+    int cubemapOffset = lightIndex * 6;
+        
+    for (float face = 0; face < 6; face += 1.0f)
     {
-        float3 lightDir = normalize(posPointLightViewSpace[lightIndex] - posViewSpace);
-        float LdotN = saturate(dot(lightDir, normalViewSpace));
-        float correctedBias = max(minBias, maxBias * (1.0f - LdotN));
+        float4 posLightSpace = mul(posWorldSpace, mul(lightViewMat[face + cubemapOffset], lightProjMat));
+        float3 ndcPosLightSpace = (posLightSpace.xyz / posLightSpace.w);
         
-        shadowingSampled = 1.0f;
-        int cubemapOffset = lightIndex * 6;
-        
-        for (float face = 0; face < 6; face += 1.0f)
+        if (ndcPosLightSpace.x < 1.0f && ndcPosLightSpace.y < 1.0f && ndcPosLightSpace.z < 1.0f &&
+        ndcPosLightSpace.x > -1.0f && ndcPosLightSpace.y > -1.0f && ndcPosLightSpace.z > 0.0f)
         {
-            float4 posLightSpace = mul(posWorldSpace, mul(lightViewMat[face + cubemapOffset], lightProjMat));
-            float3 ndcPosLightSpace = (posLightSpace.xyz / posLightSpace.w);
-        
-            if (ndcPosLightSpace.x < 1.0f && ndcPosLightSpace.y < 1.0f && ndcPosLightSpace.z < 1.0f &&
-            ndcPosLightSpace.x > -1.0f && ndcPosLightSpace.y > -1.0f && ndcPosLightSpace.z > 0.0f)
-            {
-                //float3 sampleDir = posWorldSpace - float4(pointLights[0].posWorldSpace.x, 0.0f, 0.0f, 1.0f);
-                float2 normCoords = (ndcPosLightSpace.xy * 0.5f) + 0.5f;
+            //float3 sampleDir = posWorldSpace - float4(pointLights[0].posWorldSpace.x, 0.0f, 0.0f, 1.0f);
+            float2 normCoords = (ndcPosLightSpace.xy * 0.5f) + 0.5f;
                 
-                //DirectX maps the near plane to 0, not -1
-                float currentDepth = ndcPosLightSpace.z;
-                float3 shadowMapUVF = float3(normCoords.x, 1.0f - normCoords.y, face + cubemapOffset);
+            //DirectX maps the near plane to 0, not -1
+            float currentDepth = ndcPosLightSpace.z;
+            float3 shadowMapUVF = float3(normCoords.x, 1.0f - normCoords.y, face + cubemapOffset);
     
-                //Brute force 16 samples
-                for (float i = -1.5; i <= 1.5; i += 1.0f)
+            //Brute force 16 samples
+            for (float i = -1.5; i <= 1.5; i += 1.0f)
+            {
+                for (float j = -1.5; j <= 1.5; j += 1.0f)
                 {
-                    for (float j = -1.5; j <= 1.5; j += 1.0f)
-                    {
-                        float3 offset = float3(i, j, 0.0f) * texScale;
-                        float sampledDepth = ShadowCubeMap.Sample(ObjSamplerState, shadowMapUVF + offset).r;
-                        shadowingSampled += sampledDepth < currentDepth - correctedBias ? lightDec : 0.0f;
-                    }
+                    float3 offset = float3(i, j, 0.0f) * texScale;
+                    float sampledDepth = ShadowCubeMap.Sample(ObjSamplerState, shadowMapUVF + offset).r;
+                    shadowingSampled += sampledDepth < currentDepth - correctedBias ? lightDec : 0.0f;
                 }
-                
             }
+                
         }
-        allLightShadowing += shadowingSampled;
     }
     
-    return allLightShadowing / numPLights;
+    return shadowingSampled;
+
 }
 
 float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal, float4 tex, float metalness, float linRoughness)
@@ -374,26 +364,23 @@ float3 computeColPointLight(PointLight pLight, float4 lightPosViewSpace, float4 
     return brdf(VdotN, LdotN, LdotH, NdotH, linRoughness, metalness) * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
 }
 
-float3 computeColSpotLight(float4 posFragViewSpace, float3 normal, float metalness, float linRoughness)
+float3 computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float linRoughness)
 {
-    float3 radiantExitance = float3(0.0f, 0.0f, 0.0f);
-        
-    for (int i = 0; i < numSpotLights; i++)
+    float3 radiantExitance = float3(0.0f, 0.0f, 0.0f);  
+
+    float3 lightDir = normalize(posSpotLightViewSpace[lightIndex] - posFragViewSpace);
+    float cosAngle = dot(-lightDir, normalize(dirSpotLightViewSpace[lightIndex].xyz));
+    if (cosAngle > spotLights[lightIndex].cosCutoffAngle)
     {
-        float3 lightDir = normalize(posSpotLightViewSpace[i] - posFragViewSpace);
-        float cosAngle = dot(-lightDir, normalize(dirSpotLightViewSpace[i].xyz));
-        if (cosAngle > spotLights[i].cosCutoffAngle)
-        {
-            float3 viewDir = -normalize(posFragViewSpace).xyz;
-            float3 halfVec = normalize(viewDir + lightDir);
+        float3 viewDir = -normalize(posFragViewSpace).xyz;
+        float3 halfVec = normalize(viewDir + lightDir);
             
-            float VdotN = abs(dot(normal, viewDir)) + 1e-5f;
-            float LdotN = saturate(dot(lightDir, normal));
-            float LdotH = saturate(dot(lightDir, halfVec));
-            float NdotH = saturate(dot(halfVec, normal));
+        float VdotN = abs(dot(normal, viewDir)) + 1e-5f;
+        float LdotN = saturate(dot(lightDir, normal));
+        float LdotH = saturate(dot(lightDir, halfVec));
+        float NdotH = saturate(dot(halfVec, normal));
     
-            radiantExitance = brdf(VdotN, LdotN, LdotH, NdotH, linRoughness, metalness) * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi;
-        }
+        radiantExitance = brdf(VdotN, LdotN, LdotH, NdotH, linRoughness, metalness) * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi;
     }
     
     return radiantExitance;

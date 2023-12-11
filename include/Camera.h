@@ -11,35 +11,40 @@ public:
 	Camera() {};
 
 	Camera(const dx::XMVECTOR camPos, const dx::XMVECTOR camDir, const dx::XMVECTOR camUp, float fov, float aspectRatio, float nearZ, float farZ){
-		_camPos = camPos;
 		_camDir = camDir;
 		_camUp = camUp;
-		_viewMatrix = dx::XMMatrixLookAtLH(_camPos, _camDir, _camUp);
+		_camPos = camPos;
+		_camRight = dx::XMVector3Cross(_camUp, _camDir);
+
+		rotateAroundCamAxis(0.0f, 0.0f, 0.0f);
 
 		_fov = fov;
 		_aspectRatio = aspectRatio;
 		_nearZ = nearZ;
 		_farZ = farZ;
 		_projMatrix = dx::XMMatrixPerspectiveFovLH(_fov, _aspectRatio, _nearZ, _farZ);
+
 	};
 
-	~Camera() {
-		
-	}
+	~Camera() {}
 
-	//TODO: why make transpose inside these functions?
 	dx::XMMATRIX getViewMatrix() const;
 	dx::XMMATRIX getProjMatrix() const;
 
-	void rotate(float aroundX, float aroundY, float aroundZ);
+	dx::XMMATRIX getViewMatrixTransposed() const;
+	dx::XMMATRIX getProjMatrixTransposed() const;
 
-	dx::XMMATRIX _viewMatrix;
-	dx::XMVECTOR _camPos;
+	dx::XMMATRIX getRotationMatrix() const;
+
+	void rotateAroundCamAxis(float aroundX, float aroundY, float aroundZ);
+	void translateAlongCamAxis(float x, float y, float z);
 
 private:
 
 	dx::XMMATRIX _projMatrix;
-	dx::XMVECTOR _camDir, _camUp;
+	dx::XMVECTOR _camDir, _camUp, _camRight, _camPos;
+	dx::XMMATRIX _rotMat;
+	//dx::XMMATRIX _viewMatrix;
 
 	float _fov;
 	float _aspectRatio;

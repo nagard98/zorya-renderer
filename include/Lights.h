@@ -2,8 +2,15 @@
 #define LIGHTS_H_
 
 #include <DirectXMath.h>
+#include <cstdint>
 
 namespace dx = DirectX;
+
+enum class LightType : std::uint8_t{
+    DIRECTIONAL,
+    POINT,
+    SPOT
+};
 
 struct DirectionalLight {
     dx::XMVECTOR direction;
@@ -23,7 +30,10 @@ struct SpotLight {
     float cosCutoffAngle;
 };
 
-
+struct LightHandle_t {
+    LightType tag;
+    std::uint8_t index;
+};
 
 struct LightCB {
     DirectionalLight dLight;
@@ -50,9 +60,5 @@ struct OmniDirShadowCB {
     dx::XMMATRIX spotLightViewMat[16];
     dx::XMMATRIX spotLightProjMat[16];
 };
-
-extern DirectionalLight dLight;
-extern PointLight pLights[1];
-extern SpotLight spotLights[1];
 
 #endif

@@ -11,6 +11,7 @@ public:
 	~EntityOutline();
 
 	void RenderEProperties(RenderableEntity& entity, SubmeshInfo* smInfo, MaterialDesc* matDesc);
+	void RenderEProperties(RenderableEntity& entity, LightInfo& lightInfo);
 
 	char tmpCharBuff[128];
 };

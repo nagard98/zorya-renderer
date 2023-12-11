@@ -16,6 +16,7 @@
 
 #include "imgui.h"
 #include "imgui_impl_dx11.h"
+#include "imgui_impl_dx11.h"
 #include "imgui_impl_win32.h"
 
 #include <Editor/Logger.h>
@@ -75,7 +76,6 @@ wrl::ComPtr<ID3D11Buffer> g_d3dIndexBufferSkybox;
 wrl::ComPtr<ID3D11Buffer> g_cbPerObj;
 wrl::ComPtr<ID3D11Buffer> g_cbPerCam;
 wrl::ComPtr<ID3D11Buffer> g_cbPerProj;
-wrl::ComPtr<ID3D11Buffer> g_cbLight;
 
 wrl::ComPtr<ID3D11VertexShader> g_d3dVertexShader;
 
@@ -105,11 +105,8 @@ Mouse mouse;
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-bool LoadContent();
-bool UnloadContent();
-
 void Update(float deltaTime);
-void RenderSHierarchy();
+void Render();
 void Cleanup();
 
 int InitApplication(HINSTANCE hInstance, int cmdShow) {
@@ -225,7 +222,7 @@ int Run() {
             deltaTime = std::min<float>(deltaTime, maxTimeStep);
 
             Update(deltaTime);
-            RenderSHierarchy();
+            Render();
         }
     }
 
@@ -282,6 +279,37 @@ HRESULT LoadSkybox(const wchar_t *skyboxPath) {
     cubeIndexData.SysMemSlicePitch = 0;
 
     hr = rhi.device->CreateBuffer(&cubeIndexBuffDesc, &cubeIndexData, g_d3dIndexBufferSkybox.GetAddressOf());
+    RETURN_IF_FAILED(hr);
+
+    D3D11_BUFFER_DESC cubeObjCB;
+    ZeroMemory(&cubeObjCB, sizeof(cubeObjCB));
+    cubeObjCB.ByteWidth = sizeof(ObjCB);
+    cubeObjCB.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    cubeObjCB.Usage = D3D11_USAGE_DEFAULT;
+    cubeObjCB.CPUAccessFlags = 0;
+
+    hr = rhi.device->CreateBuffer(&cubeObjCB, nullptr, g_cbPerObj.GetAddressOf());
+    RETURN_IF_FAILED(hr);
+
+    D3D11_BUFFER_DESC cubeViewCB;
+    ZeroMemory(&cubeViewCB, sizeof(cubeViewCB));
+    cubeViewCB.ByteWidth = sizeof(ObjCB);
+    cubeViewCB.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    cubeViewCB.Usage = D3D11_USAGE_DEFAULT;
+    cubeViewCB.CPUAccessFlags = 0;
+
+    hr = rhi.device->CreateBuffer(&cubeViewCB, nullptr, g_cbPerCam.GetAddressOf());
+    RETURN_IF_FAILED(hr);
+
+    D3D11_BUFFER_DESC cubeProjCB;
+    ZeroMemory(&cubeProjCB, sizeof(cubeProjCB));
+    cubeProjCB.ByteWidth = sizeof(ObjCB);
+    cubeProjCB.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    cubeProjCB.Usage = D3D11_USAGE_DEFAULT;
+    cubeProjCB.CPUAccessFlags = 0;
+
+    hr = rhi.device->CreateBuffer(&cubeProjCB, nullptr, g_cbPerProj.GetAddressOf());
+    RETURN_IF_FAILED(hr);
 
     return hr;
     //---------------------------------------------------------------------
@@ -307,13 +335,13 @@ HRESULT InitData() {
     //RenderableEntity mHnd5 = rf.LoadModelFromFile("./shaders/assets/cornell/cornell.fbx");
     //RenderableEntity mHnd = rf.LoadModelFromFile("./shaders/assets/perry/head.obj");
     //RenderableEntity mHnd2 = rf.LoadModelFromFile("./shaders/assets/cicada/source/cicada.fbx");
-    //RenderableEntity mHnd3 = rf.LoadModelFromFile("./shaders/assets/Human/Models/Head/Head.fbx");
+    RenderableEntity mHnd3 = rf.LoadModelFromFile("./shaders/assets/Human/Models/Head/Head.fbx");
     //RenderableEntity mHnd6 = rf.LoadModelFromFile("./shaders/assets/cube.dae");
     //RenderableEntity mHnd7 = rf.LoadModelFromFile("./shaders/assets/nile/source/nile.obj");
     //RenderableEntity mHnd8 = rf.LoadModelFromFile("./shaders/assets/nixdorf/scene.gltf");
     //RenderableEntity mHnd9 = rf.LoadModelFromFile("./shaders/assets/ye-gameboy/scene.gltf", true);
     //RenderableEntity mHnd10 = rf.LoadModelFromFile("./shaders/assets/old_tv/scene.gltf", true);
-    //RenderableEntity mHnd11 = rf.LoadModelFromFile("./shaders/assets/sphere.dae", true);
+    //RenderableEntity mHnd11 = rf.LoadModelFromFile("./shaders/assets/sphere.obj", true);
     //RenderableEntity mHnd12 = rf.LoadModelFromFile("./shaders/assets/mori_knob/testObj.obj", true);
     //RenderableEntity mHnd13 = rf.LoadModelFromFile("./shaders/assets/cl-gameboy-gltf/scene.gltf", true);
     //RenderableEntity mHnd14 = rf.LoadModelFromFile("./shaders/assets/cl-gameboy-fbx/source/GameBoy_low_01_Fbx.fbx");
@@ -367,7 +395,7 @@ HRESULT InitData() {
 
 float rot = 0.0f;
 
-void RenderSHierarchy() {
+void Render() {
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
@@ -381,18 +409,28 @@ void RenderSHierarchy() {
     std::uint32_t strides[] = { sizeof(Vertex) };
     std::uint32_t offsets[] = { 0 };
 
-    //g_cam.rotate(0.0f, -0.00f, 0.0f);    
+    //g_cam.rotateAroundCamAxis(0.0f, -0.00f, 0.0f);    
 
     ////skybox-----------------------------------------------------------
-    //Here transMat used to center skybox cubemap
-    dx::XMMATRIX transMat = dx::XMMatrixTranslationFromVector(g_cam._camPos);
-    ObjCB tmpOCB{ dx::XMMatrixTranspose(transMat) };
-    rhi.context->UpdateSubresource(rb.objectCB, 0, NULL, &tmpOCB, 0, 0);
+    //Using cam rotation matrix as view, to ignore cam translation, making skybox always centered
+    ObjCB tmpOCB{ dx::XMMatrixIdentity() };
+    ViewCB viewCB{ dx::XMMatrixTranspose(g_cam.getRotationMatrix()) };
+    ProjCB projCB{ g_cam.getProjMatrixTransposed() };
+
+    rhi.context->VSSetShader(g_d3dVertexShaderSkybox.Get(), 0, 0);
+    rhi.context->VSSetConstantBuffers(0, 1, g_cbPerObj.GetAddressOf());
+    rhi.context->VSSetConstantBuffers(1, 1, g_cbPerCam.GetAddressOf());
+    rhi.context->VSSetConstantBuffers(2, 1, g_cbPerProj.GetAddressOf());
+
+    rhi.context->UpdateSubresource(g_cbPerObj.Get(), 0, nullptr, &tmpOCB, 0, 0);
+    rhi.context->UpdateSubresource(g_cbPerCam.Get(), 0, nullptr, &viewCB, 0, 0);
+    rhi.context->UpdateSubresource(g_cbPerProj.Get(), 0, nullptr, &projCB, 0, 0);
+
+    //rhi.context->UpdateSubresource(rb.objectCB, 0, NULL, &tmpOCB, 0, 0);
 
     rhi.context->IASetVertexBuffers(0, 1, g_d3dVertexBufferSkybox.GetAddressOf(), strides, offsets);
     rhi.context->IASetIndexBuffer(g_d3dIndexBufferSkybox.Get(), DXGI_FORMAT_R16_UINT, 0);
 
-    rhi.context->VSSetShader(g_d3dVertexShaderSkybox.Get(), 0, 0);
     rhi.context->PSSetShader(g_d3dPixelShaderSkybox.Get(), 0, 0);
 
     rhi.context->PSSetShaderResources(0, 1, cubemapView.GetAddressOf());
@@ -411,18 +449,16 @@ void RenderSHierarchy() {
     rb.RenderView(vDesc);
     //-------------------------------------------------------------
 
-    //ImGui::Begin("Debug");
-    //ImGui::Text("mouse X: %d \nmouse Y: %d\n ", mouse.relX, mouse.relY);
-    //ImGui::End();
 
+    //editor--------------------------------
     ID3D11Resource* srvTexture = nullptr;
     ID3D11Resource* rtTexture = nullptr;
     rhi.renderTargetShaderResourceView->GetResource(&srvTexture);
     rhi.renderTargetView->GetResource(&rtTexture);
     rhi.context->ResolveSubresource(srvTexture, 0, rtTexture, 0, DXGI_FORMAT_R8G8B8A8_UNORM);
 
-    //editor
-    editor.RenderEditor(rf, rhi.renderTargetShaderResourceView.Get());
+    editor.RenderEditor(rf, g_cam, rhi.renderTargetShaderResourceView.Get());
+    //----------------------------------------
 
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
