@@ -12,6 +12,7 @@ enum class VShaderID : std::uint8_t {
     STANDARD,
     SKYBOX,
     DEPTH,
+    POST_PROCESSING,
     NUM_SHADERS
 };
 
@@ -19,6 +20,8 @@ enum class PShaderID : std::uint8_t {
     UNDEFINED,
     STANDARD,
     SKYBOX,
+    SKIN,
+    SSSSS,
     NUM_SHADERS
 };
 
@@ -30,12 +33,17 @@ public:
 
     std::vector<ID3D11VertexShader*> vertexShaders;
     std::vector<ID3D11PixelShader*> pixelShaders;
+
+    ID3D11InputLayout* vertexLayout;
+    ID3D11InputLayout* simpleVertexLayout;
 };
 
 extern Shaders shaders;
 
 extern std::vector<ID3D11VertexShader*> vertexShaders;
 extern std::vector<ID3D11PixelShader*> pixelShaders;
+
+extern D3D11_INPUT_ELEMENT_DESC vertexLayoutDesc[4];
 
 template<class ShaderClass>
 HRESULT CreateShader(ID3DBlob* pShaderBlob, ShaderClass** pShader, ID3D11Device* g_d3dDevice);
@@ -53,7 +61,7 @@ HRESULT LoadShader(const std::wstring& shaderFilename, const std::string& entryp
 
     UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG;
 
-    HRESULT hr = D3DCompileFromFile(shaderFilename.c_str(), NULL, NULL, entrypoint.c_str(), profile.c_str(), flags, 0, shaderBlob, errBlob.GetAddressOf());
+    HRESULT hr = D3DCompileFromFile(shaderFilename.c_str(), NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, entrypoint.c_str(), profile.c_str(), flags, 0, shaderBlob, errBlob.GetAddressOf());
 
     if (FAILED(hr)) {
         std::string errorMessage = (char*)errBlob->GetBufferPointer();

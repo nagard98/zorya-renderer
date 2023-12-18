@@ -229,7 +229,7 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     //TODO: move depth/stencil view creation somewhere else------------------
     D3D11_TEXTURE2D_DESC depthStenTexDesc;
     depthStenTexDesc.MipLevels = 1;
-    depthStenTexDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    depthStenTexDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
     depthStenTexDesc.MiscFlags = 0;
     depthStenTexDesc.CPUAccessFlags = 0;
     depthStenTexDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -246,10 +246,19 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
     dsvDesc.Texture2D.MipSlice = 0;
 
+    D3D11_SHADER_RESOURCE_VIEW_DESC dsRsvDesc;
+    dsRsvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    dsRsvDesc.Texture2D.MipLevels = 1;
+    dsRsvDesc.Texture2D.MostDetailedMip = 0;
+    dsRsvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+
     hRes = device->CreateTexture2D(&depthStenTexDesc, NULL, depthStencilBuff.GetAddressOf());
     RETURN_IF_FAILED(hRes);
 
     hRes = device->CreateDepthStencilView(depthStencilBuff.Get(), &dsvDesc, depthStencilView.GetAddressOf());
+    RETURN_IF_FAILED(hRes);
+
+    hRes = device->CreateShaderResourceView(depthStencilBuff.Get(), &dsRsvDesc, depthStencilShaderResourceView.GetAddressOf());
     RETURN_IF_FAILED(hRes);
 
     context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), depthStencilView.Get());

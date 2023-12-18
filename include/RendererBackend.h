@@ -75,6 +75,10 @@ public:
 	ID3D11ShaderResourceView* shadowCubeMapSRV;
 	ID3D11DepthStencilView* shadowCubeMapDSV[6 * 2];
 
+	ID3D11Texture2D* skinMaps[2];
+	ID3D11RenderTargetView* skinRT[2];
+	ID3D11ShaderResourceView* skinSRV[2];	
+
 	//TODO: what did I intend to do with this?
 	//std::hash<std::uint16_t> submeshHash;
 };

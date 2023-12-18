@@ -70,3 +70,10 @@ std::vector<std::uint16_t> cubeIndices =
 };
 
 
+std::vector<SimpleVertex> quadVertices =
+{
+    SimpleVertex(-1.0f, -1.0f, 0.0f),
+    SimpleVertex(-1.0f, 1.0f, 0.0f),
+    SimpleVertex(1.0f, 1.0f, 0.0f),
+    SimpleVertex(1.0f, -1.0f, 0.0f)
+};

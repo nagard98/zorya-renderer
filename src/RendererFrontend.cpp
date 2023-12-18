@@ -238,7 +238,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                 Logger::AddLog(Logger::Channel::ERR, "%s\n", importer.GetErrorString());
             }
 
-            matDesc.shaderType = PShaderID::STANDARD;
+            matDesc.shaderType = PShaderID::SKIN;
 
             aiString diffTexName;
             int count = material->GetTextureCount(aiTextureType_DIFFUSE);

@@ -87,13 +87,6 @@ wrl::ComPtr<ID3D11SamplerState> samplerStateCube;
 Camera g_cam;
 
 
-D3D11_INPUT_ELEMENT_DESC vertexLayouts[] = {
-    {"position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-    {"texcoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-    {"normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-    {"tangent", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
-};
-
 
 struct Mouse {
     std::int64_t relX, relY;
@@ -347,6 +340,7 @@ HRESULT InitData() {
     //RenderableEntity mHnd14 = rf.LoadModelFromFile("./shaders/assets/cl-gameboy-fbx/source/GameBoy_low_01_Fbx.fbx");
     //RenderableEntity mHnd15 = rf.LoadModelFromFile("./shaders/assets/plane.obj", true);
     //RenderableEntity mHnd16 = rf.LoadModelFromFile("./shaders/assets/cornell-box/CornellBox-Original.obj");
+    //rf.AddLight(nullptr, dx::XMVectorSet(1.0f, 0.0f, 0.0, 0.0f));
 
     wrl::ComPtr<ID3DBlob> verShaderBlob ;
     hr = LoadShader<ID3D11VertexShader>(L"./shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), rhi.device.Get());
@@ -355,7 +349,7 @@ HRESULT InitData() {
     rhi.context->VSSetShader(g_d3dVertexShader.Get(), 0, 0);
 
     wrl::ComPtr<ID3D11InputLayout> vertLayout;
-    hr = rhi.device->CreateInputLayout(vertexLayouts, 4, verShaderBlob->GetBufferPointer(), verShaderBlob->GetBufferSize(), vertLayout.GetAddressOf());
+    hr = rhi.device->CreateInputLayout(vertexLayoutDesc, 4, verShaderBlob->GetBufferPointer(), verShaderBlob->GetBufferSize(), vertLayout.GetAddressOf());
     RETURN_IF_FAILED(hr);
 
     rhi.context->IASetInputLayout(vertLayout.Get());
@@ -418,6 +412,7 @@ void Render() {
     ProjCB projCB{ g_cam.getProjMatrixTransposed() };
 
     rhi.context->VSSetShader(g_d3dVertexShaderSkybox.Get(), 0, 0);
+    rhi.context->IASetInputLayout(shaders.vertexLayout);
     rhi.context->VSSetConstantBuffers(0, 1, g_cbPerObj.GetAddressOf());
     rhi.context->VSSetConstantBuffers(1, 1, g_cbPerCam.GetAddressOf());
     rhi.context->VSSetConstantBuffers(2, 1, g_cbPerProj.GetAddressOf());

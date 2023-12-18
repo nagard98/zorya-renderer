@@ -28,6 +28,12 @@ struct SubmeshHandle_t {
     std::uint32_t numIndexes;
 };
 
+struct SimpleVertex
+{
+    SimpleVertex(float x, float y, float z) : position(x, y, z) {}
+
+    dx::XMFLOAT3 position;
+};
 
 struct Vertex
 {
@@ -44,4 +50,6 @@ struct Vertex
 extern std::vector<Vertex> cubeVertices;
 extern std::vector<std::uint16_t> cubeIndices;
 
-#endif // !MESH_H_
+extern std::vector<SimpleVertex> quadVertices;
+
+#endif // !MODEL_H_

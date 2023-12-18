@@ -6,10 +6,19 @@
 #include <d3d11_1.h>
 
 Shaders shaders;
+D3D11_INPUT_ELEMENT_DESC vertexLayoutDesc[4] = {
+    {"position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+    { "texcoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    { "normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    { "tangent", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+};
 
 HRESULT Shaders::Init() {
     vertexShaders.resize((std::uint8_t)VShaderID::NUM_SHADERS);
     pixelShaders.resize((std::uint8_t)PShaderID::NUM_SHADERS);
+
+    vertexLayout = nullptr;
+    simpleVertexLayout = nullptr;
 
     BuildDefaultShaders();
 
@@ -22,15 +31,24 @@ HRESULT Shaders::BuildDefaultShaders() {
 
     hRes = LoadShader<ID3D11VertexShader>(L"./shaders/StandardVertexShader.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::STANDARD), rhi.device.Get());
     RETURN_IF_FAILED(hRes);
+    hRes = rhi.device->CreateInputLayout(vertexLayoutDesc, 4, shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), &vertexLayout);
+    RETURN_IF_FAILED(hRes);
+
     hRes = LoadShader<ID3D11VertexShader>(L"./shaders/DepthVertexShader.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::DEPTH), rhi.device.Get());
     RETURN_IF_FAILED(hRes);
     hRes = LoadShader<ID3D11VertexShader>(L"./shaders/SkyboxVertexShader.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::SKYBOX), rhi.device.Get());
     RETURN_IF_FAILED(hRes);
-
-
-    LoadShader<ID3D11PixelShader>(L"./shaders/StandardPixelShader.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::STANDARD), rhi.device.Get());
+    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/SSSSS.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::POST_PROCESSING), rhi.device.Get());
     RETURN_IF_FAILED(hRes);
-    LoadShader<ID3D11PixelShader>(L"./shaders/SkyboxPixelShader.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::SKYBOX), rhi.device.Get());
+
+
+    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/StandardPixelShader.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::STANDARD), rhi.device.Get());
+    RETURN_IF_FAILED(hRes);
+    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/SkyboxPixelShader.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::SKYBOX), rhi.device.Get());
+    RETURN_IF_FAILED(hRes);
+    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/SkinPixelShader.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::SKIN), rhi.device.Get());
+    RETURN_IF_FAILED(hRes);
+    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/SSSSS.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::SSSSS), rhi.device.Get());
     RETURN_IF_FAILED(hRes);
 
     if (shaderBlob != nullptr) shaderBlob->Release();

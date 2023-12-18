@@ -20,7 +20,8 @@ struct PS_INPUT
 
 struct PS_OUTPUT
 {
-    float4 vCol : SV_TARGET;
+    float4 diffuse : SV_TARGET0;
+    float4 specular : SV_TARGET1;
 };
 
 struct DirectionalLight
@@ -42,6 +43,13 @@ struct SpotLight
     float4 posWorldSpace;
     float4 direction;
     float cosCutoffAngle;
+};
+
+struct ExitRadiance_t
+{
+    float3 diffuse;
+    float3 specular;
+    float3 transmitted;
 };
 
 cbuffer light : register(b0)
@@ -88,6 +96,10 @@ static const float gamma = 1.0f / 2.2f;
 static const float lightDec = -(1 / 16.0f);
 static const float texScale = 1 / 2048.0f;
 
+static const float zf = 20.0f;
+static const float zn = 2.0f;
+static const float q = zf / (zf - zn);
+
 Texture2D ObjTexture : register(t0);
 Texture2D NormalMap : register(t1);
 Texture2D MetalnessMap : register(t2);
@@ -99,14 +111,15 @@ Texture2D SpotShadowMap : register(t6);
 
 SamplerState ObjSamplerState : register(s0);
 
-float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal, float4 tex, float metalness, float roughness);
-float3 computeColPointLight(PointLight pLight, float4 posLightViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float4 tex, float metalness, float roughness);
-float3 computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float roughness);
+ExitRadiance_t computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal, float4 tex, float metalness, float roughness, float transmDist);
+ExitRadiance_t computeColPointLight(PointLight pLight, float4 posLightViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float4 tex, float metalness, float roughness, float transmDist);
+ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float roughness, float transmDist);
 
-float computeShadowing(float4 posLightSpace, float bias, float NdotL);
-float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragViewSpace, float minBias, float maxBias);
-float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewSpace, float3 normalViewSpace, float minBias, float maxBias);
+float computeShadowing(float4 posLightSpace, float bias, float NdotL, out float transmDist);
+float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragViewSpace, float minBias, float maxBias, out float transmDist);
+float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewSpace, float3 normalViewSpace, float minBias, float maxBias, out float transmDist);
 
+float3 T(float s);
 
 PS_OUTPUT ps(PS_INPUT input)
 {
@@ -147,40 +160,73 @@ PS_OUTPUT ps(PS_INPUT input)
     
     float3 viewDir = -normalize(input.posViewSpace).xyz;
     
-    float shadowing = computeShadowing(input.posLightSpace, 0.01f, 0.0f);
-    float3 radExitance = dirLight.dir.w == 0.0f ? computeColDirLight(dirLight, viewDir, input.fNormal, tex, metalness, linRoughness) * shadowing : float3(0.0f, 0.0f, 0.0f);
+    float shadowing = 0.0f;
+    
+    ExitRadiance_t radExitance;
+    radExitance.diffuse = float3(0.0f, 0.0f, 0.0f);
+    radExitance.specular = float3(0.0f, 0.0f, 0.0f);
+
+    if (dirLight.dir.w == 0.0f)
+    {
+        float transmDist = 0.0f;
+        shadowing = computeShadowing(input.posLightSpace, 0.005f, dot(input.fNormal, -dirLight.dir.xyz), transmDist);
+        ExitRadiance_t tmpRadExitance = computeColDirLight(dirLight, viewDir, input.fNormal, tex, metalness, linRoughness, transmDist);
+
+        radExitance.diffuse += (tmpRadExitance.diffuse * shadowing) + tmpRadExitance.transmitted;
+        radExitance.specular += tmpRadExitance.specular * shadowing;
+    }
     
     for (int i = 0; i < numSpotLights; i++)
     {
-        shadowing = computeSpotShadowing(i, input.posWorldSpace, input.posViewSpace, 0.005f, 0.01f);
-        radExitance += computeColSpotLight(i, input.posViewSpace, input.fNormal, metalness, linRoughness) * shadowing;
+        float transmDist = 0.0f;
+        shadowing = computeSpotShadowing(i, input.posWorldSpace, input.posViewSpace, 0.005f, 0.01f, transmDist);
+        ExitRadiance_t tmpRadExitance = computeColSpotLight(i, input.posViewSpace, input.fNormal, metalness, linRoughness, transmDist);
+        
+        radExitance.diffuse += tmpRadExitance.diffuse * shadowing;
+        radExitance.specular += tmpRadExitance.specular * shadowing;
     }
     
     for (int i = 0; i < numPLights; i++)
     {
-        shadowing = computeOmniShadowing(i, input.posWorldSpace, input.posViewSpace, input.fNormal, 0.005f, 0.01f);
-        radExitance += computeColPointLight(pointLights[i], posPointLightViewSpace[i], input.posViewSpace, input.fNormal, viewDir, tex, metalness, linRoughness) * shadowing;
+        float transmDist = 0.0f;
+        shadowing = computeOmniShadowing(i, input.posWorldSpace, input.posViewSpace, input.fNormal, 0.005f, 0.01f, transmDist);
+        ExitRadiance_t tmpRadExitance = computeColPointLight(pointLights[i], posPointLightViewSpace[i], input.posViewSpace, input.fNormal, viewDir, tex, metalness, linRoughness, transmDist);
+        
+        radExitance.diffuse += tmpRadExitance.diffuse * shadowing;
+        radExitance.specular += tmpRadExitance.specular * shadowing;
     }
     
-    float3 ambCol = 0.03f * tex.rgb;
-    float3 col = radExitance * tex.rgb + ambCol;
-    
-    output.vCol = float4(saturate(pow(col, gamma)), 1.0f);
+    float3 ambCol = 0.02f * tex.rgb;
+
+    output.diffuse = float4(radExitance.diffuse * tex.rgb + ambCol, 1.0f);
+    output.specular = float4(radExitance.specular, 1.0f);
     
     return output;
 }
 
 
-
-
-float computeShadowing(float4 posLightSpace, float bias, float NdotL)
+float3 T(float s)
 {
-    float correctedBias = max(0.003f, bias * (1.0f - abs(NdotL)));
+    return 
+    float3(0.233, 0.455, 0.649) * exp(-s * s / 0.0064) +
+    float3(0.1, 0.336, 0.344) * exp(-s * s / 0.0484) +
+    float3(0.118, 0.198, 0.0) * exp(-s * s / 0.187) +
+    float3(0.113, 0.007, 0.007) * exp(-s * s / 0.567) +
+    float3(0.358, 0.004, 0.0) * exp(-s * s / 1.99) +
+    float3(0.078, 0.0, 0.0) * exp(-s * s / 7.41);
+}
+
+float computeShadowing(float4 posLightSpace, float bias, float NdotL, out float transmDist)
+{
+    float correctedBias = max(0.002f, bias * (1.0f - abs(NdotL)));
     float3 ndCoords = posLightSpace.xyz / posLightSpace.w;
     float currentDepth = ndCoords.z;
     float2 shadowMapUV = ndCoords.xy * 0.5f + 0.5f;
     shadowMapUV = float2(shadowMapUV.x, 1.0f - shadowMapUV.y);
-    float sampledDepth = ShadowMap.Sample(ObjSamplerState, shadowMapUV).r;
+    
+    float linSamplDepth = (zn * zf) / (zf + min(ShadowMap.Sample(ObjSamplerState, shadowMapUV).r, currentDepth - correctedBias) * (zn - zf));
+    float linCurrDepth = (zn * zf) / (zf + (currentDepth) * (zn - zf));
+    transmDist = abs(linSamplDepth - linCurrDepth);
     
     float shadowingSampled = 1.0f;
     //Brute force 16 samples
@@ -188,7 +234,7 @@ float computeShadowing(float4 posLightSpace, float bias, float NdotL)
     {
         for (float j = -1.5; j <= 1.5; j += 1.0f)
         {
-            float2 offset = float2(i,j) * texScale;
+            float2 offset = float2(i, j) * texScale;
             float sampledDepth = ShadowMap.Sample(ObjSamplerState, shadowMapUV + offset).r;
             shadowingSampled += sampledDepth < currentDepth - correctedBias ? lightDec : 0.0f;
         }
@@ -197,10 +243,12 @@ float computeShadowing(float4 posLightSpace, float bias, float NdotL)
     return shadowingSampled;
 }
 
-float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragViewSpace, float minBias, float maxBias)
+float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragViewSpace, float minBias, float maxBias, out float transmDist)
 {
     float shadowingSampled = 1.0f;
     float correctedBias = 0.008f; // max(0.001f, bias * (1.0f - abs(NdotL)));
+    
+    transmDist = 0.0f;
         
     float3 lightDir = normalize(posSpotLightViewSpace[lightIndex] - posFragViewSpace);
     float cosAngle = dot(-lightDir, normalize(dirSpotLightViewSpace[lightIndex].xyz));
@@ -235,9 +283,10 @@ float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragV
     return shadowingSampled;
 }
 
-float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewSpace, float3 normalViewSpace, float minBias, float maxBias)
+float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewSpace, float3 normalViewSpace, float minBias, float maxBias, out float transmDist)
 {
-    float shadowingSampled = 1.0f;   
+    transmDist = 0.0f;
+    float shadowingSampled = 1.0f;
 
     float3 lightDir = normalize(posPointLightViewSpace[lightIndex] - posViewSpace);
     float LdotN = saturate(dot(lightDir, normalViewSpace));
@@ -278,8 +327,9 @@ float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewS
 
 }
 
-float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal, float4 tex, float metalness, float linRoughness)
+ExitRadiance_t computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal, float4 tex, float metalness, float linRoughness, float transmDist)
 {
+    ExitRadiance_t exitRadiance;
     float3 lDir = -normalize(dLight.dir.xyz);
     //float3 lRef = reflect(lDir, normal);
     
@@ -290,12 +340,19 @@ float3 computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal
     float LdotH = saturate(dot(lDir, halfVec));
     float NdotH = saturate(dot(halfVec, normal));
     
-    brdfOut_t brdfOut = brdf(VdotN, LdotN, LdotH, NdotH, linRoughness, metalness);
+    float E = max(0.2f + dot(-normal, -dLight.dir.xyz), 0.0f);
+    //TODO: instead of hardcoded scale, use model scale
+    float3 transmittedRad = T(transmDist * 100.0f) * E;
     
-    return (brdfOut.diffuse + brdfOut.specular) * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi;
+    brdfOut_t brdfOut = brdf(VdotN, LdotN, LdotH, NdotH, linRoughness, metalness);
+    exitRadiance.diffuse = brdfOut.diffuse *LdotN * float3(3.14f, 3.14f, 3.14f) * revPi;
+    exitRadiance.specular = brdfOut.specular * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi;
+    exitRadiance.transmitted = transmittedRad * float3(3.14f, 3.14f, 3.14f) * revPi;
+    
+    return exitRadiance;
 }
 
-float3 computeColPointLight(PointLight pLight, float4 lightPosViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float4 tex, float metalness, float linRoughness)
+ExitRadiance_t computeColPointLight(PointLight pLight, float4 lightPosViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float4 tex, float metalness, float linRoughness, float transmDist)
 {
     float3 lDir = lightPosViewSpace - fragPosViewSpace;
     float dist = length(lDir);
@@ -309,14 +366,24 @@ float3 computeColPointLight(PointLight pLight, float4 lightPosViewSpace, float4 
     float LdotH = saturate(dot(lDir, halfVec));
     float NdotH = saturate(dot(halfVec, normal));
     
+    float E = max(0.2f + dot(-normal, lDir), 0.0f);
+    float3 transmittedRad = T(transmDist * 100.0f) * E;
+    
     brdfOut_t brdfOut = brdf(VdotN, LdotN, LdotH, NdotH, linRoughness, metalness);
     
-    return (brdfOut.diffuse + brdfOut.specular) * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
+    ExitRadiance_t exitRadiance;
+    exitRadiance.diffuse = brdfOut.diffuse * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
+    exitRadiance.specular = brdfOut.specular * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
+    exitRadiance.transmitted = transmittedRad * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
+    
+    return exitRadiance;
 }
 
-float3 computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float linRoughness)
+ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float linRoughness, float transmDist)
 {
-    float3 radiantExitance = float3(0.0f, 0.0f, 0.0f);  
+    ExitRadiance_t exitRadiance;
+    exitRadiance.diffuse = float3(0.0f, 0.0f, 0.0f);
+    exitRadiance.specular = float3(0.0f, 0.0f, 0.0f);
 
     float3 lightDir = normalize(posSpotLightViewSpace[lightIndex] - posFragViewSpace);
     float cosAngle = dot(-lightDir, normalize(dirSpotLightViewSpace[lightIndex].xyz));
@@ -332,13 +399,17 @@ float3 computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 norma
         
         //TODO: provide falloff for spotlight in constant buffer
         float attenuation = cosAngle - spotLights[lightIndex].cosCutoffAngle;
+        
+        float E = max(0.2f + dot(-normal, lightDir.xyz), 0.0f);
+        float3 transmittedRad = T(transmDist * 100.0f) * E;
     
         brdfOut_t brdfOut = brdf(VdotN, LdotN, LdotH, NdotH, linRoughness, metalness);
-        
-        radiantExitance = (brdfOut.diffuse + brdfOut.specular) * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
+        exitRadiance.diffuse = (brdfOut.diffuse * LdotN + transmittedRad) * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
+        exitRadiance.specular = brdfOut.specular * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
+        exitRadiance.transmitted = transmittedRad * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
     }
     
-    return radiantExitance;
+    return exitRadiance;
 
 }
 

@@ -34,6 +34,14 @@ RendererBackend::RendererBackend()
     for (int i = 0; i < 6; i++) {
         shadowCubeMapDSV[i] = nullptr;
     }
+
+    skinRT[0] = nullptr;
+    skinRT[1] = nullptr;
+    skinMaps[0] = nullptr;
+    skinMaps[1] = nullptr;
+    skinSRV[0] = nullptr;
+    skinSRV[1] = nullptr;
+
 }
 
 
@@ -45,6 +53,12 @@ RendererBackend::~RendererBackend()
     if (viewCB) viewCB->Release();
     if (projCB) projCB->Release();
     if (shadowMap) shadowMap->Release();
+    if (skinSRV[0]) skinSRV[1]->Release();
+    if (skinSRV[1]) skinSRV[0]->Release();
+    if (skinRT[0]) skinRT[0]->Release();
+    if (skinRT[1]) skinRT[1]->Release();
+    if (skinMaps[0]) skinMaps[0]->Release();
+    if (skinMaps[1]) skinMaps[1]->Release();
 }
 
 HRESULT RendererBackend::Init()
@@ -138,8 +152,8 @@ HRESULT RendererBackend::Init()
 
     sm_viewport.TopLeftX = 0.0f;
     sm_viewport.TopLeftY = 0.0f;
-    sm_viewport.Width = 1024.0f;
-    sm_viewport.Height = 1024.f;
+    sm_viewport.Width = 2048.0f;
+    sm_viewport.Height = 2048.f;
     sm_viewport.MinDepth = 0.0f;
     sm_viewport.MaxDepth = 1.0f;
     
@@ -227,6 +241,38 @@ HRESULT RendererBackend::Init()
     
     //-----------------------------------------------------------------
 
+    //Irradiance map setup---------------------------------------------
+    
+    D3D11_TEXTURE2D_DESC irradTexDesc;
+    irradTexDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    irradTexDesc.MipLevels = 0;
+    irradTexDesc.ArraySize = 1;
+    irradTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+    irradTexDesc.CPUAccessFlags = 0;
+    irradTexDesc.MiscFlags = 0;
+    irradTexDesc.Height = 720;
+    irradTexDesc.Width = 1280;
+    irradTexDesc.Usage = D3D11_USAGE_DEFAULT;
+    irradTexDesc.SampleDesc.Count = 1;
+    irradTexDesc.SampleDesc.Quality = 0;
+    
+    hr = rhi.device->CreateTexture2D(&irradTexDesc, nullptr, &skinMaps[0]);
+    RETURN_IF_FAILED(hr);
+    hr = rhi.device->CreateTexture2D(&irradTexDesc, nullptr, &skinMaps[1]);
+    RETURN_IF_FAILED(hr);
+
+    hr = rhi.device->CreateRenderTargetView(skinMaps[0], NULL, &skinRT[0]);
+    RETURN_IF_FAILED(hr);
+    hr = rhi.device->CreateRenderTargetView(skinMaps[1], NULL, &skinRT[1]);
+    RETURN_IF_FAILED(hr);
+
+    hr = rhi.device->CreateShaderResourceView(skinMaps[0], NULL, &skinSRV[0]);
+    RETURN_IF_FAILED(hr);
+    hr = rhi.device->CreateShaderResourceView(skinMaps[1], NULL, &skinSRV[1]);
+    RETURN_IF_FAILED(hr);    
+
+    //-----------------------------------------------------------------
+
     return S_OK;
 }
 
@@ -291,7 +337,7 @@ void RendererBackend::RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& di
         dx::XMVECTOR lightPos = dx::XMVectorMultiply(dx::XMVectorNegate(transfDirLight), dx::XMVectorSet(10.0f, 10.0f, 10.0f, 1.0f));
         //TODO: rename these matrices; it isnt clear that they are used for shadow mapping
         dx::XMMATRIX dirLightVMat = dx::XMMatrixLookAtLH(lightPos, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
-        dx::XMMATRIX dirLightPMat = dx::XMMatrixOrthographicLH(12.0f, 12.0f, 1.0f, 20.0f);
+        dx::XMMATRIX dirLightPMat = dx::XMMatrixOrthographicLH(12.0f, 12.0f, 2.0f, 20.0f);
 
         dirShadowCB.dirPMat = dx::XMMatrixTranspose(dirLightPMat);
         dirShadowCB.dirVMat = dx::XMMatrixTranspose(dirLightVMat);
@@ -449,6 +495,8 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
     rhi.context->VSSetConstantBuffers(1, 1, &viewCB);
     rhi.context->VSSetConstantBuffers(2, 1, &projCB);
 
+    rhi.context->IASetInputLayout(shaders.vertexLayout);
+
     DirShadowCB dirShadowCB{};
     OmniDirShadowCB cbOmniDirShad{};
 
@@ -509,6 +557,11 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
     rhi.context->UpdateSubresource(dirShadCB, 0, nullptr, &dirShadowCB, 0, 0);
     rhi.context->UpdateSubresource(omniDirShadCB, 0, nullptr, &cbOmniDirShad, 0, 0);
 
+    FLOAT clearCol[4] = { 0.0f,0.0f,0.0f,1.0f };
+    rhi.context->ClearRenderTargetView(skinRT[0], clearCol);
+    rhi.context->ClearRenderTargetView(skinRT[1], clearCol);
+    rhi.context->OMSetRenderTargets(2, &skinRT[0], rhi.depthStencilView.Get());
+
 	for (SubmeshInfo const &sbPair : viewDesc.submeshesInfo) {
 		rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
 		rhi.context->IASetIndexBuffer(bufferCache.GetIndexBuffer(sbPair.bufferHnd).buffer.Get(), DXGI_FORMAT_R16_UINT, 0);
@@ -540,9 +593,25 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
 		rhi.context->DrawIndexed(sbPair.submeshHnd.numIndexes, 0, 0);
 	}
 
+    rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), nullptr);
+    rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::POST_PROCESSING), nullptr, 0);
+    rhi.context->IASetInputLayout(nullptr);
+    rhi.context->IASetVertexBuffers(0, 0, NULL, strides, offsets);
+    rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+    rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SSSSS), nullptr, 0);
+    rhi.context->PSSetShaderResources(0, 2, &skinSRV[0]);
+    rhi.context->PSSetShaderResources(2, 1, rhi.depthStencilShaderResourceView.GetAddressOf());
+
+    rhi.context->Draw(4, 0);
+
     ID3D11ShaderResourceView* nullSRV[] = { nullptr };
     rhi.context->PSSetShaderResources(4, 1, nullSRV);
     rhi.context->PSSetShaderResources(5, 1, nullSRV);
     rhi.context->PSSetShaderResources(6, 1, nullSRV);
+    rhi.context->PSSetShaderResources(0, 1, nullSRV);
+    rhi.context->PSSetShaderResources(1, 1, nullSRV);
+    rhi.context->PSSetShaderResources(2, 1, nullSRV);
 
+    rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), rhi.depthStencilView.Get());
 }

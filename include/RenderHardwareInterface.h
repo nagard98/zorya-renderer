@@ -43,6 +43,7 @@ public:
 	wrl::ComPtr<ID3D11RenderTargetView> renderTargetView;
 	wrl::ComPtr<ID3D11ShaderResourceView> renderTargetShaderResourceView;
 	wrl::ComPtr<ID3D11DepthStencilView> depthStencilView;
+	wrl::ComPtr<ID3D11ShaderResourceView> depthStencilShaderResourceView;
 
 	D3D_FEATURE_LEVEL featureLevel; //feature level found for device
 	D3D11_VIEWPORT viewport;

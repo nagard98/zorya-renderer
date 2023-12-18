@@ -30,8 +30,8 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 		matIndex = materialCache.size() - 1;
 	}
 
-	m = &materialCache.at(matIndex);
-	m->model.shader = shaders.pixelShaders.at((std::uint8_t)PShaderID::STANDARD);
+	m = &materialCache.at(matIndex);	
+	m->model.shader = shaders.pixelShaders.at((std::uint8_t)matDesc.shaderType);
 
 	if ((matCacheHnd.isCached & UPDATE_MAT_MAPS)) {
 		rhi.LoadTexture(matDesc.albedoPath, m->albedoMap);
