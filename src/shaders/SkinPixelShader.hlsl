@@ -27,6 +27,9 @@ struct PS_OUTPUT
 struct DirectionalLight
 {
     float4 dir;
+    float nearPlaneDist;
+    float farPlaneDist;
+    float2 pad;
 };
 
 struct PointLight
@@ -36,6 +39,11 @@ struct PointLight
     float constant;
     float lin;
     float quad;
+    
+    float nearPlaneDist;
+    float farPlaneDist;
+    
+    float3 pad;
 };
 
 struct SpotLight
@@ -43,6 +51,11 @@ struct SpotLight
     float4 posWorldSpace;
     float4 direction;
     float cosCutoffAngle;
+    
+    float nearPlaneDist;
+    float farPlaneDist;
+    
+    float pad;
 };
 
 struct ExitRadiance_t
@@ -57,10 +70,12 @@ cbuffer light : register(b0)
     DirectionalLight dirLight;
     
     int numPLights;
+    int numSpotLights;
+    int2 pad;
+    
     PointLight pointLights[16];
     float4 posPointLightViewSpace[16];
     
-    int numSpotLights;
     SpotLight spotLights[16];
     float4 posSpotLightViewSpace[16];
     float4 dirSpotLightViewSpace[16];
@@ -96,9 +111,6 @@ static const float gamma = 1.0f / 2.2f;
 static const float lightDec = -(1 / 16.0f);
 static const float texScale = 1 / 2048.0f;
 
-static const float zf = 20.0f;
-static const float zn = 2.0f;
-static const float q = zf / (zf - zn);
 
 Texture2D ObjTexture : register(t0);
 Texture2D NormalMap : register(t1);
@@ -115,9 +127,9 @@ ExitRadiance_t computeColDirLight(DirectionalLight dLight, float3 viewDir, float
 ExitRadiance_t computeColPointLight(PointLight pLight, float4 posLightViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float4 tex, float metalness, float roughness, float transmDist);
 ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float roughness, float transmDist);
 
-float computeShadowing(float4 posLightSpace, float bias, float NdotL, out float transmDist);
-float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragViewSpace, float minBias, float maxBias, out float transmDist);
-float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewSpace, float3 normalViewSpace, float minBias, float maxBias, out float transmDist);
+float computeShadowing(float4 posLightSpace, float bias, float NdotL, float nearPlane, float farPlane, out float transmDist);
+float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragViewSpace, float3 normalViewSpace, float minBias, float maxBias, float nearPlane, float farPlane, out float transmDist);
+float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewSpace, float3 normalViewSpace, float minBias, float maxBias, float nearPlane, float farPlane, out float transmDist);
 
 float3 T(float s);
 
@@ -169,7 +181,7 @@ PS_OUTPUT ps(PS_INPUT input)
     if (dirLight.dir.w == 0.0f)
     {
         float transmDist = 0.0f;
-        shadowing = computeShadowing(input.posLightSpace, 0.005f, dot(input.fNormal, -dirLight.dir.xyz), transmDist);
+        shadowing = computeShadowing(input.posLightSpace, 0.005f, dot(input.fNormal, -dirLight.dir.xyz), dirLight.nearPlaneDist, dirLight.farPlaneDist, transmDist);
         ExitRadiance_t tmpRadExitance = computeColDirLight(dirLight, viewDir, input.fNormal, tex, metalness, linRoughness, transmDist);
 
         radExitance.diffuse += (tmpRadExitance.diffuse * shadowing) + tmpRadExitance.transmitted;
@@ -179,20 +191,20 @@ PS_OUTPUT ps(PS_INPUT input)
     for (int i = 0; i < numSpotLights; i++)
     {
         float transmDist = 0.0f;
-        shadowing = computeSpotShadowing(i, input.posWorldSpace, input.posViewSpace, 0.005f, 0.01f, transmDist);
+        shadowing = computeSpotShadowing(i, input.posWorldSpace, input.posViewSpace, input.fNormal, 0.003f, 0.009f, spotLights[i].nearPlaneDist, spotLights[i].farPlaneDist, transmDist);
         ExitRadiance_t tmpRadExitance = computeColSpotLight(i, input.posViewSpace, input.fNormal, metalness, linRoughness, transmDist);
         
-        radExitance.diffuse += tmpRadExitance.diffuse * shadowing;
+        radExitance.diffuse += (tmpRadExitance.diffuse * shadowing) + tmpRadExitance.transmitted;
         radExitance.specular += tmpRadExitance.specular * shadowing;
     }
     
     for (int i = 0; i < numPLights; i++)
     {
         float transmDist = 0.0f;
-        shadowing = computeOmniShadowing(i, input.posWorldSpace, input.posViewSpace, input.fNormal, 0.005f, 0.01f, transmDist);
+        shadowing = computeOmniShadowing(i, input.posWorldSpace, input.posViewSpace, input.fNormal, 0.003f, 0.009f, pointLights[i].nearPlaneDist, pointLights[i].farPlaneDist, transmDist);
         ExitRadiance_t tmpRadExitance = computeColPointLight(pointLights[i], posPointLightViewSpace[i], input.posViewSpace, input.fNormal, viewDir, tex, metalness, linRoughness, transmDist);
         
-        radExitance.diffuse += tmpRadExitance.diffuse * shadowing;
+        radExitance.diffuse += (tmpRadExitance.diffuse * shadowing) + tmpRadExitance.transmitted;
         radExitance.specular += tmpRadExitance.specular * shadowing;
     }
     
@@ -216,7 +228,7 @@ float3 T(float s)
     float3(0.078, 0.0, 0.0) * exp(-s * s / 7.41);
 }
 
-float computeShadowing(float4 posLightSpace, float bias, float NdotL, out float transmDist)
+float computeShadowing(float4 posLightSpace, float bias, float NdotL, float nearPlane, float farPlane, out float transmDist)
 {
     float correctedBias = max(0.002f, bias * (1.0f - abs(NdotL)));
     float3 ndCoords = posLightSpace.xyz / posLightSpace.w;
@@ -224,8 +236,8 @@ float computeShadowing(float4 posLightSpace, float bias, float NdotL, out float 
     float2 shadowMapUV = ndCoords.xy * 0.5f + 0.5f;
     shadowMapUV = float2(shadowMapUV.x, 1.0f - shadowMapUV.y);
     
-    float linSamplDepth = (zn * zf) / (zf + min(ShadowMap.Sample(ObjSamplerState, shadowMapUV).r, currentDepth - correctedBias) * (zn - zf));
-    float linCurrDepth = (zn * zf) / (zf + (currentDepth) * (zn - zf));
+    float linSamplDepth = (nearPlane * farPlane) / (farPlane + min(ShadowMap.Sample(ObjSamplerState, shadowMapUV).r, currentDepth - correctedBias) * (nearPlane - farPlane));
+    float linCurrDepth = (nearPlane * farPlane) / (farPlane + (currentDepth) * (nearPlane - farPlane));
     transmDist = abs(linSamplDepth - linCurrDepth);
     
     float shadowingSampled = 1.0f;
@@ -243,15 +255,17 @@ float computeShadowing(float4 posLightSpace, float bias, float NdotL, out float 
     return shadowingSampled;
 }
 
-float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragViewSpace, float minBias, float maxBias, out float transmDist)
+float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragViewSpace, float3 normalViewSpace, float minBias, float maxBias, float nearPlane, float farPlane, out float transmDist)
 {
-    float shadowingSampled = 1.0f;
-    float correctedBias = 0.008f; // max(0.001f, bias * (1.0f - abs(NdotL)));
-    
-    transmDist = 0.0f;
-        
     float3 lightDir = normalize(posSpotLightViewSpace[lightIndex] - posFragViewSpace);
     float cosAngle = dot(-lightDir, normalize(dirSpotLightViewSpace[lightIndex].xyz));
+    
+    float NdotL = dot(normalViewSpace, lightDir);
+    float correctedBias = max(minBias, maxBias * (1.0f - abs(NdotL)));
+    
+    float shadowingSampled = 1.0f;
+    transmDist = 100.0f;
+    
     if (cosAngle > spotLights[lightIndex].cosCutoffAngle)
     {
         float4 posLightSpace = mul(posWorldSpace, mul(spotLightViewMat[lightIndex], spotLightProjMat[lightIndex]));
@@ -266,6 +280,10 @@ float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragV
             //DirectX maps the near plane to 0, not -1
             float currentDepth = ndcPosLightSpace.z;
             float2 shadowMapUVF = float2(normCoords.x, 1.0f - normCoords.y);
+            
+            float linSamplDepth = (nearPlane * farPlane) / (farPlane + min(SpotShadowMap.Sample(ObjSamplerState, shadowMapUVF).r, currentDepth - correctedBias) * (nearPlane - farPlane));
+            float linCurrDepth = (nearPlane * farPlane) / (farPlane + (currentDepth) * (nearPlane - farPlane));
+            transmDist = abs(linSamplDepth - linCurrDepth);
     
             //Brute force 16 samples
             for (float i = -1.5; i <= 1.5; i += 1.0f)
@@ -283,15 +301,15 @@ float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragV
     return shadowingSampled;
 }
 
-float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewSpace, float3 normalViewSpace, float minBias, float maxBias, out float transmDist)
+float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewSpace, float3 normalViewSpace, float minBias, float maxBias, float nearPlane, float farPlane, out float transmDist)
 {
-    transmDist = 0.0f;
-    float shadowingSampled = 1.0f;
-
     float3 lightDir = normalize(posPointLightViewSpace[lightIndex] - posViewSpace);
     float LdotN = saturate(dot(lightDir, normalViewSpace));
     float correctedBias = max(minBias, maxBias * (1.0f - LdotN));
-        
+
+    float shadowingSampled = 1.0f;
+    transmDist = 100.0f;
+    
     int cubemapOffset = lightIndex * 6;
         
     for (float face = 0; face < 6; face += 1.0f)
@@ -308,6 +326,10 @@ float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewS
             //DirectX maps the near plane to 0, not -1
             float currentDepth = ndcPosLightSpace.z;
             float3 shadowMapUVF = float3(normCoords.x, 1.0f - normCoords.y, face + cubemapOffset);
+            
+            float linSamplDepth = (nearPlane * farPlane) / (farPlane + min(ShadowCubeMap.Sample(ObjSamplerState, shadowMapUVF).r, currentDepth - correctedBias) * (nearPlane - farPlane));
+            float linCurrDepth = (nearPlane * farPlane) / (farPlane + (currentDepth) * (nearPlane - farPlane));
+            transmDist = abs(linSamplDepth - linCurrDepth);
     
             //Brute force 16 samples
             for (float i = -1.5; i <= 1.5; i += 1.0f)
@@ -384,6 +406,7 @@ ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, floa
     ExitRadiance_t exitRadiance;
     exitRadiance.diffuse = float3(0.0f, 0.0f, 0.0f);
     exitRadiance.specular = float3(0.0f, 0.0f, 0.0f);
+    exitRadiance.transmitted = float3(0.0f, 0.0f, 0.0f);
 
     float3 lightDir = normalize(posSpotLightViewSpace[lightIndex] - posFragViewSpace);
     float cosAngle = dot(-lightDir, normalize(dirSpotLightViewSpace[lightIndex].xyz));
@@ -404,9 +427,9 @@ ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, floa
         float3 transmittedRad = T(transmDist * 100.0f) * E;
     
         brdfOut_t brdfOut = brdf(VdotN, LdotN, LdotH, NdotH, linRoughness, metalness);
-        exitRadiance.diffuse = (brdfOut.diffuse * LdotN + transmittedRad) * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
+        exitRadiance.diffuse = brdfOut.diffuse * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
         exitRadiance.specular = brdfOut.specular * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
-        exitRadiance.transmitted = transmittedRad * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
+        exitRadiance.transmitted = transmittedRad * float3(3.14f, 3.14f, 3.14f) * revPi;
     }
     
     return exitRadiance;

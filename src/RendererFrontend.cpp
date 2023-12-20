@@ -55,6 +55,17 @@ inline uint32_t hash_str_uint32(const std::string& str) {
 
 }
 
+float computeMaxDistance(float constAtt, float linAtt, float quadAtt) 
+{
+    float radius = sqrt(1.0f / quadAtt);
+    float lightPow = 1.0f;
+    constexpr float threshold = 0.001f;
+    float maxDist = radius * (sqrt(lightPow / threshold) - 1.0f);
+    assert(maxDist > 0.0f);
+
+    return maxDist;
+}
+
 RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename, bool optimizeGraph, bool forceFlattenScene)
 {
 
@@ -98,12 +109,12 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
 	return rootEnt;
 }
 
-RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx::XMVECTOR direction)
+RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx::XMVECTOR direction, float shadowMapNearPlane, float shadowMapFarPlane)
 {
         LightHandle_t lightHnd;
         lightHnd.index = sceneLights.size();
         lightHnd.tag = LightType::DIRECTIONAL;
-        sceneLights.emplace_back(LightInfo{ LightType::DIRECTIONAL, DirectionalLight{direction}, dx::XMMatrixIdentity() });
+        sceneLights.emplace_back(LightInfo{ LightType::DIRECTIONAL, DirectionalLight{direction, shadowMapNearPlane, shadowMapFarPlane}, dx::XMMatrixIdentity() });
 
         //TODO:decide what to hash for id
         RenderableEntity rEnt;
@@ -131,7 +142,8 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
 
     LightInfo& lightInfo = sceneLights.emplace_back();
     lightInfo.tag = LightType::SPOT;
-    lightInfo.spotLight = SpotLight{ position,direction, std::cos(cutoffAngle) };
+    //TODO: define near/far plane computation based on some parameter thats still not defined
+    lightInfo.spotLight = SpotLight{ position,direction, std::cos(cutoffAngle), 1.0f, 20.0f };
     lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
 
     //TODO:decide what to hash for id
@@ -158,9 +170,11 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
     lightHnd.index = sceneLights.size();
     lightHnd.tag = LightType::POINT;
 
+    float maxLightDist = computeMaxDistance(constant, linear, quadratic);
+
     LightInfo& lightInfo = sceneLights.emplace_back();
     lightInfo.tag = LightType::POINT;
-    lightInfo.pointLight = PointLight{ position, constant, linear, quadratic};
+    lightInfo.pointLight = PointLight{ position, constant, linear, quadratic, 1.0f, 1.0f + maxLightDist};
     lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
 
     //TODO:decide what to hash for id

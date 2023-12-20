@@ -14,6 +14,10 @@ enum class LightType : std::uint8_t{
 
 struct DirectionalLight {
     dx::XMVECTOR direction;
+
+    float shadowMapNearPlane;
+    float shadowMapFarPlane;
+    float pad[2];
 };
 
 struct PointLight {
@@ -22,12 +26,21 @@ struct PointLight {
     float constant;
     float linear;
     float quadratic;
+
+    float shadowMapNearPlane;
+    float shadowMapFarPlane;
+    float pad[3];
 };
 
 struct SpotLight {
     dx::XMVECTOR posWorldSpace;
     dx::XMVECTOR direction;
     float cosCutoffAngle;
+
+    float shadowMapNearPlane;
+    float shadowMapFarPlane;
+
+    float pad;
 };
 
 struct LightHandle_t {
@@ -39,10 +52,12 @@ struct LightCB {
     DirectionalLight dLight;
 
     int numPLights;
+    int numSpotLights;
+    int pad[2];
+
     PointLight pointLights[16];
     dx::XMVECTOR posViewSpace[16];
 
-    int numSpotLights;
     SpotLight spotLights[16];
     dx::XMVECTOR posSpotViewSpace[16];
     dx::XMVECTOR dirSpotViewSpace[16];

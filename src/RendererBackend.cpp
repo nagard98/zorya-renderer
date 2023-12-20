@@ -333,11 +333,12 @@ void RendererBackend::RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& di
 
     for (int i = 0; i < numDirLigths; i++)
     {
-        dx::XMVECTOR transfDirLight = dx::XMVector4Transform(dirLights.at(i).dirLight.direction, dirLights.at(i).finalWorldTransf);
+        DirectionalLight& dirLight = dirLights.at(i).dirLight;
+        dx::XMVECTOR transfDirLight = dx::XMVector4Transform(dirLight.direction, dirLights.at(i).finalWorldTransf);
         dx::XMVECTOR lightPos = dx::XMVectorMultiply(dx::XMVectorNegate(transfDirLight), dx::XMVectorSet(10.0f, 10.0f, 10.0f, 1.0f));
         //TODO: rename these matrices; it isnt clear that they are used for shadow mapping
         dx::XMMATRIX dirLightVMat = dx::XMMatrixLookAtLH(lightPos, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
-        dx::XMMATRIX dirLightPMat = dx::XMMatrixOrthographicLH(12.0f, 12.0f, 2.0f, 20.0f);
+        dx::XMMATRIX dirLightPMat = dx::XMMatrixOrthographicLH(12.0f, 12.0f, dirLight.shadowMapNearPlane, dirLight.shadowMapFarPlane);
 
         dirShadowCB.dirPMat = dx::XMMatrixTranspose(dirLightPMat);
         dirShadowCB.dirVMat = dx::XMMatrixTranspose(dirLightVMat);
@@ -372,7 +373,7 @@ void RendererBackend::RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& di
     for (int i = 0; i < numSpotLights; i++) {
         dx::XMVECTOR finalPos = dx::XMVector4Transform(spotLights[i].spotLight.posWorldSpace, spotLights[i].finalWorldTransf);
         dx::XMVECTOR finalDir = dx::XMVector4Transform(spotLights[i].spotLight.direction, spotLights[i].finalWorldTransf);
-        cbOmniDirShad.spotLightProjMat[i] = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(std::acos(spotLights[i].spotLight.cosCutoffAngle)*2.0f, 1.0f, 1.0f, 50.0f));  //multiply acos by 2, because cutoff angle is considered from center, not entire light angle
+        cbOmniDirShad.spotLightProjMat[i] = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(std::acos(spotLights[i].spotLight.cosCutoffAngle)*2.0f, 1.0f, spotLights[i].spotLight.shadowMapNearPlane, spotLights[i].spotLight.shadowMapFarPlane));  //multiply acos by 2, because cutoff angle is considered from center, not entire light angle
         cbOmniDirShad.spotLightViewMat[i] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, finalDir, dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
 
         tmpVCB.viewMatrix = cbOmniDirShad.spotLightViewMat[i];
@@ -403,7 +404,8 @@ void RendererBackend::RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& di
 
 
     //Point lights-------------------------------------------------------------------
-    cbOmniDirShad.dirPMat = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XM_PIDIV2, 1.0f, 0.5f, 20.0f));
+    //TODO: do something about this; shouldnt hard code index in pointLights
+    if (numPointLights > 0) cbOmniDirShad.dirPMat = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XM_PIDIV2, 1.0f, pointLights[0].pointLight.shadowMapNearPlane, pointLights[0].pointLight.shadowMapFarPlane));
 
     for (int i = 0; i < numPointLights; i++) {
         dx::XMVECTOR finalPos = dx::XMVector4Transform(pointLights[i].pointLight.posWorldSpace, pointLights[i].finalWorldTransf);
@@ -524,8 +526,11 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
 
     for (int i = 0; i < numDirLigths; i++)
     {
-        dx::XMVECTOR transfDirLight = dx::XMVector4Transform(dirLights.at(i).dirLight.direction, dirLights.at(i).finalWorldTransf);
+        DirectionalLight& dirLight = dirLights.at(i).dirLight;
+        dx::XMVECTOR transfDirLight = dx::XMVector4Transform(dirLight.direction, dirLights.at(i).finalWorldTransf);
         tmpLCB.dLight.direction = dx::XMVector4Transform(transfDirLight, viewDesc.cam.getViewMatrix());
+        tmpLCB.dLight.shadowMapNearPlane = dirLight.shadowMapNearPlane;
+        tmpLCB.dLight.shadowMapFarPlane = dirLight.shadowMapFarPlane;
     }
 
     for (int i = 0; i < numPointLights; i++) {
@@ -534,6 +539,8 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
         tmpLCB.pointLights[i].constant = pointLights[i].pointLight.constant;
         tmpLCB.pointLights[i].linear = pointLights[i].pointLight.linear;
         tmpLCB.pointLights[i].quadratic = pointLights[i].pointLight.quadratic;
+        tmpLCB.pointLights[i].shadowMapNearPlane = pointLights[i].pointLight.shadowMapNearPlane;
+        tmpLCB.pointLights[i].shadowMapFarPlane = pointLights[i].pointLight.shadowMapFarPlane;
     }
     tmpLCB.numPLights = numPointLights;
 
@@ -544,7 +551,8 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
         tmpLCB.spotLights[i].cosCutoffAngle = spotLights[i].spotLight.cosCutoffAngle;
         tmpLCB.spotLights[i].posWorldSpace = finalPos;
         tmpLCB.spotLights[i].direction = finalDir;
-
+        tmpLCB.spotLights[i].shadowMapNearPlane = spotLights[i].spotLight.shadowMapNearPlane;
+        tmpLCB.spotLights[i].shadowMapFarPlane = spotLights[i].spotLight.shadowMapFarPlane;
 
         tmpLCB.posSpotViewSpace[i] = dx::XMVector4Transform(finalPos, viewDesc.cam.getViewMatrix());
         tmpLCB.dirSpotViewSpace[i] = dx::XMVector4Transform(finalDir, viewDesc.cam.getViewMatrix());

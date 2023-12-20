@@ -22,7 +22,6 @@
 #include <Editor/Logger.h>
 
 #include "Camera.h"
-#include "Lights.h"
 #include "Shaders.h"
 #include "Model.h"
 #include "RHIState.h"

@@ -90,7 +90,7 @@ public:
 
 	//TODO: probably move somewhere else
 	RenderableEntity LoadModelFromFile(const std::string& filename, bool optimizeGraph = false, bool forceFlattenScene = false);
-	RenderableEntity AddLight(const RenderableEntity* attachTo, dx::XMVECTOR direction); //add directional light
+	RenderableEntity AddLight(const RenderableEntity* attachTo, dx::XMVECTOR direction, float shadowMapNearPlane = 2.0f, float shadowMapFarPlane = 20.0f); //add directional light
 	RenderableEntity AddLight(const RenderableEntity* attachTo, dx::XMVECTOR direction, dx::XMVECTOR position, float cutoffAngle); //add spotlight
 	RenderableEntity AddLight(const RenderableEntity* attachTo, dx::XMVECTOR position, float constant, float linear, float quadratic); //add point light
 
