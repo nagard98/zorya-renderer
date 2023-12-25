@@ -407,37 +407,38 @@ void Render() {
 
     //g_cam.rotateAroundCamAxis(0.0f, -0.00f, 0.0f);    
 
-    ////skybox-----------------------------------------------------------
-    //Using cam rotation matrix as view, to ignore cam translation, making skybox always centered
-    ObjCB tmpOCB{ dx::XMMatrixIdentity() };
-    ViewCB viewCB{ dx::XMMatrixTranspose(g_cam.getRotationMatrix()) };
-    ProjCB projCB{ g_cam.getProjMatrixTransposed() };
+    rb.annot->BeginEvent(L"Skybox Pass");
+    {
+        //Using cam rotation matrix as view, to ignore cam translation, making skybox always centered
+        ObjCB tmpOCB{ dx::XMMatrixIdentity() };
+        ViewCB viewCB{ dx::XMMatrixTranspose(g_cam.getRotationMatrix()) };
+        ProjCB projCB{ g_cam.getProjMatrixTransposed() };
 
-    rhi.context->VSSetShader(g_d3dVertexShaderSkybox.Get(), 0, 0);
-    rhi.context->IASetInputLayout(shaders.vertexLayout);
-    rhi.context->VSSetConstantBuffers(0, 1, g_cbPerObj.GetAddressOf());
-    rhi.context->VSSetConstantBuffers(1, 1, g_cbPerCam.GetAddressOf());
-    rhi.context->VSSetConstantBuffers(2, 1, g_cbPerProj.GetAddressOf());
+        rhi.context->VSSetShader(g_d3dVertexShaderSkybox.Get(), 0, 0);
+        rhi.context->IASetInputLayout(shaders.vertexLayout);
+        rhi.context->VSSetConstantBuffers(0, 1, g_cbPerObj.GetAddressOf());
+        rhi.context->VSSetConstantBuffers(1, 1, g_cbPerCam.GetAddressOf());
+        rhi.context->VSSetConstantBuffers(2, 1, g_cbPerProj.GetAddressOf());
 
-    rhi.context->UpdateSubresource(g_cbPerObj.Get(), 0, nullptr, &tmpOCB, 0, 0);
-    rhi.context->UpdateSubresource(g_cbPerCam.Get(), 0, nullptr, &viewCB, 0, 0);
-    rhi.context->UpdateSubresource(g_cbPerProj.Get(), 0, nullptr, &projCB, 0, 0);
+        rhi.context->UpdateSubresource(g_cbPerObj.Get(), 0, nullptr, &tmpOCB, 0, 0);
+        rhi.context->UpdateSubresource(g_cbPerCam.Get(), 0, nullptr, &viewCB, 0, 0);
+        rhi.context->UpdateSubresource(g_cbPerProj.Get(), 0, nullptr, &projCB, 0, 0);
 
-    //rhi.context->UpdateSubresource(rb.objectCB, 0, NULL, &tmpOCB, 0, 0);
+        //rhi.context->UpdateSubresource(rb.objectCB, 0, NULL, &tmpOCB, 0, 0);
 
-    rhi.context->IASetVertexBuffers(0, 1, g_d3dVertexBufferSkybox.GetAddressOf(), strides, offsets);
-    rhi.context->IASetIndexBuffer(g_d3dIndexBufferSkybox.Get(), DXGI_FORMAT_R16_UINT, 0);
+        rhi.context->IASetVertexBuffers(0, 1, g_d3dVertexBufferSkybox.GetAddressOf(), strides, offsets);
+        rhi.context->IASetIndexBuffer(g_d3dIndexBufferSkybox.Get(), DXGI_FORMAT_R16_UINT, 0);
 
-    rhi.context->PSSetShader(g_d3dPixelShaderSkybox.Get(), 0, 0);
+        rhi.context->PSSetShader(g_d3dPixelShaderSkybox.Get(), 0, 0);
 
-    rhi.context->PSSetShaderResources(0, 1, cubemapView.GetAddressOf());
-    
-    RHI_OM_DS_SET_DEPTH_COMP_LESS_EQ(rhiState);
-    RHI_RS_SET_CULL_FRONT(rhiState);
-    rhi.SetState(rhiState);
-    rhi.context->DrawIndexed(36, 0, 0);
-    ////---------------------------------------------------------------
+        rhi.context->PSSetShaderResources(0, 1, cubemapView.GetAddressOf());
 
+        RHI_OM_DS_SET_DEPTH_COMP_LESS_EQ(rhiState);
+        RHI_RS_SET_CULL_FRONT(rhiState);
+        rhi.SetState(rhiState);
+        rhi.context->DrawIndexed(36, 0, 0);
+    }
+    rb.annot->EndEvent();
 
     //models-----------------------------------------------------    
     rhi.context->VSSetShader(g_d3dVertexShader.Get(), 0, 0);
@@ -446,22 +447,21 @@ void Render() {
     rb.RenderView(vDesc);
     //-------------------------------------------------------------
 
+    rb.annot->BeginEvent(L"Editor Pass");
+    {
+        ID3D11Resource* srvTexture = nullptr;
+        ID3D11Resource* rtTexture = nullptr;
+        rhi.renderTargetShaderResourceView->GetResource(&srvTexture);
+        rhi.renderTargetView->GetResource(&rtTexture);
+        rhi.context->ResolveSubresource(srvTexture, 0, rtTexture, 0, DXGI_FORMAT_R8G8B8A8_UNORM);
 
-    //editor--------------------------------
-    ID3D11Resource* srvTexture = nullptr;
-    ID3D11Resource* rtTexture = nullptr;
-    rhi.renderTargetShaderResourceView->GetResource(&srvTexture);
-    rhi.renderTargetView->GetResource(&rtTexture);
-    rhi.context->ResolveSubresource(srvTexture, 0, rtTexture, 0, DXGI_FORMAT_R8G8B8A8_UNORM);
-
-    editor.RenderEditor(rf, g_cam, rhi.renderTargetShaderResourceView.Get());
-    //----------------------------------------
-
-    ImGui::Render();
-    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+        editor.RenderEditor(rf, g_cam, rhi.renderTargetShaderResourceView.Get());
+        ImGui::Render();
+        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+    }
+    rb.annot->EndEvent();
 
     rhi.swapChain->Present(g_enableVSync, 0);
-
 }
 
 void Update(float deltaTime) {

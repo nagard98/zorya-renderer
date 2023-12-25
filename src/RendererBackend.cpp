@@ -55,6 +55,8 @@ RendererBackend::RendererBackend()
     }
 
     invMatCB = nullptr;
+
+    annot = nullptr;
 }
 
 
@@ -80,10 +82,13 @@ RendererBackend::~RendererBackend()
     }
 
     if (invMatCB) invMatCB->Release();
+    if (annot) annot->Release();
 }
 
 HRESULT RendererBackend::Init()
 {
+    rhi.context->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), (void**)&annot);
+
     sm_viewport.TopLeftX = 0.0f;
     sm_viewport.TopLeftY = 0.0f;
     sm_viewport.Width = 2048.0f;
@@ -359,187 +364,197 @@ HRESULT RendererBackend::Init()
     return S_OK;
 }
 
-void RendererBackend::RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& dirShadowCB, OmniDirShadowCB& cbOmniDirShad ) {    
-    std::vector<LightInfo> dirLights;
-    std::vector<LightInfo> spotLights;
-    std::vector<LightInfo> pointLights;
-
-    ViewCB tmpVCB;
-    ProjCB tmpPCB;
-    ObjCB tmpOCB;
-
-    std::uint32_t strides[] = { sizeof(Vertex) };
-    std::uint32_t offsets[] = { 0 };
-
-    rhi.context->RSSetViewports(1, &sm_viewport);
-
-    for (const LightInfo& lightInfo : viewDesc.lightsInfo) {
-        switch (lightInfo.tag) 
-        {
-            case LightType::DIRECTIONAL:
-            {
-                dirLights.push_back(lightInfo);
-                break;
-            }
-
-            case LightType::SPOT:
-            {
-                spotLights.push_back(lightInfo);
-                break;
-            }
-
-            case LightType::POINT:
-            {
-                pointLights.push_back(lightInfo);
-                break;
-            }
-        }
-    }
-
-    int numSpotLights = spotLights.size();
-    assert(numSpotLights == viewDesc.numSpotLights);
-
-    int numPointLights = pointLights.size();
-    assert(numPointLights == viewDesc.numPointLights);
-
-    int numDirLigths = dirLights.size();
-    assert(numDirLigths == viewDesc.numDirLights);
-
-    //Directional lights--------------------------------------------
-    rhi.context->ClearDepthStencilView(shadowMapDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-    rhi.context->OMSetRenderTargets(0, nullptr, shadowMapDSV);
-
-    rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::DEPTH), nullptr, 0);
-    rhi.context->VSSetConstantBuffers(0, 1, &objectCB);
-    rhi.context->VSSetConstantBuffers(1, 1, &viewCB);
-    rhi.context->VSSetConstantBuffers(2, 1, &projCB);
-
-    for (int i = 0; i < numDirLigths; i++)
+void RendererBackend::RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& dirShadowCB, OmniDirShadowCB& cbOmniDirShad ) {
+    annot->BeginEvent(L"ShadowMap Pre-Pass");
     {
-        DirectionalLight& dirLight = dirLights.at(i).dirLight;
-        dx::XMVECTOR transfDirLight = dx::XMVector4Transform(dirLight.direction, dirLights.at(i).finalWorldTransf);
-        dx::XMVECTOR lightPos = dx::XMVectorMultiply(dx::XMVectorNegate(transfDirLight), dx::XMVectorSet(10.0f, 10.0f, 10.0f, 1.0f));
-        //TODO: rename these matrices; it isnt clear that they are used for shadow mapping
-        dx::XMMATRIX dirLightVMat = dx::XMMatrixLookAtLH(lightPos, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
-        dx::XMMATRIX dirLightPMat = dx::XMMatrixOrthographicLH(12.0f, 12.0f, dirLight.shadowMapNearPlane, dirLight.shadowMapFarPlane);
+        std::vector<LightInfo> dirLights;
+        std::vector<LightInfo> spotLights;
+        std::vector<LightInfo> pointLights;
 
-        dirShadowCB.dirPMat = dx::XMMatrixTranspose(dirLightPMat);
-        dirShadowCB.dirVMat = dx::XMMatrixTranspose(dirLightVMat);
-        cbOmniDirShad.dirLightProjMat = dirShadowCB.dirPMat;
-        cbOmniDirShad.dirLightViewMat = dirShadowCB.dirVMat;
+        ViewCB tmpVCB;
+        ProjCB tmpPCB;
+        ObjCB tmpOCB;
 
-        tmpVCB.viewMatrix = dx::XMMatrixTranspose(dirLightVMat);
-        tmpPCB.projMatrix = dx::XMMatrixTranspose(dirLightPMat);
-    }
+        std::uint32_t strides[] = { sizeof(Vertex) };
+        std::uint32_t offsets[] = { 0 };
 
-    rhi.context->UpdateSubresource(viewCB, 0, nullptr, &tmpVCB, 0, 0);
-    rhi.context->UpdateSubresource(projCB, 0, nullptr, &tmpPCB, 0, 0);
+        rhi.context->RSSetViewports(1, &sm_viewport);
 
-    rhi.context->PSSetShader(nullptr, nullptr, 0);
+        for (const LightInfo& lightInfo : viewDesc.lightsInfo) {
+            switch (lightInfo.tag)
+            {
+                case LightType::DIRECTIONAL:
+                {
+                    dirLights.push_back(lightInfo);
+                    break;
+                }
 
-    for (SubmeshInfo const& sbPair : viewDesc.submeshesInfo) {
-        rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
-        rhi.context->IASetIndexBuffer(bufferCache.GetIndexBuffer(sbPair.bufferHnd).buffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+                case LightType::SPOT:
+                {
+                    spotLights.push_back(lightInfo);
+                    break;
+                }
 
-        tmpOCB.worldMatrix = dx::XMMatrixTranspose(sbPair.finalWorldTransf);
-        rhi.context->UpdateSubresource(objectCB, 0, nullptr, &tmpOCB, 0, 0);
-
-        RHIState state = RHI_DEFAULT_STATE();
-        RHI_RS_SET_CULL_BACK(state);
-        RHI_OM_DS_SET_DEPTH_COMP_LESS(state);
-
-        rhi.SetState(state);
-
-        rhi.context->DrawIndexed(sbPair.submeshHnd.numIndexes, 0, 0);
-    }
-    //-------------------------------------------------------------------------------
-
-    //Spot lights--------------------------------------------------------------------
-    for (int i = 0; i < numSpotLights; i++) {
-        dx::XMVECTOR finalPos = dx::XMVector4Transform(spotLights[i].spotLight.posWorldSpace, spotLights[i].finalWorldTransf);
-        dx::XMVECTOR finalDir = dx::XMVector4Transform(spotLights[i].spotLight.direction, spotLights[i].finalWorldTransf);
-        cbOmniDirShad.spotLightProjMat[i] = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(std::acos(spotLights[i].spotLight.cosCutoffAngle)*2.0f, 1.0f, spotLights[i].spotLight.shadowMapNearPlane, spotLights[i].spotLight.shadowMapFarPlane));  //multiply acos by 2, because cutoff angle is considered from center, not entire light angle
-        cbOmniDirShad.spotLightViewMat[i] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, finalDir, dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
-
-        tmpVCB.viewMatrix = cbOmniDirShad.spotLightViewMat[i];
-        tmpPCB.projMatrix = cbOmniDirShad.spotLightProjMat[i];
-    }
-
-    rhi.context->OMSetRenderTargets(0, nullptr, spotShadowMapDSV);
-    rhi.context->ClearDepthStencilView(spotShadowMapDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-
-    rhi.context->UpdateSubresource(viewCB, 0, nullptr, &tmpVCB, 0, 0);
-    rhi.context->UpdateSubresource(projCB, 0, nullptr, &tmpPCB, 0, 0);
-
-    for (SubmeshInfo const& sbPair : viewDesc.submeshesInfo) {
-        rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
-        rhi.context->IASetIndexBuffer(bufferCache.GetIndexBuffer(sbPair.bufferHnd).buffer.Get(), DXGI_FORMAT_R16_UINT, 0);
-
-        tmpOCB.worldMatrix = dx::XMMatrixTranspose(sbPair.finalWorldTransf);
-        rhi.context->UpdateSubresource(objectCB, 0, nullptr, &tmpOCB, 0, 0);
-
-        RHIState state = RHI_DEFAULT_STATE();
-        RHI_RS_SET_CULL_BACK(state);
-        RHI_OM_DS_SET_DEPTH_COMP_LESS(state);
-
-        rhi.SetState(state);
-
-        rhi.context->DrawIndexed(sbPair.submeshHnd.numIndexes, 0, 0);
-    }
-
-
-    //Point lights-------------------------------------------------------------------
-    //TODO: do something about this; shouldnt hard code index in pointLights
-    if (numPointLights > 0) cbOmniDirShad.pointLightProjMat = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XM_PIDIV2, 1.0f, pointLights[0].pointLight.shadowMapNearPlane, pointLights[0].pointLight.shadowMapFarPlane));
-
-    for (int i = 0; i < numPointLights; i++) {
-        dx::XMVECTOR finalPos = dx::XMVector4Transform(pointLights[i].pointLight.posWorldSpace, pointLights[i].finalWorldTransf);
-        cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_POSITIVE_X] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
-        cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_NEGATIVE_X] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(-1.0f, 0.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
-        cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_POSITIVE_Y] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f)));
-        cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_NEGATIVE_Y] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)));
-        cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_POSITIVE_Z] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
-        cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_NEGATIVE_Z] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
-
-        for (int face = 0; face < 6; face++) {
-            rhi.context->ClearDepthStencilView(shadowCubeMapDSV[i * 6 + face], D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+                case LightType::POINT:
+                {
+                    pointLights.push_back(lightInfo);
+                    break;
+                }
+            }
         }
-    }
 
-    for (SubmeshInfo const& sbPair : viewDesc.submeshesInfo) {
-        rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
-        rhi.context->IASetIndexBuffer(bufferCache.GetIndexBuffer(sbPair.bufferHnd).buffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+        int numSpotLights = spotLights.size();
+        assert(numSpotLights == viewDesc.numSpotLights);
 
-        ObjCB tmpOCB{ dx::XMMatrixTranspose(sbPair.finalWorldTransf) };
-        rhi.context->UpdateSubresource(objectCB, 0, nullptr, &tmpOCB, 0, 0);
+        int numPointLights = pointLights.size();
+        assert(numPointLights == viewDesc.numPointLights);
 
-        RHIState state = RHI_DEFAULT_STATE();
-        RHI_RS_SET_CULL_BACK(state);
-        RHI_OM_DS_SET_DEPTH_COMP_LESS(state);
+        int numDirLigths = dirLights.size();
+        assert(numDirLigths == viewDesc.numDirLights);
 
-        rhi.SetState(state);
+        rhi.context->PSSetShader(nullptr, nullptr, 0);
+        rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::DEPTH), nullptr, 0);
 
-        tmpPCB.projMatrix = cbOmniDirShad.pointLightProjMat;
-        rhi.context->UpdateSubresource(projCB, 0, nullptr, &tmpPCB, 0, 0);
+        //Directional lights--------------------------------------------
+        annot->BeginEvent(L"Directional Lights");
 
-        for (int i = 0; i < numPointLights; i++) {
-            for (int face = 0; face < 6; face++) {
-                tmpVCB.viewMatrix = cbOmniDirShad.pointLightViewMat[i * 6 + face];
-                rhi.context->UpdateSubresource(viewCB, 0, nullptr, &tmpVCB, 0, 0);
+        rhi.context->ClearDepthStencilView(shadowMapDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+        rhi.context->OMSetRenderTargets(0, nullptr, shadowMapDSV);
 
-                rhi.context->OMSetRenderTargets(0, nullptr, shadowCubeMapDSV[i * 6 + face]);
+        rhi.context->VSSetConstantBuffers(0, 1, &objectCB);
+        rhi.context->VSSetConstantBuffers(1, 1, &viewCB);
+        rhi.context->VSSetConstantBuffers(2, 1, &projCB);
+
+        for (int i = 0; i < numDirLigths; i++)
+        {
+            DirectionalLight& dirLight = dirLights.at(i).dirLight;
+            dx::XMVECTOR transfDirLight = dx::XMVector4Transform(dirLight.direction, dirLights.at(i).finalWorldTransf);
+            dx::XMVECTOR lightPos = dx::XMVectorMultiply(dx::XMVectorNegate(transfDirLight), dx::XMVectorSet(10.0f, 10.0f, 10.0f, 1.0f));
+            //TODO: rename these matrices; it isnt clear that they are used for shadow mapping
+            dx::XMMATRIX dirLightVMat = dx::XMMatrixLookAtLH(lightPos, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+            dx::XMMATRIX dirLightPMat = dx::XMMatrixOrthographicLH(12.0f, 12.0f, dirLight.shadowMapNearPlane, dirLight.shadowMapFarPlane);
+
+            dirShadowCB.dirPMat = dx::XMMatrixTranspose(dirLightPMat);
+            dirShadowCB.dirVMat = dx::XMMatrixTranspose(dirLightVMat);
+            cbOmniDirShad.dirLightProjMat = dirShadowCB.dirPMat;
+            cbOmniDirShad.dirLightViewMat = dirShadowCB.dirVMat;
+
+            tmpVCB.viewMatrix = dx::XMMatrixTranspose(dirLightVMat);
+            tmpPCB.projMatrix = dx::XMMatrixTranspose(dirLightPMat);
+
+            rhi.context->UpdateSubresource(viewCB, 0, nullptr, &tmpVCB, 0, 0);
+            rhi.context->UpdateSubresource(projCB, 0, nullptr, &tmpPCB, 0, 0);
+
+            for (SubmeshInfo const& sbPair : viewDesc.submeshesInfo) {
+                rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
+                rhi.context->IASetIndexBuffer(bufferCache.GetIndexBuffer(sbPair.bufferHnd).buffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+
+                tmpOCB.worldMatrix = dx::XMMatrixTranspose(sbPair.finalWorldTransf);
+                rhi.context->UpdateSubresource(objectCB, 0, nullptr, &tmpOCB, 0, 0);
+
+                RHIState state = RHI_DEFAULT_STATE();
+                RHI_RS_SET_CULL_BACK(state);
+                RHI_OM_DS_SET_DEPTH_COMP_LESS(state);
+
+                rhi.SetState(state);
+
                 rhi.context->DrawIndexed(sbPair.submeshHnd.numIndexes, 0, 0);
             }
         }
+        annot->EndEvent();
+
+        //-------------------------------------------------------------------------------
+
+        //Spot lights--------------------------------------------------------------------
+        annot->BeginEvent(L"Spot Lights");
+
+        rhi.context->OMSetRenderTargets(0, nullptr, spotShadowMapDSV);
+        rhi.context->ClearDepthStencilView(spotShadowMapDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+        for (int i = 0; i < numSpotLights; i++) {
+            dx::XMVECTOR finalPos = dx::XMVector4Transform(spotLights[i].spotLight.posWorldSpace, spotLights[i].finalWorldTransf);
+            dx::XMVECTOR finalDir = dx::XMVector4Transform(spotLights[i].spotLight.direction, spotLights[i].finalWorldTransf);
+            cbOmniDirShad.spotLightProjMat[i] = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(std::acos(spotLights[i].spotLight.cosCutoffAngle) * 2.0f, 1.0f, spotLights[i].spotLight.shadowMapNearPlane, spotLights[i].spotLight.shadowMapFarPlane));  //multiply acos by 2, because cutoff angle is considered from center, not entire light angle
+            cbOmniDirShad.spotLightViewMat[i] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, finalDir, dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+
+            tmpVCB.viewMatrix = cbOmniDirShad.spotLightViewMat[i];
+            tmpPCB.projMatrix = cbOmniDirShad.spotLightProjMat[i];
+
+            rhi.context->UpdateSubresource(viewCB, 0, nullptr, &tmpVCB, 0, 0);
+            rhi.context->UpdateSubresource(projCB, 0, nullptr, &tmpPCB, 0, 0);
+
+            for (SubmeshInfo const& sbPair : viewDesc.submeshesInfo) {
+                rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
+                rhi.context->IASetIndexBuffer(bufferCache.GetIndexBuffer(sbPair.bufferHnd).buffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+
+                tmpOCB.worldMatrix = dx::XMMatrixTranspose(sbPair.finalWorldTransf);
+                rhi.context->UpdateSubresource(objectCB, 0, nullptr, &tmpOCB, 0, 0);
+
+                RHIState state = RHI_DEFAULT_STATE();
+                RHI_RS_SET_CULL_BACK(state);
+                RHI_OM_DS_SET_DEPTH_COMP_LESS(state);
+
+                rhi.SetState(state);
+
+                rhi.context->DrawIndexed(sbPair.submeshHnd.numIndexes, 0, 0);
+            }
+        }
+        annot->EndEvent();
+
+        //Point lights-------------------------------------------------------------------
+        //TODO: do something about this; shouldnt hard code index in pointLights
+        annot->BeginEvent(L"Point Lights");
+
+        if (numPointLights > 0) cbOmniDirShad.pointLightProjMat = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XM_PIDIV2, 1.0f, pointLights[0].pointLight.shadowMapNearPlane, pointLights[0].pointLight.shadowMapFarPlane));
+
+        for (int i = 0; i < numPointLights; i++) {
+            dx::XMVECTOR finalPos = dx::XMVector4Transform(pointLights[i].pointLight.posWorldSpace, pointLights[i].finalWorldTransf);
+            cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_POSITIVE_X] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+            cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_NEGATIVE_X] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(-1.0f, 0.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+            cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_POSITIVE_Y] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f)));
+            cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_NEGATIVE_Y] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)));
+            cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_POSITIVE_Z] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+            cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_NEGATIVE_Z] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+
+            for (int face = 0; face < 6; face++) {
+                rhi.context->ClearDepthStencilView(shadowCubeMapDSV[i * 6 + face], D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+            }
+
+            for (SubmeshInfo const& sbPair : viewDesc.submeshesInfo) {
+                rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
+                rhi.context->IASetIndexBuffer(bufferCache.GetIndexBuffer(sbPair.bufferHnd).buffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+
+                ObjCB tmpOCB{ dx::XMMatrixTranspose(sbPair.finalWorldTransf) };
+                rhi.context->UpdateSubresource(objectCB, 0, nullptr, &tmpOCB, 0, 0);
+
+                RHIState state = RHI_DEFAULT_STATE();
+                RHI_RS_SET_CULL_BACK(state);
+                RHI_OM_DS_SET_DEPTH_COMP_LESS(state);
+
+                rhi.SetState(state);
+
+                tmpPCB.projMatrix = cbOmniDirShad.pointLightProjMat;
+                rhi.context->UpdateSubresource(projCB, 0, nullptr, &tmpPCB, 0, 0);
+
+                for (int face = 0; face < 6; face++) {
+                    tmpVCB.viewMatrix = cbOmniDirShad.pointLightViewMat[i * 6 + face];
+                    rhi.context->UpdateSubresource(viewCB, 0, nullptr, &tmpVCB, 0, 0);
+
+                    rhi.context->OMSetRenderTargets(0, nullptr, shadowCubeMapDSV[i * 6 + face]);
+                    rhi.context->DrawIndexed(sbPair.submeshHnd.numIndexes, 0, 0);
+                }
+
+            }
+        }
+        annot->EndEvent();
+
     }
+    annot->EndEvent();
 }
 
 
 void RendererBackend::RenderView(const ViewDesc& viewDesc)
 {
-    //ID3DUserDefinedAnnotation* annot;
-    //rhi.context->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), (void**)&annot);
-
 	std::uint32_t strides[] = { sizeof(Vertex) };
 	std::uint32_t offsets[] = { 0 };
 	
@@ -579,33 +594,22 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
     int numDirLigths = dirLights.size();
     assert(numDirLigths == viewDesc.numDirLights);
 
-    //Rendering shadow maps-------------------------------------------------
     rhi.context->VSSetConstantBuffers(0, 1, &objectCB);
     rhi.context->VSSetConstantBuffers(1, 1, &viewCB);
     rhi.context->VSSetConstantBuffers(2, 1, &projCB);
 
     rhi.context->IASetInputLayout(shaders.vertexLayout);
 
+    //Rendering shadow maps-------------------------------------------------
     DirShadowCB dirShadowCB{};
     OmniDirShadowCB cbOmniDirShad{};
 
-    //annot->BeginEvent(L"ShadowMap Pre-Pass");
     RenderShadowMaps(viewDesc, dirShadowCB, cbOmniDirShad);
-    //annot->EndEvent();
     //----------------------------------------------------------------------
 
 
     //Actual rendering-------------------------------------------------------
     rhi.context->RSSetViewports(1, &rhi.viewport);
-    rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), rhi.depthStencilView.Get());
-
-    rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::STANDARD), nullptr, 0);
-    rhi.context->VSSetConstantBuffers(0, 1, &objectCB);
-    rhi.context->VSSetConstantBuffers(1, 1, &viewCB);
-    rhi.context->VSSetConstantBuffers(2, 1, &projCB);
-    rhi.context->VSSetConstantBuffers(3, 1, &lightsCB);
-    rhi.context->VSSetConstantBuffers(4, 1, &dirShadCB);
-    rhi.context->VSSetConstantBuffers(5, 1, &omniDirShadCB);
 
     ViewCB tmpVCB{ viewDesc.cam.getViewMatrixTransposed() };
     ProjCB tmpPCB{ viewDesc.cam.getProjMatrixTransposed() };
@@ -652,85 +656,110 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
     rhi.context->UpdateSubresource(dirShadCB, 0, nullptr, &dirShadowCB, 0, 0);
     rhi.context->UpdateSubresource(omniDirShadCB, 0, nullptr, &cbOmniDirShad, 0, 0);
 
-    FLOAT clearCol[4] = { 0.0f,0.0f,0.0f,1.0f };
-    for (int i = 0; i < GBuffer::SIZE; i++) {
-        rhi.context->ClearRenderTargetView(GBufferRTV[i], clearCol);
+    annot->BeginEvent(L"G-Buffer Pass");
+    {
+        rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::STANDARD), nullptr, 0);
+        rhi.context->VSSetConstantBuffers(0, 1, &objectCB);
+        rhi.context->VSSetConstantBuffers(1, 1, &viewCB);
+        rhi.context->VSSetConstantBuffers(2, 1, &projCB);
+        rhi.context->VSSetConstantBuffers(3, 1, &lightsCB);
+        rhi.context->VSSetConstantBuffers(4, 1, &dirShadCB);
+        rhi.context->VSSetConstantBuffers(5, 1, &omniDirShadCB);
+
+        FLOAT clearCol[4] = { 0.0f,0.0f,0.0f,1.0f };
+        for (int i = 0; i < GBuffer::SIZE; i++) {
+            rhi.context->ClearRenderTargetView(GBufferRTV[i], clearCol);
+        }
+
+        rhi.context->OMSetRenderTargets(3, &GBufferRTV[0], rhi.depthStencilView.Get());
+
+        for (SubmeshInfo const& sbPair : viewDesc.submeshesInfo) {
+            rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
+            rhi.context->IASetIndexBuffer(bufferCache.GetIndexBuffer(sbPair.bufferHnd).buffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+
+            Material& mat = resourceCache.materialCache.at(sbPair.matCacheHnd.index);
+            rhi.context->PSSetShader(mat.model.shader, 0, 0);
+            rhi.context->PSSetShaderResources(0, 1, &mat.albedoMap.resourceView);
+            rhi.context->PSSetShaderResources(1, 1, &mat.normalMap.resourceView);
+            rhi.context->PSSetShaderResources(2, 1, &mat.metalnessMap.resourceView);
+            rhi.context->PSSetShaderResources(3, 1, &mat.smoothnessMap.resourceView);
+            rhi.context->PSSetShaderResources(4, 1, &shadowMapSRV);
+            rhi.context->PSSetShaderResources(5, 1, &shadowCubeMapSRV);
+            rhi.context->PSSetShaderResources(6, 1, &spotShadowMapSRV);
+
+            rhi.context->UpdateSubresource(matPrmsCB, 0, nullptr, &mat.matPrms, 0, 0);
+            rhi.context->PSSetConstantBuffers(0, 1, &lightsCB);
+            rhi.context->PSSetConstantBuffers(1, 1, &matPrmsCB);
+            rhi.context->PSSetConstantBuffers(2, 1, &omniDirShadCB);
+
+            ObjCB tmpOCB{ dx::XMMatrixTranspose(sbPair.finalWorldTransf) };
+            rhi.context->UpdateSubresource(objectCB, 0, nullptr, &tmpOCB, 0, 0);
+
+            RHIState state = RHI_DEFAULT_STATE();
+            RHI_RS_SET_CULL_BACK(state);
+            RHI_OM_DS_SET_DEPTH_COMP_LESS(state);
+
+            rhi.SetState(state);
+
+            rhi.context->DrawIndexed(sbPair.submeshHnd.numIndexes, 0, 0);
+        }
     }
+    annot->EndEvent();
 
-    rhi.context->OMSetRenderTargets(3, &GBufferRTV[0], rhi.depthStencilView.Get());
 
-	for (SubmeshInfo const &sbPair : viewDesc.submeshesInfo) {
-		rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
-		rhi.context->IASetIndexBuffer(bufferCache.GetIndexBuffer(sbPair.bufferHnd).buffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+    annot->BeginEvent(L"Lighting Pass");
+    {
+        rhi.context->OMSetRenderTargets(3, &skinRT[0], nullptr);
 
-		Material &mat = resourceCache.materialCache.at(sbPair.matCacheHnd.index);
-        rhi.context->PSSetShader(mat.model.shader, 0, 0);
-		rhi.context->PSSetShaderResources(0, 1, &mat.albedoMap.resourceView);
-		rhi.context->PSSetShaderResources(1, 1, &mat.normalMap.resourceView);
-        rhi.context->PSSetShaderResources(2, 1, &mat.metalnessMap.resourceView);
-        rhi.context->PSSetShaderResources(3, 1, &mat.smoothnessMap.resourceView);
+        rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::FULL_QUAD), nullptr, 0);
+        rhi.context->IASetInputLayout(nullptr);
+        rhi.context->IASetVertexBuffers(0, 0, NULL, strides, offsets);
+        rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+        rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::LIGHTING), nullptr, 0);
+        struct Im { dx::XMMATRIX invProj; dx::XMMATRIX invView; };
+        Im im;
+        im.invProj = dx::XMMatrixTranspose(dx::XMMatrixInverse(nullptr, viewDesc.cam.getProjMatrix()));
+        im.invView = dx::XMMatrixTranspose(dx::XMMatrixInverse(nullptr, viewDesc.cam.getViewMatrix()));
+        rhi.context->UpdateSubresource(invMatCB, 0, nullptr, &im, 0, 0);
+        rhi.context->PSSetConstantBuffers(0, 1, &lightsCB);
+        rhi.context->PSSetConstantBuffers(5, 1, &invMatCB);
+        rhi.context->PSSetShaderResources(0, 3, &GBufferSRV[0]);
+        rhi.context->PSSetShaderResources(3, 1, rhi.depthStencilShaderResourceView.GetAddressOf());
         rhi.context->PSSetShaderResources(4, 1, &shadowMapSRV);
         rhi.context->PSSetShaderResources(5, 1, &shadowCubeMapSRV);
         rhi.context->PSSetShaderResources(6, 1, &spotShadowMapSRV);
-
-		rhi.context->UpdateSubresource(matPrmsCB, 0, nullptr, &mat.matPrms, 0, 0);
-        rhi.context->PSSetConstantBuffers(0, 1, &lightsCB);
-        rhi.context->PSSetConstantBuffers(1, 1, &matPrmsCB);
-        rhi.context->PSSetConstantBuffers(2, 1, &omniDirShadCB);
-
-        ObjCB tmpOCB{ dx::XMMatrixTranspose(sbPair.finalWorldTransf) };
-        rhi.context->UpdateSubresource(objectCB, 0, nullptr, &tmpOCB, 0, 0);
-
-		RHIState state = RHI_DEFAULT_STATE();
-		RHI_RS_SET_CULL_BACK(state);
-		RHI_OM_DS_SET_DEPTH_COMP_LESS(state);
-
-		rhi.SetState(state);
-
-		rhi.context->DrawIndexed(sbPair.submeshHnd.numIndexes, 0, 0);
-	}
-
-    rhi.context->OMSetRenderTargets(3, &skinRT[0], nullptr);
-
-    rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::FULL_QUAD), nullptr, 0);
-    rhi.context->IASetInputLayout(nullptr);
-    rhi.context->IASetVertexBuffers(0, 0, NULL, strides, offsets);
-    rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-    rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::LIGHTING), nullptr, 0);
-    struct Im {dx::XMMATRIX invProj; dx::XMMATRIX invView;};
-    Im im;
-    im.invProj = dx::XMMatrixTranspose(dx::XMMatrixInverse(nullptr, viewDesc.cam.getProjMatrix()));
-    im.invView = dx::XMMatrixTranspose(dx::XMMatrixInverse(nullptr, viewDesc.cam.getViewMatrix()));
-    rhi.context->UpdateSubresource(invMatCB, 0, nullptr, &im, 0, 0);
-    rhi.context->PSSetConstantBuffers(0, 1, &lightsCB);
-    rhi.context->PSSetConstantBuffers(5, 1, &invMatCB);
-    rhi.context->PSSetShaderResources(0, 3, &GBufferSRV[0]);
-    rhi.context->PSSetShaderResources(3, 1, rhi.depthStencilShaderResourceView.GetAddressOf());
-    rhi.context->PSSetShaderResources(4, 1, &shadowMapSRV);
-    rhi.context->PSSetShaderResources(5, 1, &shadowCubeMapSRV);
-    rhi.context->PSSetShaderResources(6, 1, &spotShadowMapSRV);
-    rhi.context->Draw(4, 0);
+        rhi.context->Draw(4, 0);
+    }
+    annot->EndEvent();
 
     ID3D11ShaderResourceView* nullSRV[7] = { nullptr };
 
-    rhi.context->PSSetShaderResources(GBuffer::ALBEDO, 1, &nullSRV[0]);
-    rhi.context->PSSetShaderResources(GBuffer::ROUGH_MET, 1, &nullSRV[0]);
-    ID3D11RenderTargetView* tmpRT[2] = { GBufferRTV[GBuffer::ALBEDO], GBufferRTV[GBuffer::ROUGH_MET] };
-    rhi.context->OMSetRenderTargets(2, &tmpRT[0], nullptr);
-    rhi.context->PSSetShaderResources(0, 1, &skinSRV[0]);
-    rhi.context->PSSetShaderResources(2, 1, &skinSRV[1]);
-    rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SHADOW_MAP), nullptr, 0);
-    rhi.context->Draw(4, 0);
+    annot->BeginEvent(L"ShadowMap Pass");
+    {
+        rhi.context->PSSetShaderResources(GBuffer::ALBEDO, 1, &nullSRV[0]);
+        rhi.context->PSSetShaderResources(GBuffer::ROUGH_MET, 1, &nullSRV[0]);
+        ID3D11RenderTargetView* tmpRT[2] = { GBufferRTV[GBuffer::ALBEDO], GBufferRTV[GBuffer::ROUGH_MET] };
+        rhi.context->OMSetRenderTargets(2, &tmpRT[0], nullptr);
+        rhi.context->PSSetShaderResources(0, 1, &skinSRV[0]);
+        rhi.context->PSSetShaderResources(2, 1, &skinSRV[1]);
+        rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SHADOW_MAP), nullptr, 0);
+        rhi.context->Draw(4, 0);
+    }
+    annot->EndEvent();
 
-    rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), nullptr);
-    rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SSSSS), nullptr, 0);
-    //NOTA: Gbuffer riutilizzato, non con valori originali
-    rhi.context->PSSetShaderResources(0, 1, &GBufferSRV[GBuffer::ALBEDO]);
-    rhi.context->PSSetShaderResources(1, 1, &GBufferSRV[GBuffer::ROUGH_MET]);
-    rhi.context->PSSetShaderResources(2, 1, &skinSRV[2]);
-    rhi.context->PSSetShaderResources(3, 1, rhi.depthStencilShaderResourceView.GetAddressOf());
-    rhi.context->Draw(4, 0);
+    annot->BeginEvent(L"SSSSS Pass");
+    {
+        rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), nullptr);
+        rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SSSSS), nullptr, 0);
+        //NOTA: Gbuffer riutilizzato, non con valori originali
+        rhi.context->PSSetShaderResources(0, 1, &GBufferSRV[GBuffer::ALBEDO]);
+        rhi.context->PSSetShaderResources(1, 1, &GBufferSRV[GBuffer::ROUGH_MET]);
+        rhi.context->PSSetShaderResources(2, 1, &skinSRV[2]);
+        rhi.context->PSSetShaderResources(3, 1, rhi.depthStencilShaderResourceView.GetAddressOf());
+        rhi.context->Draw(4, 0);
+    }
+    annot->EndEvent();
 
     //rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), nullptr);
     //rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::PRESENT), nullptr, 0);

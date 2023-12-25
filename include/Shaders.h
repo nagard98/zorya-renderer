@@ -79,6 +79,8 @@ HRESULT LoadShader(const std::wstring& shaderFilename, const std::string& entryp
                 strncpy_s(tmpMsg, tmpSize, ((char*)errBlob->GetBufferPointer()) + first, _TRUNCATE);
                 Logger::AddLog(Logger::Channel::Channels::ERR, "%s\n", tmpMsg);
                 first = i + 1;
+
+                delete[] tmpMsg;
             }
         }
         

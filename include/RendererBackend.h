@@ -58,8 +58,11 @@ public:
 
 	//TODO: change return type to custom wrapper
 	HRESULT Init();
-
 	void RenderView(const ViewDesc& viewDesc);
+
+	ID3DUserDefinedAnnotation* annot;
+
+private:
 	void RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& dirShadowCB, OmniDirShadowCB& cbOmniDirShad);
 
 	ID3D11Buffer* matPrmsCB;
@@ -92,7 +95,7 @@ public:
 
 	ID3D11Texture2D* skinMaps[3];
 	ID3D11RenderTargetView* skinRT[3];
-	ID3D11ShaderResourceView* skinSRV[3];	
+	ID3D11ShaderResourceView* skinSRV[3];
 
 	//TODO: what did I intend to do with this?
 	//std::hash<std::uint16_t> submeshHash;
