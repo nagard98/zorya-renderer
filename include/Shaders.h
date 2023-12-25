@@ -8,11 +8,13 @@
 #include <cstdint>
 #include <vector>
 
+#include <Editor/Logger.h>
+
 enum class VShaderID : std::uint8_t {
     STANDARD,
     SKYBOX,
     DEPTH,
-    POST_PROCESSING,
+    FULL_QUAD,
     NUM_SHADERS
 };
 
@@ -22,6 +24,9 @@ enum class PShaderID : std::uint8_t {
     SKYBOX,
     SKIN,
     SSSSS,
+    LIGHTING,
+    SHADOW_MAP,
+    PRESENT,
     NUM_SHADERS
 };
 
@@ -64,9 +69,19 @@ HRESULT LoadShader(const std::wstring& shaderFilename, const std::string& entryp
     HRESULT hr = D3DCompileFromFile(shaderFilename.c_str(), NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, entrypoint.c_str(), profile.c_str(), flags, 0, shaderBlob, errBlob.GetAddressOf());
 
     if (FAILED(hr)) {
-        std::string errorMessage = (char*)errBlob->GetBufferPointer();
-        OutputDebugStringA(errorMessage.c_str());
+        char* errMsg = (char*)errBlob->GetBufferPointer();
 
+        for (int i = 0, first = 0; errMsg[i] != '\0'; i++) {
+            if (errMsg[i] == '\n') {
+                int numChar = i - first + 1;
+                size_t tmpSize = sizeof(char) * numChar;
+                char* tmpMsg = new char[tmpSize];
+                strncpy_s(tmpMsg, tmpSize, ((char*)errBlob->GetBufferPointer()) + first, _TRUNCATE);
+                Logger::AddLog(Logger::Channel::Channels::ERR, "%s\n", tmpMsg);
+                first = i + 1;
+            }
+        }
+        
         return hr;
     }
 

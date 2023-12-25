@@ -1,6 +1,7 @@
 Texture2D diffuseIrrad : register(t0);
 Texture2D specularIrrad : register(t1);
-Texture2D depthMap : register(t2);
+Texture2D transmittedIrrad : register(t2);
+Texture2D depthMap : register(t3);
 
 SamplerState texSampler : register(s0);
 
@@ -71,7 +72,8 @@ float4 ps(float4 fragPos : SV_Position) : SV_Target
         
         for (int i = 0; i < 7; i++)
         {
-            col += (gaussian[i] * (diffuseIrrad.Sample(texSampler, coords).rgb * weights[j])) * 0.5f;
+            float3 rad = pow(diffuseIrrad.Sample(texSampler, coords).rgb, 1.0f / gamma) + pow(transmittedIrrad.Sample(texSampler, coords).rgb, 1.0f / gamma);
+            col += (gaussian[i] * (rad * weights[j])) * 0.5f;
             coords += float2(netFilterWidth, 0.0f);
         }
         
@@ -79,13 +81,14 @@ float4 ps(float4 fragPos : SV_Position) : SV_Target
         coords = uvCoord - float2(0.0f, netFilterWidth * 3.0);
         for (int i2 = 0; i2 < 7; i2++)
         {
-            col += (gaussian[i2] * diffuseIrrad.Sample(texSampler, coords).rgb * weights[j]) * 0.5f;
+            float3 rad = pow(diffuseIrrad.Sample(texSampler, coords).rgb, 1.0f / gamma) + pow(transmittedIrrad.Sample(texSampler, coords).rgb, 1.0f / gamma);
+            col += (gaussian[i2] * rad * weights[j]) * 0.5f;
             coords += float2(0.0f, netFilterWidth);
         }
     }
     
-    col = saturate(specularIrrad.Sample(texSampler, uvCoord.xy).rgb + col);
+    col = saturate(pow(specularIrrad.Sample(texSampler, uvCoord.xy).rgb, 1.0f/gamma) + col);
     
-    return float4(saturate(pow(col, gamma)), 1.0f);
+    return float4(pow(col, gamma), 1.0f);
 
 }

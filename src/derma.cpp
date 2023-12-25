@@ -312,13 +312,16 @@ dx::XMMATRIX scaleMat = scaleMat = dx::XMMatrixScaling(1.0f, 1.0f, 1.0f);
 
 HRESULT InitData() {
 
+    //TODO: move gui initialization elsewhere
+    ImGui_ImplDX11_Init(rhi.device.Get(), rhi.context.Get());
+
     HRESULT hr;
     
     hr = rb.Init();
     RETURN_IF_FAILED(hr);
 
     hr = shaders.Init();
-    RETURN_IF_FAILED(hr);
+    RETURN_IF_FAILED(hr);  
 
     hr = LoadSkybox(L"./shaders/assets/skybox.dds");
     RETURN_IF_FAILED(hr);

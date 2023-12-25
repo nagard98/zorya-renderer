@@ -20,6 +20,15 @@ struct CUBEMAP {
 	};
 };
 
+struct GBuffer {
+	enum :int {
+		ALBEDO,
+		NORMAL,
+		ROUGH_MET,
+		SIZE
+	};
+};
+
 enum ConstanBuffer {
 	CB_Application,
 	CB_Frame,
@@ -61,7 +70,13 @@ public:
 	ID3D11Buffer* dirShadCB;
 	ID3D11Buffer* omniDirShadCB;
 
+	ID3D11Buffer* invMatCB;
+
 	D3D11_VIEWPORT sm_viewport;
+
+	ID3D11Texture2D* GBuffer[GBuffer::SIZE];
+	ID3D11RenderTargetView* GBufferRTV[GBuffer::SIZE];
+	ID3D11ShaderResourceView* GBufferSRV[GBuffer::SIZE];
 
 	ID3D11Texture2D* shadowMap;
 	ID3D11ShaderResourceView* shadowMapSRV;
@@ -75,9 +90,9 @@ public:
 	ID3D11ShaderResourceView* shadowCubeMapSRV;
 	ID3D11DepthStencilView* shadowCubeMapDSV[6 * 2];
 
-	ID3D11Texture2D* skinMaps[2];
-	ID3D11RenderTargetView* skinRT[2];
-	ID3D11ShaderResourceView* skinSRV[2];	
+	ID3D11Texture2D* skinMaps[3];
+	ID3D11RenderTargetView* skinRT[3];
+	ID3D11ShaderResourceView* skinSRV[3];	
 
 	//TODO: what did I intend to do with this?
 	//std::hash<std::uint16_t> submeshHash;

@@ -1,3 +1,6 @@
+#ifndef LOGGER_H_
+#define LOGGER_H_
+
 #include <imgui.h>
 #include <string>
 #include <cstdint>
@@ -23,3 +26,5 @@ namespace Logger {
 	void AddLog(Channel::Channels channel, const char* fmt, ...);
 	void RenderLogs();
 }
+
+#endif

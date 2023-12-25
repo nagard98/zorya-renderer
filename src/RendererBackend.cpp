@@ -42,6 +42,19 @@ RendererBackend::RendererBackend()
     skinSRV[0] = nullptr;
     skinSRV[1] = nullptr;
 
+    for (int i = 0; i < 3; i++) {
+        skinRT[i] = nullptr;
+        skinMaps[i] = nullptr;
+        skinSRV[i] = nullptr;
+    }
+
+    for (int i = 0; i < GBuffer::SIZE; i++) {
+        GBufferSRV[i] = nullptr;
+        GBufferRTV[i] = nullptr;
+        GBuffer[i] = nullptr;
+    }
+
+    invMatCB = nullptr;
 }
 
 
@@ -53,16 +66,31 @@ RendererBackend::~RendererBackend()
     if (viewCB) viewCB->Release();
     if (projCB) projCB->Release();
     if (shadowMap) shadowMap->Release();
-    if (skinSRV[0]) skinSRV[1]->Release();
-    if (skinSRV[1]) skinSRV[0]->Release();
-    if (skinRT[0]) skinRT[0]->Release();
-    if (skinRT[1]) skinRT[1]->Release();
-    if (skinMaps[0]) skinMaps[0]->Release();
-    if (skinMaps[1]) skinMaps[1]->Release();
+
+    for (int i = 0; i < 3; i++) {
+        if (skinSRV[i]) skinSRV[i]->Release();
+        if (skinRT[i]) skinRT[i]->Release();
+        if (skinMaps[i]) skinMaps[i]->Release();
+    }
+
+    for (int i = 0; i < GBuffer::SIZE; i++) {
+        if (GBufferSRV[i]) GBufferSRV[i]->Release();
+        if (GBufferRTV[i]) GBufferRTV[i]->Release();
+        if (GBuffer[i]) GBuffer[i]->Release();
+    }
+
+    if (invMatCB) invMatCB->Release();
 }
 
 HRESULT RendererBackend::Init()
 {
+    sm_viewport.TopLeftX = 0.0f;
+    sm_viewport.TopLeftY = 0.0f;
+    sm_viewport.Width = 2048.0f;
+    sm_viewport.Height = 2048.f;
+    sm_viewport.MinDepth = 0.0f;
+    sm_viewport.MaxDepth = 1.0f;
+
 	D3D11_BUFFER_DESC matCbDesc;
 	ZeroMemory(&matCbDesc, sizeof(matCbDesc));
 	matCbDesc.ByteWidth = sizeof(MaterialParams);
@@ -131,6 +159,58 @@ HRESULT RendererBackend::Init()
     rhi.context->VSSetConstantBuffers(3, 1, &lightsCB);
     //---------------------------------------------------------
 	
+    //GBuffer setup--------------------------------------------
+    
+    D3D11_TEXTURE2D_DESC gbufferDesc;
+    gbufferDesc.Format = DXGI_FORMAT_R8G8B8A8_TYPELESS;
+    gbufferDesc.ArraySize = 1;
+    gbufferDesc.MipLevels = 1;
+    gbufferDesc.Usage = D3D11_USAGE_DEFAULT;
+    gbufferDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+    gbufferDesc.CPUAccessFlags = 0;
+    gbufferDesc.MiscFlags = 0;
+    gbufferDesc.SampleDesc.Count = 1;
+    gbufferDesc.SampleDesc.Quality = 0;
+    gbufferDesc.Width = 1280.0f;
+    gbufferDesc.Height = 720.0f;
+
+    for (int i = 0; i < GBuffer::SIZE; i++) {
+        hr = rhi.device->CreateTexture2D(&gbufferDesc, nullptr, &GBuffer[i]);
+        RETURN_IF_FAILED(hr);
+    }
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC gBufferSRVDesc;
+    gBufferSRVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    gBufferSRVDesc.Texture2D.MipLevels = 1;
+    gBufferSRVDesc.Texture2D.MostDetailedMip = 0;
+    gBufferSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+
+    for (int i = 0; i < GBuffer::SIZE; i++) {
+        hr = rhi.device->CreateShaderResourceView(GBuffer[i], &gBufferSRVDesc, &GBufferSRV[i]);
+        RETURN_IF_FAILED(hr);
+    }
+
+    D3D11_RENDER_TARGET_VIEW_DESC gBufferRTVDesc;
+    gBufferRTVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    gBufferRTVDesc.Texture2D.MipSlice = 0;
+    gBufferRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+
+    for (int i = 0; i < GBuffer::SIZE; i++) {
+        hr = rhi.device->CreateRenderTargetView(GBuffer[i], &gBufferRTVDesc, &GBufferRTV[i]);
+        RETURN_IF_FAILED(hr);
+    }
+
+
+    D3D11_BUFFER_DESC invMatDesc;
+    ZeroMemory(&invMatDesc, sizeof(invMatDesc));
+    invMatDesc.ByteWidth = sizeof(dx::XMMatrixIdentity()) * 2;
+    invMatDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    invMatDesc.Usage = D3D11_USAGE_DEFAULT;
+
+    hr = rhi.device->CreateBuffer(&invMatDesc, nullptr, &invMatCB);
+
+    //---------------------------------------------------------
+
     //Shadow map setup-------------------------------------------------
     D3D11_BUFFER_DESC dirShadowMatBuffDesc;
     ZeroMemory(&dirShadowMatBuffDesc, sizeof(D3D11_BUFFER_DESC));
@@ -149,13 +229,6 @@ HRESULT RendererBackend::Init()
 
     hr = rhi.device->CreateBuffer(&omniDirShadowMatBuffDesc, nullptr, &omniDirShadCB);
     RETURN_IF_FAILED(hr);
-
-    sm_viewport.TopLeftX = 0.0f;
-    sm_viewport.TopLeftY = 0.0f;
-    sm_viewport.Width = 2048.0f;
-    sm_viewport.Height = 2048.f;
-    sm_viewport.MinDepth = 0.0f;
-    sm_viewport.MaxDepth = 1.0f;
     
     D3D11_TEXTURE2D_DESC sm_texDesc;
     ZeroMemory(&sm_texDesc, sizeof(sm_texDesc));
@@ -256,20 +329,30 @@ HRESULT RendererBackend::Init()
     irradTexDesc.SampleDesc.Count = 1;
     irradTexDesc.SampleDesc.Quality = 0;
     
-    hr = rhi.device->CreateTexture2D(&irradTexDesc, nullptr, &skinMaps[0]);
-    RETURN_IF_FAILED(hr);
-    hr = rhi.device->CreateTexture2D(&irradTexDesc, nullptr, &skinMaps[1]);
-    RETURN_IF_FAILED(hr);
+    for (int i = 0; i < 3; i++) {
+        hr = rhi.device->CreateTexture2D(&irradTexDesc, nullptr, &skinMaps[i]);
+        RETURN_IF_FAILED(hr);
 
-    hr = rhi.device->CreateRenderTargetView(skinMaps[0], NULL, &skinRT[0]);
-    RETURN_IF_FAILED(hr);
-    hr = rhi.device->CreateRenderTargetView(skinMaps[1], NULL, &skinRT[1]);
-    RETURN_IF_FAILED(hr);
+        hr = rhi.device->CreateRenderTargetView(skinMaps[i], NULL, &skinRT[i]);
+        RETURN_IF_FAILED(hr);
 
-    hr = rhi.device->CreateShaderResourceView(skinMaps[0], NULL, &skinSRV[0]);
-    RETURN_IF_FAILED(hr);
-    hr = rhi.device->CreateShaderResourceView(skinMaps[1], NULL, &skinSRV[1]);
-    RETURN_IF_FAILED(hr);    
+        hr = rhi.device->CreateShaderResourceView(skinMaps[i], NULL, &skinSRV[i]);
+        RETURN_IF_FAILED(hr);
+    }
+    //hr = rhi.device->CreateTexture2D(&irradTexDesc, nullptr, &skinMaps[0]);
+    //RETURN_IF_FAILED(hr);
+    //hr = rhi.device->CreateTexture2D(&irradTexDesc, nullptr, &skinMaps[1]);
+    //RETURN_IF_FAILED(hr);
+
+    //hr = rhi.device->CreateRenderTargetView(skinMaps[0], NULL, &skinRT[0]);
+    //RETURN_IF_FAILED(hr);
+    //hr = rhi.device->CreateRenderTargetView(skinMaps[1], NULL, &skinRT[1]);
+    //RETURN_IF_FAILED(hr);
+
+    //hr = rhi.device->CreateShaderResourceView(skinMaps[0], NULL, &skinSRV[0]);
+    //RETURN_IF_FAILED(hr);
+    //hr = rhi.device->CreateShaderResourceView(skinMaps[1], NULL, &skinSRV[1]);
+    //RETURN_IF_FAILED(hr);    
 
     //-----------------------------------------------------------------
 
@@ -342,6 +425,8 @@ void RendererBackend::RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& di
 
         dirShadowCB.dirPMat = dx::XMMatrixTranspose(dirLightPMat);
         dirShadowCB.dirVMat = dx::XMMatrixTranspose(dirLightVMat);
+        cbOmniDirShad.dirLightProjMat = dirShadowCB.dirPMat;
+        cbOmniDirShad.dirLightViewMat = dirShadowCB.dirVMat;
 
         tmpVCB.viewMatrix = dx::XMMatrixTranspose(dirLightVMat);
         tmpPCB.projMatrix = dx::XMMatrixTranspose(dirLightPMat);
@@ -405,16 +490,16 @@ void RendererBackend::RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& di
 
     //Point lights-------------------------------------------------------------------
     //TODO: do something about this; shouldnt hard code index in pointLights
-    if (numPointLights > 0) cbOmniDirShad.dirPMat = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XM_PIDIV2, 1.0f, pointLights[0].pointLight.shadowMapNearPlane, pointLights[0].pointLight.shadowMapFarPlane));
+    if (numPointLights > 0) cbOmniDirShad.pointLightProjMat = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XM_PIDIV2, 1.0f, pointLights[0].pointLight.shadowMapNearPlane, pointLights[0].pointLight.shadowMapFarPlane));
 
     for (int i = 0; i < numPointLights; i++) {
         dx::XMVECTOR finalPos = dx::XMVector4Transform(pointLights[i].pointLight.posWorldSpace, pointLights[i].finalWorldTransf);
-        cbOmniDirShad.dirVMat[i * 6 + CUBEMAP::FACE_POSITIVE_X] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
-        cbOmniDirShad.dirVMat[i * 6 + CUBEMAP::FACE_NEGATIVE_X] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(-1.0f, 0.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
-        cbOmniDirShad.dirVMat[i * 6 + CUBEMAP::FACE_POSITIVE_Y] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f)));
-        cbOmniDirShad.dirVMat[i * 6 + CUBEMAP::FACE_NEGATIVE_Y] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)));
-        cbOmniDirShad.dirVMat[i * 6 + CUBEMAP::FACE_POSITIVE_Z] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
-        cbOmniDirShad.dirVMat[i * 6 + CUBEMAP::FACE_NEGATIVE_Z] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+        cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_POSITIVE_X] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+        cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_NEGATIVE_X] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(-1.0f, 0.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+        cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_POSITIVE_Y] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f)));
+        cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_NEGATIVE_Y] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)));
+        cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_POSITIVE_Z] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+        cbOmniDirShad.pointLightViewMat[i * 6 + CUBEMAP::FACE_NEGATIVE_Z] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(finalPos, dx::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
 
         for (int face = 0; face < 6; face++) {
             rhi.context->ClearDepthStencilView(shadowCubeMapDSV[i * 6 + face], D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
@@ -434,12 +519,12 @@ void RendererBackend::RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& di
 
         rhi.SetState(state);
 
-        tmpPCB.projMatrix = cbOmniDirShad.dirPMat;
+        tmpPCB.projMatrix = cbOmniDirShad.pointLightProjMat;
         rhi.context->UpdateSubresource(projCB, 0, nullptr, &tmpPCB, 0, 0);
 
         for (int i = 0; i < numPointLights; i++) {
             for (int face = 0; face < 6; face++) {
-                tmpVCB.viewMatrix = cbOmniDirShad.dirVMat[i * 6 + face];
+                tmpVCB.viewMatrix = cbOmniDirShad.pointLightViewMat[i * 6 + face];
                 rhi.context->UpdateSubresource(viewCB, 0, nullptr, &tmpVCB, 0, 0);
 
                 rhi.context->OMSetRenderTargets(0, nullptr, shadowCubeMapDSV[i * 6 + face]);
@@ -452,6 +537,8 @@ void RendererBackend::RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& di
 
 void RendererBackend::RenderView(const ViewDesc& viewDesc)
 {
+    //ID3DUserDefinedAnnotation* annot;
+    //rhi.context->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), (void**)&annot);
 
 	std::uint32_t strides[] = { sizeof(Vertex) };
 	std::uint32_t offsets[] = { 0 };
@@ -502,7 +589,9 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
     DirShadowCB dirShadowCB{};
     OmniDirShadowCB cbOmniDirShad{};
 
+    //annot->BeginEvent(L"ShadowMap Pre-Pass");
     RenderShadowMaps(viewDesc, dirShadowCB, cbOmniDirShad);
+    //annot->EndEvent();
     //----------------------------------------------------------------------
 
 
@@ -521,8 +610,6 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
     ViewCB tmpVCB{ viewDesc.cam.getViewMatrixTransposed() };
     ProjCB tmpPCB{ viewDesc.cam.getProjMatrixTransposed() };
     LightCB tmpLCB;
-
-    //TODO: fix here using member _viewMatrix because need matrix non transposed
 
     for (int i = 0; i < numDirLigths; i++)
     {
@@ -566,9 +653,11 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
     rhi.context->UpdateSubresource(omniDirShadCB, 0, nullptr, &cbOmniDirShad, 0, 0);
 
     FLOAT clearCol[4] = { 0.0f,0.0f,0.0f,1.0f };
-    rhi.context->ClearRenderTargetView(skinRT[0], clearCol);
-    rhi.context->ClearRenderTargetView(skinRT[1], clearCol);
-    rhi.context->OMSetRenderTargets(2, &skinRT[0], rhi.depthStencilView.Get());
+    for (int i = 0; i < GBuffer::SIZE; i++) {
+        rhi.context->ClearRenderTargetView(GBufferRTV[i], clearCol);
+    }
+
+    rhi.context->OMSetRenderTargets(3, &GBufferRTV[0], rhi.depthStencilView.Get());
 
 	for (SubmeshInfo const &sbPair : viewDesc.submeshesInfo) {
 		rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
@@ -601,25 +690,57 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
 		rhi.context->DrawIndexed(sbPair.submeshHnd.numIndexes, 0, 0);
 	}
 
-    rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), nullptr);
-    rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::POST_PROCESSING), nullptr, 0);
+    rhi.context->OMSetRenderTargets(3, &skinRT[0], nullptr);
+
+    rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::FULL_QUAD), nullptr, 0);
     rhi.context->IASetInputLayout(nullptr);
     rhi.context->IASetVertexBuffers(0, 0, NULL, strides, offsets);
     rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-    rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SSSSS), nullptr, 0);
-    rhi.context->PSSetShaderResources(0, 2, &skinSRV[0]);
-    rhi.context->PSSetShaderResources(2, 1, rhi.depthStencilShaderResourceView.GetAddressOf());
 
+    rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::LIGHTING), nullptr, 0);
+    struct Im {dx::XMMATRIX invProj; dx::XMMATRIX invView;};
+    Im im;
+    im.invProj = dx::XMMatrixTranspose(dx::XMMatrixInverse(nullptr, viewDesc.cam.getProjMatrix()));
+    im.invView = dx::XMMatrixTranspose(dx::XMMatrixInverse(nullptr, viewDesc.cam.getViewMatrix()));
+    rhi.context->UpdateSubresource(invMatCB, 0, nullptr, &im, 0, 0);
+    rhi.context->PSSetConstantBuffers(0, 1, &lightsCB);
+    rhi.context->PSSetConstantBuffers(5, 1, &invMatCB);
+    rhi.context->PSSetShaderResources(0, 3, &GBufferSRV[0]);
+    rhi.context->PSSetShaderResources(3, 1, rhi.depthStencilShaderResourceView.GetAddressOf());
+    rhi.context->PSSetShaderResources(4, 1, &shadowMapSRV);
+    rhi.context->PSSetShaderResources(5, 1, &shadowCubeMapSRV);
+    rhi.context->PSSetShaderResources(6, 1, &spotShadowMapSRV);
     rhi.context->Draw(4, 0);
 
-    ID3D11ShaderResourceView* nullSRV[] = { nullptr };
-    rhi.context->PSSetShaderResources(4, 1, nullSRV);
-    rhi.context->PSSetShaderResources(5, 1, nullSRV);
-    rhi.context->PSSetShaderResources(6, 1, nullSRV);
-    rhi.context->PSSetShaderResources(0, 1, nullSRV);
-    rhi.context->PSSetShaderResources(1, 1, nullSRV);
-    rhi.context->PSSetShaderResources(2, 1, nullSRV);
+    ID3D11ShaderResourceView* nullSRV[7] = { nullptr };
+
+    rhi.context->PSSetShaderResources(GBuffer::ALBEDO, 1, &nullSRV[0]);
+    rhi.context->PSSetShaderResources(GBuffer::ROUGH_MET, 1, &nullSRV[0]);
+    ID3D11RenderTargetView* tmpRT[2] = { GBufferRTV[GBuffer::ALBEDO], GBufferRTV[GBuffer::ROUGH_MET] };
+    rhi.context->OMSetRenderTargets(2, &tmpRT[0], nullptr);
+    rhi.context->PSSetShaderResources(0, 1, &skinSRV[0]);
+    rhi.context->PSSetShaderResources(2, 1, &skinSRV[1]);
+    rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SHADOW_MAP), nullptr, 0);
+    rhi.context->Draw(4, 0);
+
+    rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), nullptr);
+    rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SSSSS), nullptr, 0);
+    //NOTA: Gbuffer riutilizzato, non con valori originali
+    rhi.context->PSSetShaderResources(0, 1, &GBufferSRV[GBuffer::ALBEDO]);
+    rhi.context->PSSetShaderResources(1, 1, &GBufferSRV[GBuffer::ROUGH_MET]);
+    rhi.context->PSSetShaderResources(2, 1, &skinSRV[2]);
+    rhi.context->PSSetShaderResources(3, 1, rhi.depthStencilShaderResourceView.GetAddressOf());
+    rhi.context->Draw(4, 0);
+
+    //rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), nullptr);
+    //rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::PRESENT), nullptr, 0);
+    //rhi.context->PSSetShaderResources(0, 1, &GBufferSRV[GBuffer::ALBEDO]);
+    //rhi.context->Draw(4, 0);
+
+
+    rhi.context->PSSetShaderResources(0, 7, &nullSRV[0]);
 
     rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    //rhi.context->ClearDepthStencilView(rhi.depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), rhi.depthStencilView.Get());
 }

@@ -34,7 +34,7 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 	m->model.shader = shaders.pixelShaders.at((std::uint8_t)matDesc.shaderType);
 
 	if ((matCacheHnd.isCached & UPDATE_MAT_MAPS)) {
-		rhi.LoadTexture(matDesc.albedoPath, m->albedoMap);
+		rhi.LoadTexture(matDesc.albedoPath, m->albedoMap, false);
 		rhi.LoadTexture(matDesc.normalPath, m->normalMap, false);
 		if ((matDesc.unionTags & METALNESS_IS_MAP) == METALNESS_IS_MAP) {
 			rhi.LoadTexture(matDesc.metalnessMap, m->metalnessMap, false);
@@ -57,9 +57,9 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 			m->matPrms.metalness = matDesc.metalnessValue;
 			m->matPrms.hasMetalnessMap = false;
 		}
-		//TODO: change matPrms name smoothness to roughness
+
 		if ((matDesc.unionTags & SMOOTHNESS_IS_MAP) == 0) {
-			m->matPrms.smoothness = 1.0f - matDesc.smoothnessValue;
+			m->matPrms.roughness = 1.0f - matDesc.smoothnessValue;
 			m->matPrms.hasSmoothnessMap = false;
 		}
 
@@ -73,7 +73,7 @@ void ResourceCache::UpdateMaterialSmoothness(const MaterialCacheHandle_t matHnd,
 	assert(matHnd.isCached);
 	assert(smoothness >= 0.0f && smoothness <= 1.0f);
 	Material& matCache = materialCache.at(matHnd.index);
-	matCache.matPrms.smoothness = smoothness;
+	matCache.matPrms.roughness = smoothness;
 }
 
 void ResourceCache::UpdateMaterialAlbedoMap(const MaterialCacheHandle_t matHnd, const wchar_t* albedoMapPath)

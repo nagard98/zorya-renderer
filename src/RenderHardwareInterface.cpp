@@ -286,8 +286,7 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     //rhi.context->OMSetBlendState(blendVariants[0].pStateObject, 0, 0);
     //---------------------------
 
-    //TODO: move gui initialization elsewhere
-    ImGui_ImplDX11_Init(device.Get(), context.Get());
+
 
     return S_OK;
 }

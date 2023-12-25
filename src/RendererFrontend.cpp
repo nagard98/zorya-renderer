@@ -102,7 +102,13 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
     aiString basePath = aiString(filename.substr(0, sepIndex));
     scene->mMetaData->Add("basePath", basePath);
 
-    LoadNodeChildren(scene, &rootNode, 1, RenderableEntity{ 0 });
+    const char* name = scene->GetShortFilename(filename.c_str());
+    scene->mMetaData->Add("modelName", name);
+
+    RenderableEntity rEnt{ hash_str_uint32(name), EntityType::COLLECTION, SubmeshHandle_t{ 0,0,0 }, name, IDENTITY_TRANSFORM };
+    sceneGraph.insertNode(RenderableEntity{ 0 }, rEnt);
+
+    LoadNodeChildren(scene, rootNode->mChildren, rootNode->mNumChildren, rEnt);
 
     Logger::AddLog(Logger::Channel::TRACE, "Imported model %s\n", scene->GetShortFilename(filename.c_str()));
 
@@ -252,7 +258,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                 Logger::AddLog(Logger::Channel::ERR, "%s\n", importer.GetErrorString());
             }
 
-            matDesc.shaderType = PShaderID::SKIN;
+            matDesc.shaderType = PShaderID::STANDARD;
 
             aiString diffTexName;
             int count = material->GetTextureCount(aiTextureType_DIFFUSE);

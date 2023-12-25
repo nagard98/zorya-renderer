@@ -63,7 +63,7 @@ struct MaterialParams {
 	std::uint32_t hasNormalMap;
 	std::uint32_t hasSmoothnessMap;
 
-	float smoothness;
+	float roughness;
 	float metalness;
 
 	std::uint8_t pad[8];

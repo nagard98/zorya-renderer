@@ -69,8 +69,11 @@ struct DirShadowCB {
 };
 
 struct OmniDirShadowCB {
-    dx::XMMATRIX dirVMat[16*6];
-    dx::XMMATRIX dirPMat;
+    dx::XMMATRIX dirLightViewMat;
+    dx::XMMATRIX dirLightProjMat;
+
+    dx::XMMATRIX pointLightViewMat[16*6];
+    dx::XMMATRIX pointLightProjMat;
 
     dx::XMMATRIX spotLightViewMat[16];
     dx::XMMATRIX spotLightProjMat[16];
