@@ -21,6 +21,7 @@ struct PS_OUT
     float4 diffuse : SV_TARGET0;
     float4 specular : SV_TARGET1;
     float4 transmitted : SV_TARGET2;
+    float4 ambient : SV_TARGET3;
 };
 
 struct ExitRadiance_t
@@ -130,6 +131,7 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
     ps_out.diffuse = float4(pow(radExitance.diffuse, gamma), 1.0f);
     ps_out.specular = float4(pow(radExitance.specular, gamma), 1.0f);
     ps_out.transmitted = float4(pow(radExitance.transmitted, gamma), 1.0f);
+    ps_out.ambient = float4(pow((albedo * 0.02f), gamma), 1.0f);
     
     return ps_out;
 }

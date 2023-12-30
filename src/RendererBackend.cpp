@@ -81,6 +81,10 @@ RendererBackend::~RendererBackend()
         if (GBuffer[i]) GBuffer[i]->Release();
     }
 
+    if (ambientSRV) ambientSRV->Release();
+    if (ambientRTV) ambientRTV->Release();
+    if (ambientMap) ambientMap->Release();
+
     if (invMatCB) invMatCB->Release();
     if (annot) annot->Release();
 }
@@ -169,11 +173,11 @@ HRESULT RendererBackend::Init()
     D3D11_TEXTURE2D_DESC gbufferDesc;
     gbufferDesc.Format = DXGI_FORMAT_R8G8B8A8_TYPELESS;
     gbufferDesc.ArraySize = 1;
-    gbufferDesc.MipLevels = 1;
+    gbufferDesc.MipLevels = 4;
     gbufferDesc.Usage = D3D11_USAGE_DEFAULT;
     gbufferDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
     gbufferDesc.CPUAccessFlags = 0;
-    gbufferDesc.MiscFlags = 0;
+    gbufferDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
     gbufferDesc.SampleDesc.Count = 1;
     gbufferDesc.SampleDesc.Quality = 0;
     gbufferDesc.Width = 1280.0f;
@@ -184,9 +188,13 @@ HRESULT RendererBackend::Init()
         RETURN_IF_FAILED(hr);
     }
 
+    gbufferDesc.MipLevels = 0;
+    hr = rhi.device->CreateTexture2D(&gbufferDesc, nullptr, &ambientMap);
+    RETURN_IF_FAILED(hr);
+
     D3D11_SHADER_RESOURCE_VIEW_DESC gBufferSRVDesc;
     gBufferSRVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    gBufferSRVDesc.Texture2D.MipLevels = 1;
+    gBufferSRVDesc.Texture2D.MipLevels = 4;
     gBufferSRVDesc.Texture2D.MostDetailedMip = 0;
     gBufferSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 
@@ -194,6 +202,10 @@ HRESULT RendererBackend::Init()
         hr = rhi.device->CreateShaderResourceView(GBuffer[i], &gBufferSRVDesc, &GBufferSRV[i]);
         RETURN_IF_FAILED(hr);
     }
+
+    gBufferSRVDesc.Texture2D.MipLevels = 1;
+    hr = rhi.device->CreateShaderResourceView(ambientMap, &gBufferSRVDesc, &ambientSRV);
+    RETURN_IF_FAILED(hr);
 
     D3D11_RENDER_TARGET_VIEW_DESC gBufferRTVDesc;
     gBufferRTVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -204,6 +216,9 @@ HRESULT RendererBackend::Init()
         hr = rhi.device->CreateRenderTargetView(GBuffer[i], &gBufferRTVDesc, &GBufferRTV[i]);
         RETURN_IF_FAILED(hr);
     }
+
+    hr = rhi.device->CreateRenderTargetView(ambientMap, &gBufferRTVDesc, &ambientRTV);
+    RETURN_IF_FAILED(hr);
 
 
     D3D11_BUFFER_DESC invMatDesc;
@@ -709,7 +724,8 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
 
     annot->BeginEvent(L"Lighting Pass");
     {
-        rhi.context->OMSetRenderTargets(3, &skinRT[0], nullptr);
+        ID3D11RenderTargetView* rts[4] = { skinRT[0], skinRT[1], skinRT[2], ambientRTV };
+        rhi.context->OMSetRenderTargets(4, &rts[0], nullptr);
 
         rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::FULL_QUAD), nullptr, 0);
         rhi.context->IASetInputLayout(nullptr);
@@ -733,16 +749,17 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
     }
     annot->EndEvent();
 
-    ID3D11ShaderResourceView* nullSRV[7] = { nullptr };
+    ID3D11ShaderResourceView* nullSRV[8] = { nullptr };
 
     annot->BeginEvent(L"ShadowMap Pass");
     {
         rhi.context->PSSetShaderResources(GBuffer::ALBEDO, 1, &nullSRV[0]);
         rhi.context->PSSetShaderResources(GBuffer::ROUGH_MET, 1, &nullSRV[0]);
-        ID3D11RenderTargetView* tmpRT[2] = { GBufferRTV[GBuffer::ALBEDO], GBufferRTV[GBuffer::ROUGH_MET] };
+        ID3D11RenderTargetView* tmpRT[2] = { GBufferRTV[GBuffer::ALBEDO], GBufferRTV[GBuffer::ROUGH_MET]};
         rhi.context->OMSetRenderTargets(2, &tmpRT[0], nullptr);
         rhi.context->PSSetShaderResources(0, 1, &skinSRV[0]);
         rhi.context->PSSetShaderResources(2, 1, &skinSRV[1]);
+        rhi.context->PSSetShaderResources(7, 1, &ambientSRV);
         rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SHADOW_MAP), nullptr, 0);
         rhi.context->Draw(4, 0);
     }
@@ -753,6 +770,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
         rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), nullptr);
         rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SSSSS), nullptr, 0);
         //NOTA: Gbuffer riutilizzato, non con valori originali
+        rhi.context->GenerateMips(GBufferSRV[GBuffer::ALBEDO]);
         rhi.context->PSSetShaderResources(0, 1, &GBufferSRV[GBuffer::ALBEDO]);
         rhi.context->PSSetShaderResources(1, 1, &GBufferSRV[GBuffer::ROUGH_MET]);
         rhi.context->PSSetShaderResources(2, 1, &skinSRV[2]);
@@ -767,7 +785,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
     //rhi.context->Draw(4, 0);
 
 
-    rhi.context->PSSetShaderResources(0, 7, &nullSRV[0]);
+    rhi.context->PSSetShaderResources(0, 8, &nullSRV[0]);
 
     rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     //rhi.context->ClearDepthStencilView(rhi.depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);

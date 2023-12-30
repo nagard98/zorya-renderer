@@ -81,6 +81,10 @@ private:
 	ID3D11RenderTargetView* GBufferRTV[GBuffer::SIZE];
 	ID3D11ShaderResourceView* GBufferSRV[GBuffer::SIZE];
 
+	ID3D11Texture2D* ambientMap;
+	ID3D11RenderTargetView* ambientRTV;
+	ID3D11ShaderResourceView* ambientSRV;
+
 	ID3D11Texture2D* shadowMap;
 	ID3D11ShaderResourceView* shadowMapSRV;
 	ID3D11DepthStencilView* shadowMapDSV;

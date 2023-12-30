@@ -57,6 +57,7 @@ Texture2D diffuse : register(t0);
 Texture2D specular : register(t2);
 Texture2D gbuffer_normal : register(t1);
 Texture2D gbuffer_depth : register(t3);
+Texture2D ambient : register(t7);
 
 Texture2D ShadowMap : register(t4);
 Texture2DArray ShadowCubeMap : register(t5);
@@ -75,6 +76,7 @@ PS_OUT ps(float4 posFragQuad : SV_POSITION) : SV_Target
 {
     float2 uvCoord = float2(posFragQuad.x / 1280.0f, posFragQuad.y / 720.0f);
     float4 diffuseCol = diffuse.Sample(texSampler, uvCoord);
+    float4 ambCol = ambient.Sample(texSampler, uvCoord);
     float4 specCol = specular.Sample(texSampler, uvCoord);
     float sampledDepth = gbuffer_depth.Sample(texSampler, uvCoord);
     float3 normal = gbuffer_normal.Sample(texSampler, uvCoord).xyz * 2.0f - 1.0f;
@@ -86,10 +88,12 @@ PS_OUT ps(float4 posFragQuad : SV_POSITION) : SV_Target
 
     //TODO : use stencil buffer for to exclude skybox, instead of branching
     //if (sampledDepth < 0.999f)
-
+    float NdotL = 0.0f;
+    
     if (dirLight.dir.w == 0.0f)
     {
-        shadowing = computeShadowing(posWS, 0.008f, dot(normal, -dirLight.dir.xyz));
+        NdotL = dot(normal, -dirLight.dir.xyz);
+        shadowing = computeShadowing(posWS, 0.006f, NdotL);
     }
 
     for (int i = 0; i < numSpotLights; i++)
@@ -102,9 +106,8 @@ PS_OUT ps(float4 posFragQuad : SV_POSITION) : SV_Target
         shadowing = computeOmniShadowing(j, posWS, posVS, normal, 0.003f, 0.009f);
     }
     
-    
     PS_OUT ps_out;
-    ps_out.diffuseShadowed = float4(diffuseCol.rgb * shadowing, 1.0f);
+    ps_out.diffuseShadowed = float4(diffuseCol.rgb * shadowing + ambCol.rgb * (1.0f - shadowing), 1.0f);
     ps_out.specularShadowed = float4(specCol.rgb * shadowing, 1.0f);
     
     return ps_out;
@@ -114,7 +117,7 @@ float computeShadowing(float4 posWorldSpace, float bias, float NdotL)
 {
     float4 posLightSpace = mul(posWorldSpace, mul(dirLightViewMat, dirLightProjMat));
     
-    float correctedBias = max(0.002f, bias * (1.0f - abs(NdotL)));
+    float correctedBias = max(0.001f, bias * (1.0f - abs(NdotL)));
     float3 ndCoords = posLightSpace.xyz / posLightSpace.w;
     float currentDepth = ndCoords.z;
     float2 shadowMapUV = ndCoords.xy * 0.5f + 0.5f;
