@@ -29,6 +29,10 @@ struct MaterialDesc {
 
 	wchar_t albedoPath[128];
 	dx::XMFLOAT4 baseColor;
+	dx::XMFLOAT4 subsurfaceAlbedo;
+	dx::XMFLOAT4 meanFreePathColor;
+	float meanFreePathDistance;
+	float scale;
 
 	union {
 		float smoothnessValue;
@@ -56,7 +60,10 @@ struct MaterialModel {
 };
 
 struct MaterialParams {
+	float samples[64];
 	dx::XMFLOAT4 baseColor;
+	dx::XMFLOAT4 subsurfaceAlbedo;
+	dx::XMFLOAT4 meanFreePathColor;
 
 	std::uint32_t hasAlbedoMap;
 	std::uint32_t hasMetalnessMap;
@@ -65,10 +72,11 @@ struct MaterialParams {
 
 	float roughness;
 	float metalness;
-
-	std::uint8_t pad[8];
-
+	float meanFreePathDist;
+	float scale;
+	//std::uint8_t pad[4];
 };
+
 
 struct Material {
 	MaterialModel model;

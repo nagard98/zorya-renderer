@@ -67,7 +67,7 @@ void Editor::RenderEditor(RendererFrontend& rf, Camera& editorCam, const ID3D11S
 					if (ImGui::MenuItem("Spot", nullptr, &clicked[ADD_SPOT_LIGHT])) {}
 					ImGui::EndMenu();
 				}
-				if (ImGui::MenuItem("Sphere", nullptr, &clicked[ADD_SPHERE])) {}
+				/*if (ImGui::MenuItem("Sphere", nullptr, &clicked[ADD_SPHERE])) {}*/
 				ImGui::EndMenu();
 			}
 			ImGui::EndMenu();
@@ -183,15 +183,15 @@ void Editor::RenderEditor(RendererFrontend& rf, Camera& editorCam, const ID3D11S
 		ImGui::Image((void*)rtSRV, size);
 		bool isSceneHovered = ImGui::IsItemHovered();
 		if (!isSceneClicked && isSceneHovered) {
-			isSceneClicked = ImGui::IsItemClicked(ImGuiMouseButton_Middle) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
+			isSceneClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
 		}
 
 		if (isSceneClicked) {
 			ImVec2 delta = ImVec2(0.0, 0.0);
-			if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
-				delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Middle);
+			if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+				delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
 				editorCam.rotateAroundCamAxis(delta.y / 100.0f, delta.x / 100.0f, 0.0f);
-				ImGui::ResetMouseDragDelta(ImGuiMouseButton_Middle);
+				ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
 			}
 
 			if (ImGui::IsMouseDragging(ImGuiMouseButton_Right)) {
@@ -209,7 +209,7 @@ void Editor::RenderEditor(RendererFrontend& rf, Camera& editorCam, const ID3D11S
 			}
 		}
 
-		if (ImGui::IsMouseReleased(ImGuiMouseButton_Middle) || ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+		if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
 			isSceneClicked = false;
 		}
 	}

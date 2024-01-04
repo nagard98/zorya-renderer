@@ -72,6 +72,26 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
 			}
 
+			ImGui::ColorEdit4("Subsurface Albedo", &matDesc->subsurfaceAlbedo.x);
+			if (ImGui::IsItemEdited()) {
+				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+			}
+
+			ImGui::DragFloat4("Mean Free Path Color", &matDesc->meanFreePathColor.x);
+			if (ImGui::IsItemEdited()) {
+				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+			}
+			
+			ImGui::DragFloat("Mean Free Path Distance", &matDesc->meanFreePathDistance, 0.001f, 0.001f);
+			if (ImGui::IsItemEdited()) {
+				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+			}
+
+			ImGui::DragFloat("scale", &matDesc->scale, 0.01f, 1.0f);
+			if (ImGui::IsItemEdited()) {
+				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+			}
+
 			wcstombs(tmpCharBuff, matDesc->albedoPath, 128);
 			ImGui::InputText("Albedo Map", tmpCharBuff, 128);
 			if (ImGui::IsItemDeactivatedAfterEdit()) {

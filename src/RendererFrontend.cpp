@@ -250,7 +250,14 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
         MaterialDesc& matDesc = materials.at(matDescId);
         MaterialCacheHandle_t initMatCacheHnd{ 0, NO_UPDATE_MAT};
 
+
         if (matDesc.shaderType == PShaderID::UNDEFINED) {
+
+            matDesc.meanFreePathDistance = 1.25f;
+            matDesc.meanFreePathColor = dx::XMFLOAT4(3.7f, 1.7f, 0.68f,1.0f);
+            matDesc.subsurfaceAlbedo = dx::XMFLOAT4(1.0f, 1.0f, 1.0f,1.0f);
+            matDesc.scale = 1.0f;
+
             wchar_t tmpString[128];
 
             aiColor3D diffuse(0.0f, 0.0f, 0.0f);

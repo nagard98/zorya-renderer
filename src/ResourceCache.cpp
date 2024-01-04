@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <cassert>
 #include <variant>
+#include <cstdlib>
+#include <iostream>
 
 namespace wrl = Microsoft::WRL;
 
@@ -52,6 +54,16 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 		m->matPrms.hasMetalnessMap = m->metalnessMap.resourceView != nullptr;
 
 		m->matPrms.baseColor = matDesc.baseColor;
+		m->matPrms.subsurfaceAlbedo = matDesc.subsurfaceAlbedo;
+		m->matPrms.meanFreePathColor = matDesc.meanFreePathColor; 
+		m->matPrms.meanFreePathDist = matDesc.meanFreePathDistance / 100.0f; //from cm to m
+		m->matPrms.scale = matDesc.scale;
+
+		srand((int)m);
+
+		for (int i = 0; i < 64; i++) {
+			m->matPrms.samples[i] = (float)(rand() % 10000) / 10000.0f;
+		}
 
 		if ((matDesc.unionTags & METALNESS_IS_MAP) == 0) {
 			m->matPrms.metalness = matDesc.metalnessValue;
