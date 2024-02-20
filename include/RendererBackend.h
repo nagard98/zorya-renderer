@@ -77,6 +77,9 @@ private:
 
 	D3D11_VIEWPORT sm_viewport;
 
+	//TODO:Thickness map here is temporary; move to material
+	ShaderTexture2D thicknessMapSRV;
+
 	ID3D11Texture2D* GBuffer[GBuffer::SIZE];
 	ID3D11RenderTargetView* GBufferRTV[GBuffer::SIZE];
 	ID3D11ShaderResourceView* GBufferSRV[GBuffer::SIZE];
@@ -97,9 +100,9 @@ private:
 	ID3D11ShaderResourceView* shadowCubeMapSRV;
 	ID3D11DepthStencilView* shadowCubeMapDSV[6 * 2];
 
-	ID3D11Texture2D* skinMaps[3];
-	ID3D11RenderTargetView* skinRT[3];
-	ID3D11ShaderResourceView* skinSRV[3];
+	ID3D11Texture2D* skinMaps[5];
+	ID3D11RenderTargetView* skinRT[5];
+	ID3D11ShaderResourceView* skinSRV[5];
 
 	//TODO: what did I intend to do with this?
 	//std::hash<std::uint16_t> submeshHash;

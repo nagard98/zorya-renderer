@@ -20,6 +20,7 @@ struct PS_OUTPUT
     float4 albedo : SV_TARGET0;
     float4 normal : SV_TARGET1;
     float4 roughMet: SV_TARGET2;
+    float4 vertNormal : SV_TARGET3;
 };
 
 
@@ -60,24 +61,26 @@ Texture2DArray ShadowCubeMap : register(t5);
 //TextureCube ShadowCubeMap : register(t5);
 Texture2D SpotShadowMap : register(t6);
 
+Texture2D ThicknessMap : register(t7);
+
 SamplerState ObjSamplerState : register(s0);
 
 
 PS_OUTPUT ps(PS_INPUT input)
 {
     PS_OUTPUT output;
+    output.vertNormal = float4(normalize(input.fNormal), 0.0f) * 0.5f + 0.5f;
 
     if (hasNormalMap == true)
     {
         input.fNormal = normalize(NormalMap.Sample(ObjSamplerState, input.texCoord).rgb * 2.0f - 1.0f);
         output.normal = float4(mul(input.tbn, input.fNormal), 0.0f);
-        output.normal = output.normal * 0.5f + 0.5f;
     }
     else
     {
         output.normal = float4(normalize(input.fNormal), 0.0f);
-        output.normal = output.normal * 0.5f + 0.5f;
     }
+    output.normal = output.normal * 0.5f + 0.5f;
     
     output.roughMet.g = cb_metallic;
     if (hasMetalnessMap == true)
@@ -91,6 +94,8 @@ PS_OUTPUT ps(PS_INPUT input)
     {
         output.roughMet.r = SmoothnessMap.Sample(ObjSamplerState, input.texCoord).g;
     }    
+    
+    output.roughMet.b = ThicknessMap.Sample(ObjSamplerState, input.texCoord).r;
     
     output.albedo = baseColor;
     if (hasAlbedoMap == true)

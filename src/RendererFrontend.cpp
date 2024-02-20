@@ -240,6 +240,12 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
     localTransf.scal.y /= unitScaleFactor;
     localTransf.scal.z /= unitScaleFactor;
 
+    //TODO: remove; just  for development
+    localTransf.scal.x = 10.0f;
+    localTransf.scal.y = 10.0f;
+    localTransf.scal.z = 10.0f;
+    localTransf.pos.y = -2.2f;
+
     for (int j = 0; j < numMeshes; j++) {
         aiMesh* mesh = scene->mMeshes[meshesIndices[j]];
 
@@ -253,10 +259,10 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
 
         if (matDesc.shaderType == PShaderID::UNDEFINED) {
 
-            matDesc.meanFreePathDistance = 1.25f;
-            matDesc.meanFreePathColor = dx::XMFLOAT4(3.7f, 1.7f, 0.68f,1.0f);
-            matDesc.subsurfaceAlbedo = dx::XMFLOAT4(1.0f, 1.0f, 1.0f,1.0f);
-            matDesc.scale = 1.0f;
+            matDesc.meanFreePathDistance = 0.01f;
+            matDesc.meanFreePathColor = dx::XMFLOAT4(3.68f, 1.37f, 0.68f, 1.0f);
+            matDesc.subsurfaceAlbedo = dx::XMFLOAT4(0.436f, 0.015688f, 0.131f,1.0f);
+            matDesc.scale = 5.0f;
 
             wchar_t tmpString[128];
 
@@ -280,10 +286,13 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     albedoPath.Append(diffTexName.C_Str());
                     mbstowcs(tmpString, albedoPath.C_Str(), 128);
                     wcscpy(matDesc.albedoPath, tmpString);
-                    //wcscpy(matDesc.albedoPath, L"");
+
                     // L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg";
                 }
             }
+            wcscpy(matDesc.albedoPath, L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg");//TODO: REMOVE AFTER TESTING
+            //wcscpy(matDesc.albedoPath, L"./shaders/assets/Human/Textures/Head/Bake/Bake_4096_point.png");
+            //wcscpy(matDesc.albedoPath, L"");
 
             aiString normTexName;
             count = material->GetTextureCount(aiTextureType_NORMALS);
@@ -297,11 +306,12 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     NormalMapPath.Append("/");
                     NormalMapPath.Append(normTexName.C_Str());
                     mbstowcs(tmpString, NormalMapPath.C_Str(), 128);
-                    wcscpy(matDesc.normalPath, tmpString);
-                    //wcscpy(matDesc.normalPath, L"");
+                    //wcscpy(matDesc.normalPath, tmpString);
                     // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
                 }
             }
+            wcscpy(matDesc.normalPath, L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg");//TODO: REMOVE AFTER TESTING
+            //wcscpy(matDesc.normalPath, L"");
 
             aiColor4D col;
             success = material->Get(AI_MATKEY_COLOR_DIFFUSE, col);
@@ -311,6 +321,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
             else {
                 matDesc.baseColor = dx::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
             }
+            matDesc.baseColor = dx::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);//TODO: REMOVE AFTER TESTING
 
             aiString roughTexName;
             count = material->GetTextureCount(aiTextureType_DIFFUSE_ROUGHNESS);
@@ -340,6 +351,8 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     matDesc.smoothnessValue = 0.5f;
                 }
             }
+
+            matDesc.smoothnessValue = 0.30f; //TODO: REMOVE AFTER TESTING
 
             aiString metTexName;
             count = material->GetTextureCount(aiTextureType_METALNESS);

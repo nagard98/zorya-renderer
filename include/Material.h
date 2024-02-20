@@ -5,7 +5,6 @@
 #include <string>
 #include <cstdint>
 #include "Shaders.h"
-#include <variant>
 
 #include <d3d11.h>
 
@@ -74,6 +73,10 @@ struct MaterialParams {
 	float metalness;
 	float meanFreePathDist;
 	float scale;
+
+	dx::XMFLOAT4 kernel[16];
+	dx::XMFLOAT2 dir;
+	std::uint8_t pad[8];
 	//std::uint8_t pad[4];
 };
 

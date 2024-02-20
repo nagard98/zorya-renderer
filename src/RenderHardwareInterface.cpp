@@ -31,7 +31,7 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     RECT rect;
     GetClientRect(windowHandle, &rect);
     UINT width = rect.right - rect.left;
-    UINT height = rect.bottom - rect.top;
+    UINT height = 1080.0f;// rect.bottom - rect.top;
 
     UINT deviceFlags = 0;
 #if _DEBUG

@@ -10,6 +10,7 @@
 #include <variant>
 #include <cstdlib>
 #include <iostream>
+#include <random>
 
 namespace wrl = Microsoft::WRL;
 
@@ -56,14 +57,25 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 		m->matPrms.baseColor = matDesc.baseColor;
 		m->matPrms.subsurfaceAlbedo = matDesc.subsurfaceAlbedo;
 		m->matPrms.meanFreePathColor = matDesc.meanFreePathColor; 
-		m->matPrms.meanFreePathDist = matDesc.meanFreePathDistance / 100.0f; //from cm to m
+		m->matPrms.meanFreePathDist = matDesc.meanFreePathDistance; //from cm to m
 		m->matPrms.scale = matDesc.scale;
 
-		srand((int)m);
+		srand((int)matDesc.scale);
 
+		std::random_device rd;
+		std::mt19937 gen(6.0f);
+		std::uniform_real_distribution<> dis(0, 1.0);//uniform distribution between 0 and 1
 		for (int i = 0; i < 64; i++) {
-			m->matPrms.samples[i] = (float)(rand() % 10000) / 10000.0f;
+			m->matPrms.samples[i] = dis(gen);
+			OutputDebugString((std::to_string(m->matPrms.samples[i]).append(", ")).c_str());
 		}
+		int tr = std::trunc(matDesc.scale) * 4;
+		std::sort(m->matPrms.samples, m->matPrms.samples + (int)(m->matPrms.scale * 4.0f));
+		std::sort(m->matPrms.samples + (int)(m->matPrms.scale * 4.0f), m->matPrms.samples + (int)(m->matPrms.scale * 4.0f) + (int)(std::trunc(matDesc.subsurfaceAlbedo.y * 255.0f)*4.0f));
+
+		//for (int i = 0; i < 64; i++) {
+		//	m->matPrms.samples[i] = (float)(rand() % 10000) / 10000.0f;
+		//}
 
 		if ((matDesc.unionTags & METALNESS_IS_MAP) == 0) {
 			m->matPrms.metalness = matDesc.metalnessValue;

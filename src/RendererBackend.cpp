@@ -10,6 +10,9 @@
 
 #include <d3d11_1.h>
 #include <cassert>
+#include <vector>
+#include <fstream>
+#include <iostream>
 
 RendererBackend rb;
 
@@ -35,14 +38,7 @@ RendererBackend::RendererBackend()
         shadowCubeMapDSV[i] = nullptr;
     }
 
-    skinRT[0] = nullptr;
-    skinRT[1] = nullptr;
-    skinMaps[0] = nullptr;
-    skinMaps[1] = nullptr;
-    skinSRV[0] = nullptr;
-    skinSRV[1] = nullptr;
-
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 5; i++) {
         skinRT[i] = nullptr;
         skinMaps[i] = nullptr;
         skinSRV[i] = nullptr;
@@ -87,6 +83,319 @@ RendererBackend::~RendererBackend()
 
     if (invMatCB) invMatCB->Release();
     if (annot) annot->Release();
+
+    thicknessMapSRV.resourceView->Release();
+}
+
+struct KernelSample
+{
+    float r, g, b, x, y;
+};
+
+float nSamples = 7;
+std::vector<dx::XMFLOAT4> kernel;
+
+void loadKernelFile(std::string fileName, std::vector<float>& data)
+{
+    //data.clear();
+
+    //std::string folder(kernelFolder.begin(), kernelFolder.end()); // dirty conversion
+    std::string path = fileName;//folder + fileName;
+
+    bool binary = false;
+    if (fileName.compare(fileName.size() - 3, 3, ".bn") == 0)
+        binary = true;
+
+    std::ifstream i;
+    std::ios_base::openmode om;
+
+    if (binary) om = std::ios_base::in | std::ios_base::binary;
+    else om = std::ios_base::in;
+
+    i.open(path, om);
+
+    if (!i.good())
+    {
+        i.close();
+        i.open("../" + path, om);
+    }
+
+    if (binary)
+    {
+        data.clear();
+
+        // read float count
+        char sv[4];
+        i.read(sv, 4);
+        int fc = (int)(floor(*((float*)sv)));
+
+        data.resize(fc);
+        i.read(reinterpret_cast<char*>(&data[0]), fc * 4);
+    }
+    else
+    {
+        float v;
+
+        while (i >> v)
+        {
+            data.push_back(v);
+
+            int next = i.peek();
+            switch (next)
+            {
+                case ',': i.ignore(1); break;
+                case ' ': i.ignore(1); break;
+            }
+        }
+    }
+
+    i.close();
+}
+
+void calculateOffsets(float _range, float _exponent, int _offsetCount, std::vector<float>& _offsets)
+{
+    // Calculate the offsets:
+    float step = 2.0f * _range / (_offsetCount - 1);
+    for (int i = 0; i < _offsetCount; i++) {
+        float o = -_range + float(i) * step;
+        float sign = o < 0.0f ? -1.0f : 1.0f;
+        float ofs = _range * sign * abs(pow(o, _exponent)) / pow(_range, _exponent);
+        _offsets.push_back(ofs);
+    }
+}
+
+void calculateAreas(std::vector<float>& _offsets, std::vector<float>& _areas)
+{
+    int size = _offsets.size();
+
+    for (int i = 0; i < size; i++) {
+        float w0 = i > 0 ? abs(_offsets[i] - _offsets[i - 1]) : 0.0f;
+        float w1 = i < size - 1 ? abs(_offsets[i] - _offsets[i + 1]) : 0.0f;
+        float area = (w0 + w1) / 2.0f;
+        _areas.push_back(area);
+    }
+}
+
+dx::XMFLOAT3 linInterpol1D(std::vector<KernelSample> _kernelData, float _x)
+{
+    // naive, a lot to improve here
+
+    if (_kernelData.size() < 1) throw "_kernelData empty";
+
+    unsigned int i = 0;
+    while (i < _kernelData.size())
+    {
+        if (_x > _kernelData[i].x) i++;
+        else break;
+    }
+
+    dx::XMFLOAT3 v;
+
+    if (i < 1)
+    {
+        v.x = _kernelData[0].r;
+        v.y = _kernelData[0].g;
+        v.z = _kernelData[0].b;
+    }
+    else if (i > _kernelData.size() - 1)
+    {
+        v.x = _kernelData[_kernelData.size() - 1].r;
+        v.y = _kernelData[_kernelData.size() - 1].g;
+        v.z = _kernelData[_kernelData.size() - 1].b;
+    }
+    else
+    {
+        KernelSample b = _kernelData[i];
+        KernelSample a = _kernelData[i - 1];
+
+        float d = b.x - a.x;
+        float dx = _x - a.x;
+
+        float t = dx / d;
+
+        v.x = a.r * (1 - t) + b.r * t;
+        v.y = a.g * (1 - t) + b.g * t;
+        v.z = a.b * (1 - t) + b.b * t;
+    }
+
+    return v;
+}
+
+void calculateSsssDiscrSepKernel(const std::vector<KernelSample>& _kernelData)
+{
+    const float EXPONENT = 2.0f; // used for impartance sampling
+
+    float RANGE = _kernelData[_kernelData.size() - 1].x; // get max. sample location
+
+    // calculate offsets
+    std::vector<float> offsets;
+    calculateOffsets(RANGE, EXPONENT, nSamples, offsets);
+
+    // calculate areas (using importance-sampling) 
+    std::vector<float> areas;
+    calculateAreas(offsets, areas);
+
+    kernel.resize(nSamples);
+
+    dx::XMFLOAT3 sum = dx::XMFLOAT3(0, 0, 0); // weights sum for normalization
+
+    // compute interpolated weights
+    for (int i = 0; i < nSamples; i++)
+    {
+        float sx = offsets[i];
+
+        dx::XMFLOAT3 v = linInterpol1D(_kernelData, sx);
+        kernel[i].x = v.x * areas[i];
+        kernel[i].y = v.y * areas[i];
+        kernel[i].z = v.z * areas[i];
+        kernel[i].w = sx;
+
+        sum.x += kernel[i].x;
+        sum.y += kernel[i].y;
+        sum.z += kernel[i].z;
+    }
+
+    // Normalize
+    for (int i = 0; i < nSamples; i++) {
+        kernel[i].x /= sum.x;
+        kernel[i].y /= sum.y;
+        kernel[i].z /= sum.z;
+    }
+
+    // TEMP put center at first
+    dx::XMFLOAT4 t = kernel[nSamples / 2];
+    for (int i = nSamples / 2; i > 0; i--)
+        kernel[i] = kernel[i - 1];
+    kernel[0] = t;
+
+    // set shader vars
+    //HRESULT hr;
+    //V(effect->GetVariableByName("maxOffsetMm")->AsScalar()->SetFloat(RANGE));
+    //V(kernelVariable->SetFloatVectorArray((float*)&kernel.front(), 0, nSamples));
+}
+
+void overrideSsssDiscrSepKernel(const std::vector<float>& _kernelData)
+{
+    bool useImg2DKernel = false;
+
+    // conversion of linear kernel data to sample array
+    std::vector<KernelSample> k;
+    unsigned int size = _kernelData.size() / 4;
+
+    unsigned int i = 0;
+    for (unsigned int s = 0; s < size; s++)
+    {
+        KernelSample ks;
+        ks.r = _kernelData[i++];
+        ks.g = _kernelData[i++];
+        ks.b = _kernelData[i++];
+        ks.x = _kernelData[i++];
+        k.push_back(ks);
+    }
+
+    // kernel computation
+    calculateSsssDiscrSepKernel(k);
+}
+
+dx::XMFLOAT3 gauss1D(float x, dx::XMFLOAT3 variance)
+{
+    dx::XMVECTOR var = dx::XMLoadFloat3(&variance);
+    dx::XMVECTOR var2 = dx::XMVectorMultiply(var, var);
+    dx::XMVECTOR var2_2 = dx::XMVectorAdd(var2, var2);
+    dx::XMVECTOR xVec = dx::XMVectorMultiply(dx::XMVectorSet(x, x, x, 0.0f), dx::XMVectorSet(x, x, x, 0.0f));
+    dx::XMVECTOR negXVec = dx::XMVectorNegate(xVec);
+    
+    dx::XMVECTOR res = dx::XMVectorMultiply(dx::XMVectorMultiply(dx::XMVectorReciprocal(var), dx::XMVectorReciprocalSqrt(dx::g_XMPi+ dx::g_XMPi)),dx::XMVectorExp(dx::XMVectorMultiply(negXVec,dx::XMVectorReciprocal(var2_2))));
+    return dx::XMFLOAT3(res.m128_f32[0], res.m128_f32[1], res.m128_f32[2]);
+    //return rcp(sqrt(2.0f * dx::XM_PI) * variance) * exp(-(x * x) * rcp(2.0f * variance * variance));
+}
+
+dx::XMFLOAT3 profile(float r) {
+    /**
+     * We used the red channel of the original skin profile defined in
+     * [d'Eon07] for all three channels. We noticed it can be used for green
+     * and blue channels (scaled using the falloff parameter) without
+     * introducing noticeable differences and allowing for total control over
+     * the profile. For example, it allows to create blue SSS gradients, which
+     * could be useful in case of rendering blue creatures.
+     */
+    //return  // 0.233f * gaussian(0.0064f, r) + /* We consider this one to be directly bounced light, accounted by the strength parameter (see @STRENGTH) */
+  /*      0.100f * gaussian(0.0484f, r) +
+        0.118f * gaussian(0.187f, r) +
+        0.113f * gaussian(0.567f, r) +
+        0.358f * gaussian(1.99f, r) +
+        0.078f * gaussian(7.41f, r);*/
+    dx::XMFLOAT3 nearVar = dx::XMFLOAT3(0.077f, 0.034f, 0.02f);
+    dx::XMFLOAT3 farVar = dx::XMFLOAT3(1.0f, 0.45f, 0.25f);
+    dx::XMVECTOR g1 = dx::XMLoadFloat3(&(gauss1D(r, nearVar)));
+    dx::XMVECTOR g2 = dx::XMLoadFloat3(&(gauss1D(r, farVar)));
+    dx::XMVECTOR weight = dx::XMVectorSet(0.5, 0.5f, 0.5f, 0.0f);
+    dx::XMVECTOR res = dx::XMVectorAdd(dx::XMVectorMultiply(weight, g1), dx::XMVectorMultiply(weight, g2));
+
+    return dx::XMFLOAT3(res.m128_f32[0], res.m128_f32[1], res.m128_f32[2]);
+}
+
+void SeparableSSScalculateKernel() {
+    HRESULT hr;
+
+    const float RANGE = nSamples > 20 ? 3.0f : 2.0f;
+    const float EXPONENT = 2.0f;
+
+    kernel.resize(nSamples);
+
+    // Calculate the offsets:
+    float step = 2.0f * RANGE / (nSamples - 1);
+    for (int i = 0; i < nSamples; i++) {
+        float o = -RANGE + float(i) * step;
+        float sign = o < 0.0f ? -1.0f : 1.0f;
+        kernel[i].w = RANGE * sign * abs(pow(o, EXPONENT)) / pow(RANGE, EXPONENT);
+    }
+
+    // Calculate the weights:
+    for (int i = 0; i < nSamples; i++) {
+        float w0 = i > 0 ? abs(kernel[i].w - kernel[i - 1].w) : 0.0f;
+        float w1 = i < nSamples - 1 ? abs(kernel[i].w - kernel[i + 1].w) : 0.0f;
+        float area = (w0 + w1) / 2.0f;
+        dx::XMFLOAT3 prof = profile(kernel[i].w);
+        dx::XMFLOAT3 t = dx::XMFLOAT3(area * prof.x, area * prof.y, area * prof.z);
+        kernel[i].x = t.x;
+        kernel[i].y = t.y;
+        kernel[i].z = t.z;
+    }
+
+    // We want the offset 0.0 to come first:
+    dx::XMFLOAT4 t = kernel[nSamples / 2];
+    for (int i = nSamples / 2; i > 0; i--)
+        kernel[i] = kernel[i - 1];
+    kernel[0] = t;
+
+    // Calculate the sum of the weights, we will need to normalize them below:
+    dx::XMFLOAT3 sum = dx::XMFLOAT3(0.0f, 0.0f, 0.0f);
+    for (int i = 0; i < nSamples; i++) {
+        sum = dx::XMFLOAT3(kernel[i].x+sum.x, kernel[i].y + sum.y, kernel[i].z+sum.z);
+    }
+
+    // Normalize the weights:
+    for (int i = 0; i < nSamples; i++) {
+        kernel[i].x /= sum.x;
+        kernel[i].y /= sum.y;
+        kernel[i].z /= sum.z;
+    }
+
+    // Tweak them using the desired strength. The first one is:
+    //     lerp(1.0, kernel[0].rgb, strength)
+    //kernel[0].x = (1.0f - strength.x) * 1.0f + strength.x * kernel[0].x;
+    //kernel[0].y = (1.0f - strength.y) * 1.0f + strength.y * kernel[0].y;
+    //kernel[0].z = (1.0f - strength.z) * 1.0f + strength.z * kernel[0].z;
+
+    //// The others:
+    ////     lerp(0.0, kernel[0].rgb, strength)
+    //for (int i = 1; i < nSamples; i++) {
+    //    kernel[i].x *= strength.x;
+    //    kernel[i].y *= strength.y;
+    //    kernel[i].z *= strength.z;
+    //}
+
 }
 
 HRESULT RendererBackend::Init()
@@ -180,8 +489,8 @@ HRESULT RendererBackend::Init()
     gbufferDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
     gbufferDesc.SampleDesc.Count = 1;
     gbufferDesc.SampleDesc.Quality = 0;
-    gbufferDesc.Width = 1280.0f;
-    gbufferDesc.Height = 720.0f;
+    gbufferDesc.Width = 1920.0f;
+    gbufferDesc.Height = 1080.0f;
 
     for (int i = 0; i < GBuffer::SIZE; i++) {
         hr = rhi.device->CreateTexture2D(&gbufferDesc, nullptr, &GBuffer[i]);
@@ -343,13 +652,18 @@ HRESULT RendererBackend::Init()
     irradTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
     irradTexDesc.CPUAccessFlags = 0;
     irradTexDesc.MiscFlags = 0;
-    irradTexDesc.Height = 720;
-    irradTexDesc.Width = 1280;
+    irradTexDesc.Width = 1920.0f;
+    irradTexDesc.Height = 1080.0f;
     irradTexDesc.Usage = D3D11_USAGE_DEFAULT;
     irradTexDesc.SampleDesc.Count = 1;
     irradTexDesc.SampleDesc.Quality = 0;
     
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 5; i++) {
+        if (i == 3) {
+            irradTexDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+            irradTexDesc.MipLevels = 8;
+        }
+
         hr = rhi.device->CreateTexture2D(&irradTexDesc, nullptr, &skinMaps[i]);
         RETURN_IF_FAILED(hr);
 
@@ -375,6 +689,22 @@ HRESULT RendererBackend::Init()
     //RETURN_IF_FAILED(hr);    
 
     //-----------------------------------------------------------------
+
+    //thickness map
+    rhi.LoadTexture(L"./shaders/assets/Human/Textures/Head/JPG/baked_translucency_4096.jpg", thicknessMapSRV, false);
+    
+    std::vector<float> krn;
+    //loadKernelFile("./shaders/assets/Skin2_PreInt_DISCSEP.bn", krn);
+    //loadKernelFile("./shaders/assets/Skin1_PreInt_DISCSEP.bn", krn);
+    loadKernelFile("./shaders/assets/Skin1_ArtModProd_DISCSEP.bn", krn);
+    
+    overrideSsssDiscrSepKernel(krn);
+    //SeparableSSScalculateKernel();
+    for (int i = 2; i < kernel.size(); i++) {
+        OutputDebugString(std::to_string(abs(kernel[i].w - kernel[i - 1].w)).c_str());
+        OutputDebugString("\n");
+    }
+
 
     return S_OK;
 }
@@ -444,10 +774,10 @@ void RendererBackend::RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& di
         {
             DirectionalLight& dirLight = dirLights.at(i).dirLight;
             dx::XMVECTOR transfDirLight = dx::XMVector4Transform(dirLight.direction, dirLights.at(i).finalWorldTransf);
-            dx::XMVECTOR lightPos = dx::XMVectorMultiply(dx::XMVectorNegate(transfDirLight), dx::XMVectorSet(10.0f, 10.0f, 10.0f, 1.0f));
+            dx::XMVECTOR lightPos = dx::XMVectorMultiply(dx::XMVectorNegate(transfDirLight), dx::XMVectorSet(3.0f, 3.0f, 3.0f, 1.0f));
             //TODO: rename these matrices; it isnt clear that they are used for shadow mapping
             dx::XMMATRIX dirLightVMat = dx::XMMatrixLookAtLH(lightPos, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
-            dx::XMMATRIX dirLightPMat = dx::XMMatrixOrthographicLH(12.0f, 12.0f, dirLight.shadowMapNearPlane, dirLight.shadowMapFarPlane);
+            dx::XMMATRIX dirLightPMat = dx::XMMatrixOrthographicLH(4.0f, 4.0f, dirLight.shadowMapNearPlane, dirLight.shadowMapFarPlane);
 
             dirShadowCB.dirPMat = dx::XMMatrixTranspose(dirLightPMat);
             dirShadowCB.dirVMat = dx::XMMatrixTranspose(dirLightVMat);
@@ -686,7 +1016,8 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
             rhi.context->ClearRenderTargetView(GBufferRTV[i], clearCol);
         }
 
-        rhi.context->OMSetRenderTargets(3, &GBufferRTV[0], rhi.depthStencilView.Get());
+        ID3D11RenderTargetView* rt2[4] = { GBufferRTV[0], GBufferRTV[1], GBufferRTV[2], skinRT[4] };
+        rhi.context->OMSetRenderTargets(4, &rt2[0]/*&GBufferRTV[0]*/, rhi.depthStencilView.Get());
 
         for (SubmeshInfo const& sbPair : viewDesc.submeshesInfo) {
             rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
@@ -701,6 +1032,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
             rhi.context->PSSetShaderResources(4, 1, &shadowMapSRV);
             rhi.context->PSSetShaderResources(5, 1, &shadowCubeMapSRV);
             rhi.context->PSSetShaderResources(6, 1, &spotShadowMapSRV);
+            rhi.context->PSSetShaderResources(7, 1, &thicknessMapSRV.resourceView);
 
             rhi.context->UpdateSubresource(matPrmsCB, 0, nullptr, &mat.matPrms, 0, 0);
             rhi.context->PSSetConstantBuffers(0, 1, &lightsCB);
@@ -745,6 +1077,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
         rhi.context->PSSetShaderResources(4, 1, &shadowMapSRV);
         rhi.context->PSSetShaderResources(5, 1, &shadowCubeMapSRV);
         rhi.context->PSSetShaderResources(6, 1, &spotShadowMapSRV);
+        rhi.context->PSSetShaderResources(7, 1, &skinSRV[4]);
         rhi.context->Draw(4, 0);
     }
     annot->EndEvent();
@@ -753,9 +1086,9 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
 
     annot->BeginEvent(L"ShadowMap Pass");
     {
-        rhi.context->PSSetShaderResources(GBuffer::ALBEDO, 1, &nullSRV[0]);
+        //rhi.context->PSSetShaderResources(GBuffer::ALBEDO, 1, &nullSRV[0]);
         rhi.context->PSSetShaderResources(GBuffer::ROUGH_MET, 1, &nullSRV[0]);
-        ID3D11RenderTargetView* tmpRT[2] = { GBufferRTV[GBuffer::ALBEDO], GBufferRTV[GBuffer::ROUGH_MET]};
+        ID3D11RenderTargetView* tmpRT[2] = { skinRT[3], GBufferRTV[GBuffer::ROUGH_MET]};
         rhi.context->OMSetRenderTargets(2, &tmpRT[0], nullptr);
         rhi.context->PSSetShaderResources(0, 1, &skinSRV[0]);
         rhi.context->PSSetShaderResources(2, 1, &skinSRV[1]);
@@ -767,15 +1100,37 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
 
     annot->BeginEvent(L"SSSSS Pass");
     {
-        rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), nullptr);
+        Material& mat = resourceCache.materialCache.at(0);
+
+        for (int i = 0; i < nSamples; i++) {
+            mat.matPrms.kernel[i] = kernel[i];
+        }
+        mat.matPrms.dir = dx::XMFLOAT2(0.0f, 1.0f);
+        rhi.context->UpdateSubresource(matPrmsCB, 0, nullptr, &mat.matPrms, 0, 0);
+
+        rhi.context->PSSetShaderResources(2, 1, &nullSRV[0]);
+        rhi.context->OMSetRenderTargets(1, /*&skinRT[1]*/rhi.renderTargetView.GetAddressOf(), nullptr);
         rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SSSSS), nullptr, 0);
-        //NOTA: Gbuffer riutilizzato, non con valori originali
-        rhi.context->GenerateMips(GBufferSRV[GBuffer::ALBEDO]);
-        rhi.context->PSSetShaderResources(0, 1, &GBufferSRV[GBuffer::ALBEDO]);
+        //NOTA: skinSRV[3] is diffuse radiance
+        annot->BeginEvent(L"mips");
+        {
+            rhi.context->GenerateMips(skinSRV[3]);
+        }
+        annot->EndEvent();
+
+        rhi.context->PSSetShaderResources(0, 1, &skinSRV[3]);
         rhi.context->PSSetShaderResources(1, 1, &GBufferSRV[GBuffer::ROUGH_MET]);
         rhi.context->PSSetShaderResources(2, 1, &skinSRV[2]);
         rhi.context->PSSetShaderResources(3, 1, rhi.depthStencilShaderResourceView.GetAddressOf());
+        rhi.context->PSSetShaderResources(4, 1, &GBufferSRV[GBuffer::ALBEDO]);
         rhi.context->Draw(4, 0);
+
+        //mat.matPrms.dir = dx::XMFLOAT2(1.0f, 0.0f);
+        //rhi.context->UpdateSubresource(matPrmsCB, 0, nullptr, &mat.matPrms, 0, 0);
+        //rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), nullptr);
+        //rhi.context->PSSetShaderResources(0, 1, &skinSRV[1]);
+        //rhi.context->Draw(4, 0);
+        
     }
     annot->EndEvent();
 

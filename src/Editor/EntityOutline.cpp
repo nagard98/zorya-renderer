@@ -77,17 +77,17 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
 			}
 
-			ImGui::DragFloat4("Mean Free Path Color", &matDesc->meanFreePathColor.x);
+			ImGui::DragFloat4("Mean Free Path Color", &matDesc->meanFreePathColor.x, 0.01f, 0.001, ImGuiSliderFlags_AlwaysClamp);
 			if (ImGui::IsItemEdited()) {
 				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
 			}
 			
-			ImGui::DragFloat("Mean Free Path Distance", &matDesc->meanFreePathDistance, 0.001f, 0.001f);
+			ImGui::DragFloat("Mean Free Path Distance", &matDesc->meanFreePathDistance, 0.0001f, 0.0001f, 0.0f, "%.4f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_AlwaysClamp);
 			if (ImGui::IsItemEdited()) {
 				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
 			}
 
-			ImGui::DragFloat("scale", &matDesc->scale, 0.01f, 1.0f);
+			ImGui::DragFloat("scale", &matDesc->scale, 1.0f, 1.0f, 16.0f);
 			if (ImGui::IsItemEdited()) {
 				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
 			}

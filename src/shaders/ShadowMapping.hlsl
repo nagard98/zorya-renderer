@@ -11,6 +11,8 @@ static const float revPi = 1 / 3.14159f;
 static const float gamma = 1.0f / 2.2f;
 static const float lightDec = -(1 / 16.0f);
 static const float texScale = 1 / 2048.0f;
+static const float SCREEN_WIDTH = 1920.0f;
+static const float SCREEN_HEIGHT = 1080.0f;
 
 struct PS_OUT
 {
@@ -74,7 +76,7 @@ float4 posFromDepth(float2 quadTexCoord, float sampledDepth, uniform float4x4 in
 
 PS_OUT ps(float4 posFragQuad : SV_POSITION) : SV_Target
 {
-    float2 uvCoord = float2(posFragQuad.x / 1280.0f, posFragQuad.y / 720.0f);
+    float2 uvCoord = float2(posFragQuad.x / SCREEN_WIDTH, posFragQuad.y / SCREEN_HEIGHT);
     float4 diffuseCol = diffuse.Sample(texSampler, uvCoord);
     float4 ambCol = ambient.Sample(texSampler, uvCoord);
     float4 specCol = specular.Sample(texSampler, uvCoord);
