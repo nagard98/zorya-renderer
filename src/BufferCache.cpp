@@ -31,7 +31,7 @@ BufferCacheHandle_t BufferCache::AllocStaticGeom(const SubmeshHandle_t sHnd, con
 	bufferData.pSysMem = geomIndStart;
 
 	HRESULT hr;
-	hr = rhi.device->CreateBuffer(&bufferDesc, &bufferData, &iBuffer);
+	hr = rhi.device.device->CreateBuffer(&bufferDesc, &bufferData, &iBuffer);
 	staticCache.indexBuffers.at(staticCache.topIndexBuffer).Init(iBuffer, sHnd.numIndexes);
 	staticCache.topIndexBuffer += 1;
 
@@ -43,7 +43,7 @@ BufferCacheHandle_t BufferCache::AllocStaticGeom(const SubmeshHandle_t sHnd, con
 
 	bufferData.pSysMem = geomVertStart;
 
-	hr = rhi.device->CreateBuffer(&bufferDesc, &bufferData, &vBuffer);
+	hr = rhi.device.device->CreateBuffer(&bufferDesc, &bufferData, &vBuffer);
 	staticCache.vertexBuffers.at(staticCache.topVertexBuffer).Init(vBuffer, sHnd.numVertices);
 	staticCache.topVertexBuffer += 1;
 

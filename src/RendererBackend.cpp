@@ -7,12 +7,15 @@
 #include "Material.h"
 #include "Lights.h"
 #include "Camera.h"
+#include "RenderDevice.h"
+
 
 #include <d3d11_1.h>
-#include <cassert>
 #include <vector>
+#include <cassert>
 #include <fstream>
 #include <iostream>
+
 
 RendererBackend rb;
 
@@ -23,8 +26,8 @@ RendererBackend::RendererBackend()
 	matPrmsCB = nullptr;
     lightsCB = nullptr;
     objectCB = nullptr;
-    viewCB = nullptr;
     projCB = nullptr;
+    viewCB = nullptr;
     dirShadCB = nullptr;
     omniDirShadCB = nullptr;
 
@@ -63,28 +66,11 @@ RendererBackend::~RendererBackend()
     if (objectCB) objectCB->Release();
     if (viewCB) viewCB->Release();
     if (projCB) projCB->Release();
-    if (shadowMap) shadowMap->Release();
-
-    for (int i = 0; i < 3; i++) {
-        if (skinSRV[i]) skinSRV[i]->Release();
-        if (skinRT[i]) skinRT[i]->Release();
-        if (skinMaps[i]) skinMaps[i]->Release();
-    }
-
-    for (int i = 0; i < GBuffer::SIZE; i++) {
-        if (GBufferSRV[i]) GBufferSRV[i]->Release();
-        if (GBufferRTV[i]) GBufferRTV[i]->Release();
-        if (GBuffer[i]) GBuffer[i]->Release();
-    }
-
-    if (ambientSRV) ambientSRV->Release();
-    if (ambientRTV) ambientRTV->Release();
-    if (ambientMap) ambientMap->Release();
 
     if (invMatCB) invMatCB->Release();
     if (annot) annot->Release();
 
-    thicknessMapSRV.resourceView->Release();
+    if (thicknessMapSRV.resourceView) thicknessMapSRV.resourceView->Release();
 }
 
 struct KernelSample
@@ -415,7 +401,7 @@ HRESULT RendererBackend::Init()
 	matCbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	matCbDesc.Usage = D3D11_USAGE_DEFAULT;
 
-	HRESULT hr = rhi.device->CreateBuffer(&matCbDesc, nullptr, &matPrmsCB);
+	HRESULT hr = rhi.device.device->CreateBuffer(&matCbDesc, nullptr, &matPrmsCB);
     
     RETURN_IF_FAILED(hr);
 
@@ -427,7 +413,7 @@ HRESULT RendererBackend::Init()
     cbObjDesc.MiscFlags = 0;
     cbObjDesc.ByteWidth = sizeof(ObjCB);
 
-    hr = rhi.device->CreateBuffer(&cbObjDesc, nullptr, &objectCB);
+    hr = rhi.device.device->CreateBuffer(&cbObjDesc, nullptr, &objectCB);
     RETURN_IF_FAILED(hr);
 
     rhi.context->VSSetConstantBuffers(0, 1, &objectCB);
@@ -442,7 +428,7 @@ HRESULT RendererBackend::Init()
     cbCamDesc.MiscFlags = 0;
     cbCamDesc.ByteWidth = sizeof(ViewCB);
 
-    hr = rhi.device->CreateBuffer(&cbCamDesc, nullptr, &viewCB);
+    hr = rhi.device.device->CreateBuffer(&cbCamDesc, nullptr, &viewCB);
     RETURN_IF_FAILED(hr);
 
     rhi.context->VSSetConstantBuffers(1, 1, &viewCB);
@@ -457,7 +443,7 @@ HRESULT RendererBackend::Init()
     cbProjDesc.MiscFlags = 0;
     cbProjDesc.ByteWidth = sizeof(ProjCB);
 
-    hr = rhi.device->CreateBuffer(&cbProjDesc, nullptr, &projCB);
+    hr = rhi.device.device->CreateBuffer(&cbProjDesc, nullptr, &projCB);
     RETURN_IF_FAILED(hr);
 
     rhi.context->VSSetConstantBuffers(2, 1, &projCB);
@@ -470,7 +456,7 @@ HRESULT RendererBackend::Init()
     lightBuffDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     lightBuffDesc.ByteWidth = sizeof(LightCB);
 
-    hr = rhi.device->CreateBuffer(&lightBuffDesc, nullptr, &lightsCB);
+    hr = rhi.device.device->CreateBuffer(&lightBuffDesc, nullptr, &lightsCB);
     RETURN_IF_FAILED(hr);
 
     rhi.context->PSSetConstantBuffers(0, 1, &lightsCB);
@@ -479,55 +465,47 @@ HRESULT RendererBackend::Init()
 	
     //GBuffer setup--------------------------------------------
     
-    D3D11_TEXTURE2D_DESC gbufferDesc;
-    gbufferDesc.Format = DXGI_FORMAT_R8G8B8A8_TYPELESS;
-    gbufferDesc.ArraySize = 1;
-    gbufferDesc.MipLevels = 4;
-    gbufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    gbufferDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-    gbufferDesc.CPUAccessFlags = 0;
-    gbufferDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
-    gbufferDesc.SampleDesc.Count = 1;
-    gbufferDesc.SampleDesc.Quality = 0;
-    gbufferDesc.Width = 1920.0f;
-    gbufferDesc.Height = 1080.0f;
+    ZRYResult zr;
 
+    RenderTextureHandle gBuffHnd[GBuffer::SIZE];
+    zr = rhi.device.createTex2D(&gBuffHnd[0], ZRYBindFlags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, 1920.0f, 1080.0f, GBuffer::SIZE, nullptr, nullptr, true, 4, 1);
+    RETURN_IF_FAILED(zr.value);
     for (int i = 0; i < GBuffer::SIZE; i++) {
-        hr = rhi.device->CreateTexture2D(&gbufferDesc, nullptr, &GBuffer[i]);
-        RETURN_IF_FAILED(hr);
+        GBuffer[i] = rhi.device.getTex2DPointer(gBuffHnd[i]);
     }
 
-    gbufferDesc.MipLevels = 0;
-    hr = rhi.device->CreateTexture2D(&gbufferDesc, nullptr, &ambientMap);
-    RETURN_IF_FAILED(hr);
-
-    D3D11_SHADER_RESOURCE_VIEW_DESC gBufferSRVDesc;
-    gBufferSRVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    gBufferSRVDesc.Texture2D.MipLevels = 4;
-    gBufferSRVDesc.Texture2D.MostDetailedMip = 0;
-    gBufferSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-
+    RenderSRVHandle gBuffSrvHnd[GBuffer::SIZE];
+    zr = rhi.device.createSRVTex2D(gBuffSrvHnd, gBuffHnd, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_UNORM }, GBuffer::SIZE, 4);
+    RETURN_IF_FAILED(zr.value);
     for (int i = 0; i < GBuffer::SIZE; i++) {
-        hr = rhi.device->CreateShaderResourceView(GBuffer[i], &gBufferSRVDesc, &GBufferSRV[i]);
-        RETURN_IF_FAILED(hr);
+        GBufferSRV[i] = rhi.device.getSRVPointer(gBuffSrvHnd[i]);
     }
 
-    gBufferSRVDesc.Texture2D.MipLevels = 1;
-    hr = rhi.device->CreateShaderResourceView(ambientMap, &gBufferSRVDesc, &ambientSRV);
-    RETURN_IF_FAILED(hr);
-
-    D3D11_RENDER_TARGET_VIEW_DESC gBufferRTVDesc;
-    gBufferRTVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    gBufferRTVDesc.Texture2D.MipSlice = 0;
-    gBufferRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-
+    RenderRTVHandle gBuffRtvHnd[GBuffer::SIZE];
+    zr = rhi.device.createRTVTex2D(gBuffRtvHnd, gBuffHnd, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_UNORM }, GBuffer::SIZE);
+    RETURN_IF_FAILED(zr.value);
     for (int i = 0; i < GBuffer::SIZE; i++) {
-        hr = rhi.device->CreateRenderTargetView(GBuffer[i], &gBufferRTVDesc, &GBufferRTV[i]);
-        RETURN_IF_FAILED(hr);
+        GBufferRTV[i] = rhi.device.getRTVPointer(gBuffRtvHnd[i]);
     }
 
-    hr = rhi.device->CreateRenderTargetView(ambientMap, &gBufferRTVDesc, &ambientRTV);
-    RETURN_IF_FAILED(hr);
+    //----------------------------------------------------------
+
+    //ambient setup------------------------------------------------
+    RenderTextureHandle ambientHnd;
+    zr = rhi.device.createTex2D(&ambientHnd, ZRYBindFlags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, 1920.0f, 1080.0f, 1, nullptr, nullptr, true, 0, 1);
+    RETURN_IF_FAILED(zr.value);
+    ambientMap = rhi.device.getTex2DPointer(ambientHnd);
+
+    RenderSRVHandle ambientSrvHnd;
+    zr = rhi.device.createSRVTex2D(&ambientSrvHnd, &ambientHnd, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_UNORM });
+    RETURN_IF_FAILED(zr.value);
+    ambientSRV = rhi.device.getSRVPointer(ambientSrvHnd);
+
+    RenderRTVHandle ambientRtvHnd;
+    zr = rhi.device.createRTVTex2D(&ambientRtvHnd, &ambientHnd, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_UNORM }, 1);
+    RETURN_IF_FAILED(zr.value);
+    ambientRTV = rhi.device.getRTVPointer(ambientRtvHnd);
+    //-----------------------------------------------------------
 
 
     D3D11_BUFFER_DESC invMatDesc;
@@ -536,7 +514,7 @@ HRESULT RendererBackend::Init()
     invMatDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     invMatDesc.Usage = D3D11_USAGE_DEFAULT;
 
-    hr = rhi.device->CreateBuffer(&invMatDesc, nullptr, &invMatCB);
+    hr = rhi.device.device->CreateBuffer(&invMatDesc, nullptr, &invMatCB);
 
     //---------------------------------------------------------
 
@@ -547,7 +525,7 @@ HRESULT RendererBackend::Init()
     dirShadowMatBuffDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     dirShadowMatBuffDesc.ByteWidth = sizeof(DirShadowCB);
 
-    hr = rhi.device->CreateBuffer(&dirShadowMatBuffDesc, nullptr, &dirShadCB);
+    hr = rhi.device.device->CreateBuffer(&dirShadowMatBuffDesc, nullptr, &dirShadCB);
     RETURN_IF_FAILED(hr);
 
     D3D11_BUFFER_DESC omniDirShadowMatBuffDesc;
@@ -556,139 +534,89 @@ HRESULT RendererBackend::Init()
     omniDirShadowMatBuffDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     omniDirShadowMatBuffDesc.ByteWidth = sizeof(OmniDirShadowCB);
 
-    hr = rhi.device->CreateBuffer(&omniDirShadowMatBuffDesc, nullptr, &omniDirShadCB);
+    hr = rhi.device.device->CreateBuffer(&omniDirShadowMatBuffDesc, nullptr, &omniDirShadCB);
     RETURN_IF_FAILED(hr);
     
-    D3D11_TEXTURE2D_DESC sm_texDesc;
-    ZeroMemory(&sm_texDesc, sizeof(sm_texDesc));
-    sm_texDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-    sm_texDesc.ArraySize = 1;
-    sm_texDesc.MipLevels = 1;
-    sm_texDesc.Usage = D3D11_USAGE_DEFAULT;
-    sm_texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
-    sm_texDesc.Height = sm_viewport.Height;
-    sm_texDesc.Width = sm_viewport.Width;
-    sm_texDesc.SampleDesc.Count = 1;
-    sm_texDesc.SampleDesc.Quality = 0;
 
-    D3D11_DEPTH_STENCIL_VIEW_DESC sm_dsvDesc;
-    sm_dsvDesc.Texture2D.MipSlice = 0;
-    sm_dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    sm_dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-    sm_dsvDesc.Flags = 0;
+    RenderTextureHandle shadowMapHnd;
+    zr = rhi.device.createTex2D(&shadowMapHnd, ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL }, ZRYFormat{ DXGI_FORMAT_R24G8_TYPELESS }, sm_viewport.Width, sm_viewport.Height, 1, nullptr, nullptr, false, 1);
+    RETURN_IF_FAILED(zr.value);
+    shadowMap = rhi.device.getTex2DPointer(shadowMapHnd);
 
-    D3D11_SHADER_RESOURCE_VIEW_DESC sm_srvDesc;
-    sm_srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-    sm_srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    sm_srvDesc.Texture2D.MostDetailedMip = 0;
-    sm_srvDesc.Texture2D.MipLevels = -1;
+    RenderSRVHandle shadowMapSrvHnd;
+    zr = rhi.device.createSRVTex2D(&shadowMapSrvHnd, &shadowMapHnd, ZRYFormat{ DXGI_FORMAT_R24_UNORM_X8_TYPELESS }, 1, -1);
+    RETURN_IF_FAILED(zr.value);
+    shadowMapSRV = rhi.device.getSRVPointer(shadowMapSrvHnd);
 
-    hr = rhi.device->CreateTexture2D(&sm_texDesc, nullptr, &shadowMap);
-    RETURN_IF_FAILED(hr);
-    hr = rhi.device->CreateTexture2D(&sm_texDesc, nullptr, &spotShadowMap);
-    RETURN_IF_FAILED(hr);
-
-    hr = rhi.device->CreateShaderResourceView(shadowMap, &sm_srvDesc, &shadowMapSRV);
-    RETURN_IF_FAILED(hr);
-    hr = rhi.device->CreateShaderResourceView(spotShadowMap, &sm_srvDesc, &spotShadowMapSRV);
-    RETURN_IF_FAILED(hr);
-
-    hr = rhi.device->CreateDepthStencilView(shadowMap, &sm_dsvDesc, &shadowMapDSV);
-    RETURN_IF_FAILED(hr);
-    hr = rhi.device->CreateDepthStencilView(spotShadowMap, &sm_dsvDesc, &spotShadowMapDSV);
-    RETURN_IF_FAILED(hr);
-
-    D3D11_TEXTURE2D_DESC sm_cubeTexDesc;
-    ZeroMemory(&sm_cubeTexDesc, sizeof(sm_cubeTexDesc));
-    sm_cubeTexDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-    sm_cubeTexDesc.ArraySize = 12;
-    sm_cubeTexDesc.MipLevels = 1;
-    sm_cubeTexDesc.Usage = D3D11_USAGE_DEFAULT;
-    sm_cubeTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
-    sm_cubeTexDesc.Height = sm_viewport.Height;
-    sm_cubeTexDesc.Width = sm_viewport.Width;
-    sm_cubeTexDesc.SampleDesc.Count = 1;
-    sm_cubeTexDesc.SampleDesc.Quality = 0;
-    sm_cubeTexDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+    RenderDSVHandle hndDSVShadowMap;
+    zr = rhi.device.createDSVTex2D(&hndDSVShadowMap, &shadowMapHnd, ZRYFormat{ DXGI_FORMAT_D24_UNORM_S8_UINT });
+    RETURN_IF_FAILED(zr.value);
+    shadowMapDSV = rhi.device.getDSVPointer(hndDSVShadowMap);
 
 
-    D3D11_SHADER_RESOURCE_VIEW_DESC sm_cubeSrvDesc;
-    sm_cubeSrvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-    sm_cubeSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-    sm_cubeSrvDesc.Texture2DArray.ArraySize = 12;
-    sm_cubeSrvDesc.Texture2DArray.FirstArraySlice = 0;
-    sm_cubeSrvDesc.Texture2DArray.MipLevels = 1;
-    sm_cubeSrvDesc.Texture2DArray.MostDetailedMip = 0;
+    //Shadow map setup (spot light)-----------------------------------
+    RenderTextureHandle spotShadowMapHnd;
+    zr = rhi.device.createTex2D(&spotShadowMapHnd, ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL }, ZRYFormat{ DXGI_FORMAT_R24G8_TYPELESS }, sm_viewport.Width, sm_viewport.Height, 1, nullptr, nullptr, false, 1);
+    RETURN_IF_FAILED(zr.value);
+    spotShadowMap = rhi.device.getTex2DPointer(spotShadowMapHnd);
+
+    RenderSRVHandle spotShadowMapSrvHnd;
+    zr = rhi.device.createSRVTex2D(&spotShadowMapSrvHnd, &spotShadowMapHnd, ZRYFormat{ DXGI_FORMAT_R24_UNORM_X8_TYPELESS }, 1, -1);
+    RETURN_IF_FAILED(zr.value);
+    spotShadowMapSRV = rhi.device.getSRVPointer(spotShadowMapSrvHnd);
+
+    RenderDSVHandle hndDsvSpotShadowMap;
+    zr = rhi.device.createDSVTex2D(&hndDsvSpotShadowMap, &spotShadowMapHnd, ZRYFormat{ DXGI_FORMAT_D24_UNORM_S8_UINT });
+    RETURN_IF_FAILED(zr.value);
+    spotShadowMapDSV = rhi.device.getDSVPointer(hndDsvSpotShadowMap);
 
 
-    hr = rhi.device->CreateTexture2D(&sm_cubeTexDesc, nullptr, &shadowCubeMap);
-    RETURN_IF_FAILED(hr);
-    hr = rhi.device->CreateShaderResourceView(shadowCubeMap, &sm_cubeSrvDesc, &shadowCubeMapSRV);
-    RETURN_IF_FAILED(hr);
+    //Cube shadow map setup (point light)--------------------------------------------
+    RenderTextureHandle shadowCubemapHnd;
+    zr = rhi.device.createTexCubemap(&shadowCubemapHnd, ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL }, ZRYFormat{ DXGI_FORMAT_R24G8_TYPELESS },
+        sm_viewport.Width, sm_viewport.Height, 1, nullptr, nullptr, false, 1, 12);
+    RETURN_IF_FAILED(zr.value);
+    shadowCubeMap = rhi.device.getTex2DPointer(shadowCubemapHnd);
 
-    D3D11_DEPTH_STENCIL_VIEW_DESC sm_cubeDsvDesc;
+    RenderSRVHandle hndShadowCubemapSRV;
+    zr = rhi.device.createSRVTex2DArray(&hndShadowCubemapSRV, &shadowCubemapHnd, ZRYFormat{ DXGI_FORMAT_R24_UNORM_X8_TYPELESS }, 1, 12);
+    RETURN_IF_FAILED(zr.value);
+    shadowCubeMapSRV = rhi.device.getSRVPointer(hndShadowCubemapSRV);
+
     int numScmDSV = ARRAYSIZE(shadowCubeMapDSV);
+    RenderDSVHandle* hndDSVShadowCubemap = new RenderDSVHandle[numScmDSV];
+    
     for (int i = 0; i < numScmDSV; i++)
     {
-        sm_cubeDsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-        sm_cubeDsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-        sm_cubeDsvDesc.Texture2DArray.MipSlice = 0;
-        sm_cubeDsvDesc.Texture2DArray.ArraySize = 1;
-        sm_cubeDsvDesc.Texture2DArray.FirstArraySlice = i;
-        sm_cubeDsvDesc.Flags = 0;
-
-        hr = rhi.device->CreateDepthStencilView(shadowCubeMap, &sm_cubeDsvDesc, &shadowCubeMapDSV[i]);
-        RETURN_IF_FAILED(hr);
+        zr = rhi.device.createDSVTex2DArray(&hndDSVShadowCubemap[i], &shadowCubemapHnd, ZRYFormat{ DXGI_FORMAT_D24_UNORM_S8_UINT }, 1, 1, 0, i);
+        RETURN_IF_FAILED(zr.value);
+        shadowCubeMapDSV[i] = rhi.device.getDSVPointer(hndDSVShadowCubemap[i]);
     }
     
     //-----------------------------------------------------------------
 
     //Irradiance map setup---------------------------------------------
-    
-    D3D11_TEXTURE2D_DESC irradTexDesc;
-    irradTexDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-    irradTexDesc.MipLevels = 0;
-    irradTexDesc.ArraySize = 1;
-    irradTexDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-    irradTexDesc.CPUAccessFlags = 0;
-    irradTexDesc.MiscFlags = 0;
-    irradTexDesc.Width = 1920.0f;
-    irradTexDesc.Height = 1080.0f;
-    irradTexDesc.Usage = D3D11_USAGE_DEFAULT;
-    irradTexDesc.SampleDesc.Count = 1;
-    irradTexDesc.SampleDesc.Quality = 0;
-    
+
+    RenderTextureHandle skinMapHnd[5];
+    RenderRTVHandle skinRTViewHnd[5];
+    RenderSRVHandle skinSRViewHnd[5];
+    zr = rhi.device.createTex2D(&skinMapHnd[0], ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRYFormat{ DXGI_FORMAT_R32G32B32A32_FLOAT }, 1920.0f, 1080.0f, 3, &skinSRViewHnd[0], &skinRTViewHnd[0]);
+    RETURN_IF_FAILED(zr.value);
+
+    zr = rhi.device.createTex2D(&skinMapHnd[4], ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRYFormat{ DXGI_FORMAT_R32G32B32A32_FLOAT }, 1920.0f, 1080.0f, 1, &skinSRViewHnd[4], &skinRTViewHnd[4]);
+    RETURN_IF_FAILED(zr.value);
+
+    zr = rhi.device.createTex2D(&skinMapHnd[3], ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRYFormat{ DXGI_FORMAT_R32G32B32A32_FLOAT }, 1920.0f, 1080.0f, 1, &skinSRViewHnd[3], &skinRTViewHnd[3], true, 8);
+    RETURN_IF_FAILED(zr.value);
+
     for (int i = 0; i < 5; i++) {
-        if (i == 3) {
-            irradTexDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
-            irradTexDesc.MipLevels = 8;
-        }
-
-        hr = rhi.device->CreateTexture2D(&irradTexDesc, nullptr, &skinMaps[i]);
-        RETURN_IF_FAILED(hr);
-
-        hr = rhi.device->CreateRenderTargetView(skinMaps[i], NULL, &skinRT[i]);
-        RETURN_IF_FAILED(hr);
-
-        hr = rhi.device->CreateShaderResourceView(skinMaps[i], NULL, &skinSRV[i]);
-        RETURN_IF_FAILED(hr);
+        skinMaps[i] = rhi.device.getTex2DPointer(skinMapHnd[i]);
+        skinRT[i] = rhi.device.getRTVPointer(skinRTViewHnd[i]);
+        skinSRV[i] = rhi.device.getSRVPointer(skinSRViewHnd[i]);
     }
-    //hr = rhi.device->CreateTexture2D(&irradTexDesc, nullptr, &skinMaps[0]);
-    //RETURN_IF_FAILED(hr);
-    //hr = rhi.device->CreateTexture2D(&irradTexDesc, nullptr, &skinMaps[1]);
-    //RETURN_IF_FAILED(hr);
-
-    //hr = rhi.device->CreateRenderTargetView(skinMaps[0], NULL, &skinRT[0]);
-    //RETURN_IF_FAILED(hr);
-    //hr = rhi.device->CreateRenderTargetView(skinMaps[1], NULL, &skinRT[1]);
-    //RETURN_IF_FAILED(hr);
-
-    //hr = rhi.device->CreateShaderResourceView(skinMaps[0], NULL, &skinSRV[0]);
-    //RETURN_IF_FAILED(hr);
-    //hr = rhi.device->CreateShaderResourceView(skinMaps[1], NULL, &skinSRV[1]);
-    //RETURN_IF_FAILED(hr);    
 
     //-----------------------------------------------------------------
+
 
     //thickness map
     rhi.LoadTexture(L"./shaders/assets/Human/Textures/Head/JPG/baked_translucency_4096.jpg", thicknessMapSRV, false);
@@ -719,9 +647,9 @@ void RendererBackend::RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& di
         ViewCB tmpVCB;
         ProjCB tmpPCB;
         ObjCB tmpOCB;
-
         std::uint32_t strides[] = { sizeof(Vertex) };
         std::uint32_t offsets[] = { 0 };
+        
 
         rhi.context->RSSetViewports(1, &sm_viewport);
 
@@ -1017,7 +945,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
         }
 
         ID3D11RenderTargetView* rt2[4] = { GBufferRTV[0], GBufferRTV[1], GBufferRTV[2], skinRT[4] };
-        rhi.context->OMSetRenderTargets(4, &rt2[0]/*&GBufferRTV[0]*/, rhi.depthStencilView.Get());
+        rhi.context->OMSetRenderTargets(4, &rt2[0]/*&GBufferRTV[0]*/, rhi.depthStencilView);
 
         for (SubmeshInfo const& sbPair : viewDesc.submeshesInfo) {
             rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
@@ -1073,7 +1001,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
         rhi.context->PSSetConstantBuffers(0, 1, &lightsCB);
         rhi.context->PSSetConstantBuffers(5, 1, &invMatCB);
         rhi.context->PSSetShaderResources(0, 3, &GBufferSRV[0]);
-        rhi.context->PSSetShaderResources(3, 1, rhi.depthStencilShaderResourceView.GetAddressOf());
+        rhi.context->PSSetShaderResources(3, 1, &rhi.depthStencilShaderResourceView);
         rhi.context->PSSetShaderResources(4, 1, &shadowMapSRV);
         rhi.context->PSSetShaderResources(5, 1, &shadowCubeMapSRV);
         rhi.context->PSSetShaderResources(6, 1, &spotShadowMapSRV);
@@ -1121,7 +1049,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
         rhi.context->PSSetShaderResources(0, 1, &skinSRV[3]);
         rhi.context->PSSetShaderResources(1, 1, &GBufferSRV[GBuffer::ROUGH_MET]);
         rhi.context->PSSetShaderResources(2, 1, &skinSRV[2]);
-        rhi.context->PSSetShaderResources(3, 1, rhi.depthStencilShaderResourceView.GetAddressOf());
+        rhi.context->PSSetShaderResources(3, 1, &rhi.depthStencilShaderResourceView);
         rhi.context->PSSetShaderResources(4, 1, &GBufferSRV[GBuffer::ALBEDO]);
         rhi.context->Draw(4, 0);
 
@@ -1144,5 +1072,5 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
 
     rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     //rhi.context->ClearDepthStencilView(rhi.depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-    rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), rhi.depthStencilView.Get());
+    rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), rhi.depthStencilView);
 }

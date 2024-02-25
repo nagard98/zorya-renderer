@@ -4,6 +4,7 @@
 #include "BufferCache.h"
 #include "RendererFrontend.h"
 #include "Lights.h"
+#include "RenderDevice.h"
 
 #include <functional>
 #include <cstdint>

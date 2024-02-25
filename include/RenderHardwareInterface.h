@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <array>
 
+#include "RenderDevice.h"
 #include "Material.h"
 
 namespace wrl = Microsoft::WRL;
@@ -37,13 +38,15 @@ public:
 	void SetState(RHIState newState);
 	RHI_RESULT LoadTexture(const wchar_t *path, ShaderTexture2D &shaderTexture, bool convertToLinear = true, size_t maxSize = 0);
 
-	wrl::ComPtr<ID3D11Device> device;
+	//wrl::ComPtr<ID3D11Device> device;
+	DX11RenderDevice device;
+
 	wrl::ComPtr<ID3D11DeviceContext> context;
 	wrl::ComPtr<IDXGISwapChain> swapChain;
 	wrl::ComPtr<ID3D11RenderTargetView> renderTargetView;
-	wrl::ComPtr<ID3D11ShaderResourceView> renderTargetShaderResourceView;
-	wrl::ComPtr<ID3D11DepthStencilView> depthStencilView;
-	wrl::ComPtr<ID3D11ShaderResourceView> depthStencilShaderResourceView;
+	ID3D11ShaderResourceView* renderTargetShaderResourceView;
+	ID3D11DepthStencilView* depthStencilView;
+	ID3D11ShaderResourceView* depthStencilShaderResourceView;
 
 	D3D_FEATURE_LEVEL featureLevel; //feature level found for device
 	D3D11_VIEWPORT viewport;
@@ -59,7 +62,8 @@ private:
 	D3D11_RASTERIZER_DESC tmpRastDesc;
 	D3D11_DEPTH_STENCIL_DESC tmpDepthStenDesc;
 
-	wrl::ComPtr<ID3D11Texture2D> depthStencilBuff;
+	//wrl::ComPtr<ID3D11Texture2D> depthStencilBuff;
+	ID3D11Texture2D* depthStencilTex;
 	
 };
 
