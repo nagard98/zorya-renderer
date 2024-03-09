@@ -8,15 +8,21 @@
       "installRoot": "${projectDir}\\build\\install\\${name}",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "inheritEnvironments": [ "clang_cl_x64_x64" ],
       "variables": [
         {
           "name": "BUILD_SHARED_LIBS",
           "value": "False",
           "type": "BOOL"
+        },
+        {
+          "name": "ASSIMP_WARNINGS_AS_ERRORS",
+          "value": "False",
+          "type": "BOOL"
         }
       ],
-      "cmakeExecutable": "E:/Program Files (x86)/CMake/bin/cmake.exe"
+      "cmakeExecutable": "C:/Program Files/CMake/bin/cmake.exe",
+      "intelliSenseMode": "windows-clang-x64"
     }
   ]
 }

@@ -58,7 +58,7 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 		m->matPrms.subsurfaceAlbedo = matDesc.subsurfaceAlbedo;
 		m->matPrms.meanFreePathColor = matDesc.meanFreePathColor; 
 		m->matPrms.meanFreePathDist = matDesc.meanFreePathDistance; //from cm to m
-		m->matPrms.scale = matDesc.scale;
+		m->matPrms.scale = fmax(0.0f, matDesc.scale);
 
 		srand((int)matDesc.scale);
 

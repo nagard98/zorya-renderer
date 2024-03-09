@@ -8,6 +8,8 @@
 
 #include <d3d11.h>
 
+#define PROPERTY(params)
+
 namespace dx = DirectX;
 
 typedef std::uint8_t MatUpdateFlags_;
@@ -27,18 +29,30 @@ struct MaterialDesc {
 	MatDescFlags_ unionTags;
 
 	wchar_t albedoPath[128];
+
+	PROPERTY()
 	dx::XMFLOAT4 baseColor;
+
+	PROPERTY()
 	dx::XMFLOAT4 subsurfaceAlbedo;
+
+	PROPERTY()
 	dx::XMFLOAT4 meanFreePathColor;
+
+	PROPERTY()
 	float meanFreePathDistance;
+
+	PROPERTY()
 	float scale;
 
 	union {
+		PROPERTY()
 		float smoothnessValue;
 		wchar_t smoothnessMap[128];
 	};
 
 	union {
+		PROPERTY()
 		float metalnessValue;
 		wchar_t metalnessMap[128];
 	};
@@ -62,6 +76,7 @@ struct MaterialParams {
 	float samples[64];
 	dx::XMFLOAT4 baseColor;
 	dx::XMFLOAT4 subsurfaceAlbedo;
+	PROPERTY()
 	dx::XMFLOAT4 meanFreePathColor;
 
 	std::uint32_t hasAlbedoMap;
@@ -69,8 +84,11 @@ struct MaterialParams {
 	std::uint32_t hasNormalMap;
 	std::uint32_t hasSmoothnessMap;
 
+	PROPERTY(asd)
 	float roughness;
+	PROPERTY(bbb)
 	float metalness;
+	PROPERTY(qwe)
 	float meanFreePathDist;
 	float scale;
 

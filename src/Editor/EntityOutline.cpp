@@ -2,6 +2,8 @@
 #include "Editor/Logger.h"
 #include "RendererFrontend.h"
 #include "Material.h"
+#include "Reflection/Reflection.h"
+#include "Reflection/Reflection_auto_generated.h"
 
 #include "DirectXMath.h"
 #include <cassert>
@@ -20,6 +22,92 @@ EntityOutline::~EntityOutline()
 {
 }
 
+
+template<zorya::VAR_REFL_TYPE T>
+bool RenderEPropertyImpl(const char* structAddress, const MemberMeta& memMeta) {
+	Logger::AddLog(Logger::Channel::WARNING, "type %s not supported in editor\n", zorya::VAR_REFL_TYPE_STRING[memMeta.type]);
+	return false;
+}
+
+template<>
+bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::FLOAT>(const char* structAddress, const MemberMeta& memMeta) {
+	ImGui::DragFloat(memMeta.name, (float*)(structAddress + memMeta.offset), 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+	return ImGui::IsItemEdited();
+}
+
+template<>
+bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::INT>(const char* structAddress, const MemberMeta& memMeta) {
+	ImGui::DragInt(memMeta.name, (int*)(structAddress + memMeta.offset), 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+	return ImGui::IsItemEdited();
+}
+
+template<>
+bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT8>(const char* structAddress, const MemberMeta& memMeta) {
+	ImGui::DragInt(memMeta.name, (int*)(structAddress + memMeta.offset), 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+	return ImGui::IsItemEdited();
+}
+
+template<>
+bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT16>(const char* structAddress, const MemberMeta& memMeta) {
+	ImGui::DragInt(memMeta.name, (int*)(structAddress + memMeta.offset), 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+	return ImGui::IsItemEdited();
+}
+
+template<>
+bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT32>(const char* structAddress, const MemberMeta& memMeta) {
+	ImGui::DragInt(memMeta.name, (int*)(structAddress + memMeta.offset), 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+	return ImGui::IsItemEdited();
+}
+
+template<>
+bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT64>(const char* structAddress, const MemberMeta& memMeta) {
+	ImGui::DragInt(memMeta.name, (int*)(structAddress + memMeta.offset), 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+	return ImGui::IsItemEdited();
+}
+
+template<>
+bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT2>(const char* structAddress, const MemberMeta& memMeta) {
+	ImGui::DragFloat2(memMeta.name, (float*)(structAddress + memMeta.offset), 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+	return ImGui::IsItemEdited();
+}
+
+template<>
+bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT3>(const char* structAddress, const MemberMeta& memMeta) {
+	ImGui::DragFloat3(memMeta.name, (float*)(structAddress + memMeta.offset), 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+	return ImGui::IsItemEdited();
+}
+
+template<>
+bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT4>(const char* structAddress, const MemberMeta& memMeta) {
+	ImGui::DragFloat4(memMeta.name, (float*)(structAddress + memMeta.offset), 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+	return ImGui::IsItemEdited();
+}
+
+
+bool RenderEProperty(const char* structAddress, const MemberMeta& memMeta) {
+	switch (memMeta.type) {
+	case zorya::VAR_REFL_TYPE::FLOAT:
+		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::FLOAT>(structAddress, std::forward<const MemberMeta>(memMeta));
+	case zorya::VAR_REFL_TYPE::INT:
+		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::INT>(structAddress, std::forward<const MemberMeta>(memMeta));
+	case zorya::VAR_REFL_TYPE::UINT8:
+		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT8>(structAddress, std::forward<const MemberMeta>(memMeta));
+	case zorya::VAR_REFL_TYPE::UINT16:
+		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT16>(structAddress, std::forward<const MemberMeta>(memMeta));
+	case zorya::VAR_REFL_TYPE::UINT32:
+		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT32>(structAddress, std::forward<const MemberMeta>(memMeta));
+	case zorya::VAR_REFL_TYPE::UINT64:
+		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT64>(structAddress, std::forward<const MemberMeta>(memMeta));
+	case zorya::VAR_REFL_TYPE::XMFLOAT2:
+		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT2>(structAddress, std::forward<const MemberMeta>(memMeta));
+	case zorya::VAR_REFL_TYPE::XMFLOAT3:
+		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT3>(structAddress, std::forward<const MemberMeta>(memMeta));
+	case zorya::VAR_REFL_TYPE::XMFLOAT4:
+		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT4>(structAddress, std::forward<const MemberMeta>(memMeta));
+	default:
+		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::NOT_SUPPORTED>(structAddress, std::forward<const MemberMeta>(memMeta));
+	}
+}
 
 void EntityOutline::RenderEProperties(RenderableEntity& entity, LightInfo& lightInfo)
 {
@@ -66,31 +154,37 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 		assert(matDesc != nullptr);
 		ImGui::SeparatorText("Material");
 		{
+			foreachfield(matDesc, [=](const MemberMeta& memMeta) {
+				bool isEdited = RenderEProperty((char*)matDesc, std::forward<const MemberMeta>(memMeta));
+				if (isEdited) {
+					smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+				}
+				});
 
-			ImGui::ColorEdit4("Base Color", &matDesc->baseColor.x);
-			if (ImGui::IsItemEdited()) {
-				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
-			}
+			//ImGui::ColorEdit4("Base Color", &matDesc->baseColor.x);
+			//if (ImGui::IsItemEdited()) {
+			//	smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+			//}
 
-			ImGui::ColorEdit4("Subsurface Albedo", &matDesc->subsurfaceAlbedo.x);
-			if (ImGui::IsItemEdited()) {
-				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
-			}
+			//ImGui::ColorEdit4("Subsurface Albedo", &matDesc->subsurfaceAlbedo.x);
+			//if (ImGui::IsItemEdited()) {
+			//	smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+			//}
 
-			ImGui::DragFloat4("Mean Free Path Color", &matDesc->meanFreePathColor.x, 0.01f, 0.001, ImGuiSliderFlags_AlwaysClamp);
-			if (ImGui::IsItemEdited()) {
-				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
-			}
-			
-			ImGui::DragFloat("Mean Free Path Distance", &matDesc->meanFreePathDistance, 0.0001f, 0.0001f, 0.0f, "%.4f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_AlwaysClamp);
-			if (ImGui::IsItemEdited()) {
-				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
-			}
+			//ImGui::DragFloat4("Mean Free Path Color", &matDesc->meanFreePathColor.x, 0.01f, 0.001, ImGuiSliderFlags_AlwaysClamp);
+			//if (ImGui::IsItemEdited()) {
+			//	smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+			//}
+			//
+			//ImGui::DragFloat("Mean Free Path Distance", &matDesc->meanFreePathDistance, 0.0001f, 0.0001f, 0.0f, "%.4f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_AlwaysClamp);
+			//if (ImGui::IsItemEdited()) {
+			//	smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+			//}
 
-			ImGui::DragFloat("scale", &matDesc->scale, 1.0f, 1.0f, 16.0f);
-			if (ImGui::IsItemEdited()) {
-				smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
-			}
+			//ImGui::DragFloat("scale", &matDesc->scale, 1.0f, 1.0f, 16.0f);
+			//if (ImGui::IsItemEdited()) {
+			//	smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+			//}
 
 			wcstombs(tmpCharBuff, matDesc->albedoPath, 128);
 			ImGui::InputText("Albedo Map", tmpCharBuff, 128);

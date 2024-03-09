@@ -28,6 +28,7 @@
 #include "RenderHardwareInterface.h"
 #include "RendererFrontend.h"
 #include "RendererBackend.h"
+#include "ApplicationConfig.h"
 #include <Editor/Editor.h>
 #include "SceneGraph.h"
 
@@ -48,16 +49,11 @@
 
 #define RETURN_IF_FAILED(hResult) { if(FAILED(hResult)) return hResult; }
 
+
 namespace dx = DirectX;
 namespace wrl = Microsoft::WRL;
 
-const LONG g_windowWidth = 1920;
-const LONG g_windowHeight = 1080;
-LPCSTR g_windowClassName = "DirectXWindowClass";
-LPCSTR g_windowName = "Derma";
 HWND g_windowHandle = 0;
-
-const BOOL g_enableVSync = TRUE;
 
 Assimp::Importer importer;
 
@@ -239,10 +235,10 @@ HRESULT LoadSkybox(const wchar_t *skyboxPath) {
     wrl::ComPtr<ID3DBlob> verShaderBlob2;
     wrl::ComPtr<ID3DBlob> pixShaderBlob2;
 
-    hr = LoadShader<ID3D11VertexShader>(L"./shaders/SkyboxVertexShader.hlsl", "vs", verShaderBlob2.GetAddressOf(), g_d3dVertexShaderSkybox.GetAddressOf(), rhi.device.device.Get());
+    hr = LoadShader<ID3D11VertexShader>(L"./shaders/SkyboxVS.hlsl", "vs", verShaderBlob2.GetAddressOf(), g_d3dVertexShaderSkybox.GetAddressOf(), rhi.device.device.Get());
     RETURN_IF_FAILED(hr);
 
-    hr = LoadShader<ID3D11PixelShader>(L"./shaders/SkyboxPixelShader.hlsl", "ps", pixShaderBlob2.GetAddressOf(), g_d3dPixelShaderSkybox.GetAddressOf(), rhi.device.device.Get());
+    hr = LoadShader<ID3D11PixelShader>(L"./shaders/SkyboxPS.hlsl", "ps", pixShaderBlob2.GetAddressOf(), g_d3dPixelShaderSkybox.GetAddressOf(), rhi.device.device.Get());
     RETURN_IF_FAILED(hr);
 
     D3D11_BUFFER_DESC cubeBuffDesc;
@@ -330,7 +326,7 @@ HRESULT InitData() {
     //RenderableEntity mHnd5 = rf.LoadModelFromFile("./shaders/assets/cornell/cornell.fbx");
     //RenderableEntity mHnd = rf.LoadModelFromFile("./shaders/assets/perry/head.obj");
     //RenderableEntity mHnd2 = rf.LoadModelFromFile("./shaders/assets/cicada/source/cicada.fbx");
-    RenderableEntity mHnd3 = rf.LoadModelFromFile("./shaders/assets/Human/Models/Head/Head.fbx");
+    //RenderableEntity mHnd3 = rf.LoadModelFromFile("./shaders/assets/Human/Models/Head/Head.fbx");
     //RenderableEntity mHnd6 = rf.LoadModelFromFile("./shaders/assets/cube.dae");
     //RenderableEntity mHnd7 = rf.LoadModelFromFile("./shaders/assets/nile/source/nile.obj");
     //RenderableEntity mHnd8 = rf.LoadModelFromFile("./shaders/assets/nixdorf/scene.gltf");
@@ -343,20 +339,21 @@ HRESULT InitData() {
     //RenderableEntity mHnd15 = rf.LoadModelFromFile("./shaders/assets/plane.obj", true);
     //RenderableEntity mHnd16 = rf.LoadModelFromFile("./shaders/assets/cornell-box/CornellBox-Original.obj");
     //RenderableEntity mHnd17 = rf.LoadModelFromFile("./shaders/assets/sphere.dae");
+    RenderableEntity mHnd18 = rf.LoadModelFromFile("./shaders/assets/brocc-the-athlete/source/Sporter_Retopo.fbx");
     rf.AddLight(nullptr, dx::XMVectorSet(1.0f, 0.0f, 0.0, 0.0f), 1.0f, 8.0f);
     //rf.AddLight(nullptr, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.22f, 0.20f);
 
-    wrl::ComPtr<ID3DBlob> verShaderBlob ;
-    hr = LoadShader<ID3D11VertexShader>(L"./shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), rhi.device.device.Get());
-    RETURN_IF_FAILED(hr);
+    //wrl::ComPtr<ID3DBlob> verShaderBlob ;
+    //hr = LoadShader<ID3D11VertexShader>(L"./shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), rhi.device.device.Get());
+    //RETURN_IF_FAILED(hr);
 
-    rhi.context->VSSetShader(g_d3dVertexShader.Get(), 0, 0);
+    //rhi.context->VSSetShader(g_d3dVertexShader.Get(), 0, 0);
 
-    wrl::ComPtr<ID3D11InputLayout> vertLayout;
-    hr = rhi.device.device->CreateInputLayout(vertexLayoutDesc, 4, verShaderBlob->GetBufferPointer(), verShaderBlob->GetBufferSize(), vertLayout.GetAddressOf());
-    RETURN_IF_FAILED(hr);
+    //wrl::ComPtr<ID3D11InputLayout> vertLayout;
+    //hr = rhi.device.device->CreateInputLayout(vertexLayoutDesc, 4, verShaderBlob->GetBufferPointer(), verShaderBlob->GetBufferSize(), vertLayout.GetAddressOf());
+    //RETURN_IF_FAILED(hr);
 
-    rhi.context->IASetInputLayout(vertLayout.Get());
+    rhi.context->IASetInputLayout(shaders.vertexLayout/*vertLayout.Get()*/);
     rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 

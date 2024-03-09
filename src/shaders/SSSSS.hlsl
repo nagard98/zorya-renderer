@@ -51,8 +51,8 @@ static const float Q = FAR_PLANE / (FAR_PLANE - NEAR_PLANE);
 static const float ALPHA = 3.0f;
 static const float BETA = 800.0f;
 
-static const float SCREEN_WIDTH = 1920.0f;
-static const float SCREEN_HEIGHT = 1080.0f;
+static const float SCREEN_WIDTH = 1280.0f;
+static const float SCREEN_HEIGHT = 720.0f;
 static const float VERT_FOV = (PI / 2.0f) * (SCREEN_HEIGHT / SCREEN_WIDTH);
 static const float ASPECT_RATIO = SCREEN_WIDTH / SCREEN_HEIGHT;
 static const float NP_HEIGHT = 2.0f * NEAR_PLANE * tan(VERT_FOV / 2.0f);

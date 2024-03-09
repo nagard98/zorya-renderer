@@ -11,8 +11,8 @@ static const float revPi = 1 / 3.14159f;
 static const float gamma = 1.0f / 2.2f;
 static const float lightDec = -(1 / 16.0f);
 static const float texScale = 1 / 2048.0f;
-static const float SCREEN_WIDTH = 1920.0f;
-static const float SCREEN_HEIGHT = 1080.0f;
+static const float SCREEN_WIDTH = 1280.0f;
+static const float SCREEN_HEIGHT = 720.0f;
 
 struct PS_OUT
 {

@@ -290,7 +290,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     // L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg";
                 }
             }
-            wcscpy(matDesc.albedoPath, L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg");//TODO: REMOVE AFTER TESTING
+            //wcscpy(matDesc.albedoPath, L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg");//TODO: REMOVE AFTER TESTING
             //wcscpy(matDesc.albedoPath, L"./shaders/assets/Human/Textures/Head/Bake/Bake_4096_point.png");
             //wcscpy(matDesc.albedoPath, L"");
 
@@ -310,7 +310,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
                 }
             }
-            wcscpy(matDesc.normalPath, L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg");//TODO: REMOVE AFTER TESTING
+            //wcscpy(matDesc.normalPath, L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg");//TODO: REMOVE AFTER TESTING
             //wcscpy(matDesc.normalPath, L"");
 
             aiColor4D col;

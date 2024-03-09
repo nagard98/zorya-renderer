@@ -10,10 +10,19 @@ ADD_CUSTOM_TARGET(
         COMMENT "Copying Files for target: derma" VERBATIM 
         )
 
+add_subdirectory("src/BuildTools")
+
+ADD_CUSTOM_TARGET(zorya_preprocessor
+    COMMAND preprocessor
+    DEPENDS preprocessor
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    COMMENT "Running Preprocessor"
+)
+
 add_subdirectory("external/imgui")
 add_subdirectory("external/assimp")
 add_subdirectory("external/DirectXTK")
-add_executable(derma WIN32 src/derma.cpp "include/Camera.h" "src/Camera.cpp" "include/Lights.h" "src/Shaders.cpp" "include/Shaders.h" "include/Model.h"  "include/Material.h" "include/RendererBackend.h"  "include/BufferCache.h" "include/BufferObject.h" "src/BufferObject.cpp" "src/BufferCache.cpp" "include/RenderHardwareInterface.h" "src/RenderHardwareInterface.cpp" "include/RHIState.h" "src/RHIState.cpp" "include/ModelManager.h" "include/RendererFrontend.h" "src/RendererFrontend.cpp" "src/RendererBackend.cpp" "include/ResourceCache.h" "src/ResourceCache.cpp" "src/Model.cpp" "include/Editor/SceneHierarchy.h" "src/Editor/SceneHierarchy.cpp" "src/Lights.cpp" "include/Editor/Editor.h" "src/Editor/Editor.cpp" "include/Editor/EntityOutline.h" "src/Editor/EntityOutline.cpp" "include/SceneGraph.h" "src/SceneGraph.cpp" "include/Editor/Logger.h" "src/Editor/Logger.cpp" "include/Transform.h" "src/Transform.cpp" "include/RenderDevice.h" "src/RenderDeviceDX11.cpp")
+add_executable(derma WIN32 src/derma.cpp "include/Camera.h" "src/Camera.cpp" "include/Lights.h" "src/Shaders.cpp" "include/Shaders.h" "include/Model.h"  "include/Material.h" "include/RendererBackend.h"  "include/BufferCache.h" "include/BufferObject.h" "src/BufferObject.cpp" "src/BufferCache.cpp" "include/RenderHardwareInterface.h" "src/RenderHardwareInterface.cpp" "include/RHIState.h" "src/RHIState.cpp" "include/ModelManager.h" "include/RendererFrontend.h" "src/RendererFrontend.cpp" "src/RendererBackend.cpp" "include/ResourceCache.h" "src/ResourceCache.cpp" "src/Model.cpp" "include/Editor/SceneHierarchy.h" "src/Editor/SceneHierarchy.cpp" "src/Lights.cpp" "include/Editor/Editor.h" "src/Editor/Editor.cpp" "include/Editor/EntityOutline.h" "src/Editor/EntityOutline.cpp" "include/SceneGraph.h" "src/SceneGraph.cpp" "include/Editor/Logger.h" "src/Editor/Logger.cpp" "include/Transform.h" "src/Transform.cpp" "include/RenderDevice.h" "src/RenderDeviceDX11.cpp" "src/BuildTools/PreProcessor.cpp" "include/BuildTools/PreProcessor.h" "include/reflection/Reflection.h")
 target_include_directories(derma PRIVATE "include")
 
 set_property (TARGET derma
@@ -25,3 +34,4 @@ set_property (TARGET derma
 
 target_link_libraries(derma PRIVATE DirectXTK imgui assimp::assimp)
 ADD_DEPENDENCIES(derma copy_shader_files)
+ADD_DEPENDENCIES(derma zorya_preprocessor)

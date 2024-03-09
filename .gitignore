@@ -13,3 +13,4 @@ build
 .vs/
 src/shaders/assets
 *_old*
+include/Reflection/*_auto_generated*
