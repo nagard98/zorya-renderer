@@ -30,6 +30,8 @@ namespace zorya {
 	};
 }
 
+#define PROPERTY(params)
+
 struct MemberIntermediateMeta {
 	char* name;
 	char* structName;
@@ -45,8 +47,9 @@ struct MemberMeta {
 #define BUILD_FOREACHFIELD(structName) \
 template <typename L> \
 void foreachfield(structName* _struct, L&& lambda) { \
+	const char* structAddr = (char*)_struct;	\
 	for (const MemberMeta& memMeta : structName##_meta) { \
-		lambda(std::forward<const MemberMeta>(memMeta)); \
+		lambda(structAddr, std::forward<const MemberMeta>(memMeta)); \
 	} \
 } \
 

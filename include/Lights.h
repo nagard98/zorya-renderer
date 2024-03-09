@@ -4,6 +4,8 @@
 #include <DirectXMath.h>
 #include <cstdint>
 
+#include "Reflection/Reflection.h"
+
 namespace dx = DirectX;
 
 enum class LightType : std::uint8_t{
@@ -15,29 +17,49 @@ enum class LightType : std::uint8_t{
 struct DirectionalLight {
     dx::XMVECTOR direction;
 
+    PROPERTY()
     float shadowMapNearPlane;
+    
+    PROPERTY()
     float shadowMapFarPlane;
+
     float pad[2];
 };
 
 struct PointLight {
     dx::XMVECTOR posWorldSpace;
 
+    PROPERTY()
     float constant;
+    
+    PROPERTY()
     float linear;
+    
+    PROPERTY()
     float quadratic;
 
+
+    PROPERTY()
     float shadowMapNearPlane;
+    
+    PROPERTY()
     float shadowMapFarPlane;
+    
     float pad[3];
 };
 
 struct SpotLight {
     dx::XMVECTOR posWorldSpace;
     dx::XMVECTOR direction;
+
+    PROPERTY()
     float cosCutoffAngle;
 
+
+    PROPERTY()
     float shadowMapNearPlane;
+    
+    PROPERTY()
     float shadowMapFarPlane;
 
     float pad;

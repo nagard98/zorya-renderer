@@ -128,6 +128,34 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, LightInfo& light
 	entity.localWorldTransf.rot.y *= invOePi;
 	entity.localWorldTransf.rot.z *= invOePi;
 
+	ImGui::SeparatorText("Light Parameters");
+	{
+		switch (lightInfo.tag) {
+
+		case LightType::DIRECTIONAL:
+			foreachfield(&lightInfo.dirLight, [](const char* structAddr, const MemberMeta& memMeta) {
+				bool isEdited = RenderEProperty(structAddr, std::forward<const MemberMeta>(memMeta));
+				});
+			break;
+		
+		case LightType::SPOT:
+			foreachfield(&lightInfo.spotLight, [](const char* structAddr, const MemberMeta& memMeta) {
+				bool isEdited = RenderEProperty(structAddr, std::forward<const MemberMeta>(memMeta));
+				});
+			break;
+
+		case LightType::POINT:
+			foreachfield(&lightInfo.pointLight, [](const char* structAddr, const MemberMeta& memMeta) {
+				bool isEdited = RenderEProperty(structAddr, std::forward<const MemberMeta>(memMeta));
+				});
+			break;
+
+		}
+
+	}
+
+
+
 }
 
 void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smInfo, MaterialDesc* matDesc)
@@ -154,8 +182,8 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 		assert(matDesc != nullptr);
 		ImGui::SeparatorText("Material");
 		{
-			foreachfield(matDesc, [=](const MemberMeta& memMeta) {
-				bool isEdited = RenderEProperty((char*)matDesc, std::forward<const MemberMeta>(memMeta));
+			foreachfield(matDesc, [=](const char* structAddr, const MemberMeta& memMeta) {
+				bool isEdited = RenderEProperty(structAddr, std::forward<const MemberMeta>(memMeta));
 				if (isEdited) {
 					smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
 				}

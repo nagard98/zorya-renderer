@@ -4,11 +4,10 @@
 #include <DirectXMath.h>
 #include <string>
 #include <cstdint>
-#include "Shaders.h"
-
 #include <d3d11.h>
 
-#define PROPERTY(params)
+#include "Shaders.h"
+#include "Reflection/Reflection.h"
 
 namespace dx = DirectX;
 
