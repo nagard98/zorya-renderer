@@ -17,7 +17,7 @@ Editor::Editor()
 	firstLoop = true;
 	isSceneClicked = false;
 	sceneId = -1;
-	strncpy(textBuff, "\0", 128);
+	strncpy_s(textBuff, "\0", 128);
 }
 
 void Editor::Init(const ImGuiID& dockspaceID) {
@@ -141,9 +141,12 @@ void Editor::RenderEditor(RendererFrontend& rf, Camera& editorCam, const ID3D11S
 					entityProps.RenderEProperties(selectedNode->value, lightInfo);
 					break;
 				}
+				default:
+				{
+					//TODO: implement other cases OR implement reflection so to not use this switching
+					assert(false);
+				}
 
-				//TODO: implement other cases OR implement reflection so to not use this switching
-				assert(false);
 			}
 
 		}

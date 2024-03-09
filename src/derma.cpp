@@ -153,7 +153,6 @@ int InitApplication(HINSTANCE hInstance, int cmdShow) {
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     PAINTSTRUCT paintStruct;
-    HDC hDC;
 
     extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
     if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam))
@@ -177,7 +176,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         break;
     }
     case WM_PAINT:
-        hDC = BeginPaint(hwnd, &paintStruct);
+        BeginPaint(hwnd, &paintStruct);
         EndPaint(hwnd, &paintStruct);
         break;
     case WM_DESTROY:
@@ -304,7 +303,7 @@ HRESULT LoadSkybox(const wchar_t *skyboxPath) {
 }
 
 
-dx::XMMATRIX scaleMat = scaleMat = dx::XMMatrixScaling(1.0f, 1.0f, 1.0f);
+dx::XMMATRIX scaleMat = dx::XMMatrixScaling(1.0f, 1.0f, 1.0f);
 
 HRESULT InitData() {
 

@@ -17,8 +17,8 @@ DX11RenderDevice::DX11RenderDevice() :
 	srvResources(SOFT_LIMIT_RESOURCE_TYPE),
 	dsvResources(SOFT_LIMIT_RESOURCE_TYPE),
 	tex2dCount(0),
-	srvCount(0),
 	rtvCount(0),
+	srvCount(0),
 	dsvCount(0) {}
 
 DX11RenderDevice::~DX11RenderDevice()

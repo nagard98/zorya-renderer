@@ -185,21 +185,21 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 			//if (ImGui::IsItemEdited()) {
 			//	smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
 			//}
-
-			wcstombs(tmpCharBuff, matDesc->albedoPath, 128);
+			size_t numConvertedChars = 0;
+			wcstombs_s(&numConvertedChars, tmpCharBuff, 128, matDesc->albedoPath, 128);
 			ImGui::InputText("Albedo Map", tmpCharBuff, 128);
 			if (ImGui::IsItemDeactivatedAfterEdit()) {
-				mbstowcs(matDesc->albedoPath, tmpCharBuff, 128);
+				mbstowcs_s(&numConvertedChars, matDesc->albedoPath, tmpCharBuff, 128);
 				smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
 			}
 
 			ImGui::Spacing();
 			ImGui::Spacing();
 
-			wcstombs(tmpCharBuff, matDesc->normalPath, 128);
+			wcstombs_s(&numConvertedChars, tmpCharBuff, matDesc->normalPath, 128);
 			ImGui::InputText("Normal Map", tmpCharBuff, 128);
 			if (ImGui::IsItemDeactivatedAfterEdit()) {
-				mbstowcs(matDesc->normalPath, tmpCharBuff, 128);
+				mbstowcs_s(&numConvertedChars, matDesc->normalPath, tmpCharBuff, 128);
 				smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
 			}
 
@@ -225,7 +225,7 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 				ImGui::SameLine();
 				if (ImGui::RadioButton("Texture", &smoothnessMode, 1)) {
 					//Logger::AddLog(Logger::Channel::TRACE, "Clicked Radio T\n");
-					mbstowcs(matDesc->smoothnessMap, "\0", 128);
+					mbstowcs_s(&numConvertedChars, matDesc->smoothnessMap, "\0", 128);
 					matDesc->unionTags |= SMOOTHNESS_IS_MAP;
 					smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
 				}
@@ -237,10 +237,10 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 					}
 				}
 				else {
-					wcstombs(tmpCharBuff, matDesc->smoothnessMap, 128);
+					wcstombs_s(&numConvertedChars, tmpCharBuff, matDesc->smoothnessMap, 128);
 					ImGui::InputText("Smoothness Map", tmpCharBuff, 128);
 					if (ImGui::IsItemDeactivatedAfterEdit()) {
-						mbstowcs(matDesc->smoothnessMap, tmpCharBuff, 128);
+						mbstowcs_s(&numConvertedChars, matDesc->smoothnessMap, tmpCharBuff, 128);
 						smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
 					}
 				}
@@ -269,7 +269,7 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 				ImGui::SameLine();
 				if (ImGui::RadioButton("Texture", &metalnessMode, 1)) {
 					//Logger::AddLog(Logger::Channel::TRACE, "Clicked Radio T %3d\n", metalnessMode);
-					mbstowcs(matDesc->metalnessMap, "\0", 128);
+					mbstowcs_s(&numConvertedChars, matDesc->metalnessMap, "\0", 128);
 					matDesc->unionTags |= METALNESS_IS_MAP;
 					smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
 				}
@@ -281,10 +281,10 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 					}
 				}
 				else {
-					wcstombs(tmpCharBuff, matDesc->metalnessMap, 128);
+					wcstombs_s(&numConvertedChars, tmpCharBuff, matDesc->metalnessMap, 128);
 					ImGui::InputTextWithHint("Metalness Mask", "Insert Path", tmpCharBuff, 128);
 					if (ImGui::IsItemDeactivatedAfterEdit()) {
-						mbstowcs(matDesc->metalnessMap, tmpCharBuff, 128);
+						mbstowcs_s(&numConvertedChars, matDesc->metalnessMap, tmpCharBuff, 128);
 						smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
 					}
 				}

@@ -172,7 +172,7 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
 
     ZRYResult zRes = device.createTex2D(&hndTexRenderTarget, ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE }, ZRYFormat{ scd.BufferDesc.Format }, scd.BufferDesc.Width, scd.BufferDesc.Height, 1, nullptr, nullptr, false, 1);
     RETURN_IF_FAILED(zRes.value);
-    ID3D11Texture2D* rtTexture = device.getTex2DPointer(hndTexRenderTarget);
+    /*ID3D11Texture2D* rtTexture = */device.getTex2DPointer(hndTexRenderTarget);
 
     RenderSRVHandle hndSrvRenderTarget;
     zRes = device.createSRVTex2D(&hndSrvRenderTarget, &hndTexRenderTarget, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_UNORM }, 1, -1);

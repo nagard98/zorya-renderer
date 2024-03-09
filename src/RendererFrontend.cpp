@@ -37,7 +37,7 @@ Transform_t buildTransform(aiMatrix4x4 assTransf) {
     return Transform_t{ dx::XMFLOAT3{pos.x, pos.y, pos.z}, dx::XMFLOAT3{rot.x, rot.y, rot.z}, dx::XMFLOAT3{scal.x, scal.y, scal.z} };
 }
 
-RendererFrontend::RendererFrontend() : sceneGraph(RenderableEntity{ 0,EntityType::COLLECTION, SubmeshHandle_t{0,0,0},"scene", IDENTITY_TRANSFORM }) {}
+RendererFrontend::RendererFrontend() : sceneGraph(RenderableEntity{ 0,EntityType::COLLECTION, {SubmeshHandle_t{0,0,0}}, "scene", IDENTITY_TRANSFORM }) {}
    
 //TODO: move somewhere else and use other hashing function; this is temporary
 inline uint32_t hash_str_uint32(const std::string& str) {
@@ -84,10 +84,7 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
         aiProcess_ConvertToLeftHanded
     );
 
-    aiReturn success;
-
-    RenderableEntity rootEnt{ 0,EntityType::UNDEFINED,0,0,0 };
-    SubmeshHandle_t submeshHandle{ 0,0,0,0 };
+    RenderableEntity rootEnt{ 0, EntityType::UNDEFINED, 0, 0, 0 };
 
     if (scene == nullptr)
     {
@@ -105,7 +102,7 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
     const char* name = scene->GetShortFilename(filename.c_str());
     scene->mMetaData->Add("modelName", name);
 
-    RenderableEntity rEnt{ hash_str_uint32(name), EntityType::COLLECTION, SubmeshHandle_t{ 0,0,0 }, name, IDENTITY_TRANSFORM };
+    RenderableEntity rEnt{ hash_str_uint32(name), EntityType::COLLECTION, {SubmeshHandle_t{ 0,0,0 }}, name, IDENTITY_TRANSFORM };
     sceneGraph.insertNode(RenderableEntity{ 0 }, rEnt);
 
     LoadNodeChildren(scene, rootNode->mChildren, rootNode->mNumChildren, rEnt);
@@ -120,7 +117,7 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
         LightHandle_t lightHnd;
         lightHnd.index = sceneLights.size();
         lightHnd.tag = LightType::DIRECTIONAL;
-        sceneLights.emplace_back(LightInfo{ LightType::DIRECTIONAL, DirectionalLight{direction, shadowMapNearPlane, shadowMapFarPlane}, dx::XMMatrixIdentity() });
+        sceneLights.emplace_back(LightInfo{ LightType::DIRECTIONAL, {DirectionalLight{direction, shadowMapNearPlane, shadowMapFarPlane}}, dx::XMMatrixIdentity() });
 
         //TODO:decide what to hash for id
         RenderableEntity rEnt;
@@ -135,7 +132,9 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
         return rEnt;
     }
     else {
+        //TODO: fix whatever this is
         assert(false);
+        return rEnt;
     }
 
 }
@@ -165,7 +164,9 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
         return rEnt;
     }
     else {
+        //TODO: fix whatever this is
         assert(false);
+        return rEnt;
     }
 
 }
@@ -196,7 +197,9 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
         return rEnt;
     }
     else {
+        //TODO: fix whatever this is
         assert(false);
+        return rEnt;
     }
 }
 
@@ -211,7 +214,7 @@ void RendererFrontend::LoadNodeChildren(const aiScene* scene, aiNode** children,
             rEnt = LoadNodeMeshes(scene, children[i]->mMeshes, children[i]->mNumMeshes, parentRE, localTransf);
         }
         else {
-            rEnt = RenderableEntity{ hash_str_uint32(children[i]->mName.C_Str()), EntityType::COLLECTION, SubmeshHandle_t{ 0,0,0 }, children[i]->mName.C_Str(), localTransf };
+            rEnt = RenderableEntity{ hash_str_uint32(children[i]->mName.C_Str()), EntityType::COLLECTION, { SubmeshHandle_t{ 0,0,0 } }, children[i]->mName.C_Str(), localTransf };
             sceneGraph.insertNode(parentRE, rEnt);
             LoadNodeMeshes(scene, children[i]->mMeshes, children[i]->mNumMeshes, rEnt);
         }
@@ -246,6 +249,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
     localTransf.scal.z = 10.0f;
     localTransf.pos.y = -2.2f;
 
+    size_t numCharConverted = 0;
     for (int j = 0; j < numMeshes; j++) {
         aiMesh* mesh = scene->mMeshes[meshesIndices[j]];
 
@@ -284,8 +288,8 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     aiString albedoPath = aiString(basePath);
                     albedoPath.Append("/");
                     albedoPath.Append(diffTexName.C_Str());
-                    mbstowcs(tmpString, albedoPath.C_Str(), 128);
-                    wcscpy(matDesc.albedoPath, tmpString);
+                    mbstowcs_s(&numCharConverted, tmpString, albedoPath.C_Str(), 128);
+                    wcscpy_s(matDesc.albedoPath, tmpString);
 
                     // L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg";
                 }
@@ -305,7 +309,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     aiString NormalMapPath = aiString(basePath);
                     NormalMapPath.Append("/");
                     NormalMapPath.Append(normTexName.C_Str());
-                    mbstowcs(tmpString, NormalMapPath.C_Str(), 128);
+                    mbstowcs_s(&numCharConverted, tmpString, NormalMapPath.C_Str(), 128);
                     //wcscpy(matDesc.normalPath, tmpString);
                     // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
                 }
@@ -334,8 +338,8 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     aiString roughnessMapPath = aiString(basePath);
                     roughnessMapPath.Append("/");
                     roughnessMapPath.Append(roughTexName.C_Str());
-                    mbstowcs(tmpString, roughnessMapPath.C_Str(), 128);
-                    wcscpy(matDesc.smoothnessMap, tmpString);
+                    mbstowcs_s(&numCharConverted, tmpString, roughnessMapPath.C_Str(), 128);
+                    wcscpy_s(matDesc.smoothnessMap, tmpString);
                     //wcscpy(matDesc.smoothnessMap, L"");
                     matDesc.unionTags |= SMOOTHNESS_IS_MAP;
                 }
@@ -365,8 +369,8 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     aiString metalnessMapPath = aiString(basePath);
                     metalnessMapPath.Append("/");
                     metalnessMapPath.Append(metTexName.C_Str());
-                    mbstowcs(tmpString, metalnessMapPath.C_Str(), 128);
-                    wcscpy(matDesc.metalnessMap, tmpString);
+                    mbstowcs_s(&numCharConverted, tmpString, metalnessMapPath.C_Str(), 128);
+                    wcscpy_s(matDesc.metalnessMap, tmpString);
                     //wcscpy(matDesc.metalnessMap, L"");
                     matDesc.unionTags |= METALNESS_IS_MAP;
                 }
@@ -426,7 +430,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
         //TODO: maybe implement move for submeshHandle?
         sceneMeshes.emplace_back(SubmeshInfo{ submeshHandle, BufferCacheHandle_t{0,0}, initMatCacheHnd, dx::XMMatrixIdentity() });
 
-        rEnt = RenderableEntity{ hash_str_uint32(std::to_string(submeshHandle.baseVertex)), EntityType::MESH, submeshHandle, mesh->mName.C_Str(), localTransf };
+        rEnt = RenderableEntity{ hash_str_uint32(std::to_string(submeshHandle.baseVertex)), EntityType::MESH, {submeshHandle}, mesh->mName.C_Str(), localTransf };
         sceneGraph.insertNode(parentRE, rEnt);
     }
 

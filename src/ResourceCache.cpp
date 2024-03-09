@@ -69,7 +69,7 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 			m->matPrms.samples[i] = dis(gen);
 			OutputDebugString((std::to_string(m->matPrms.samples[i]).append(", ")).c_str());
 		}
-		int tr = std::trunc(matDesc.scale) * 4;
+
 		std::sort(m->matPrms.samples, m->matPrms.samples + (int)(m->matPrms.scale * 4.0f));
 		std::sort(m->matPrms.samples + (int)(m->matPrms.scale * 4.0f), m->matPrms.samples + (int)(m->matPrms.scale * 4.0f) + (int)(std::trunc(matDesc.subsurfaceAlbedo.y * 255.0f)*4.0f));
 
