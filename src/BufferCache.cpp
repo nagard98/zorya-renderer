@@ -52,6 +52,11 @@ BufferCacheHandle_t BufferCache::AllocStaticGeom(const SubmeshHandle_t sHnd, con
 	return handle;
 }
 
+//TODO: implement deallocation static geometry from buffer cache
+void BufferCache::DeallocStaticGeom(BufferCacheHandle_t bufferHnd)
+{
+}
+
 bool BufferCache::isCached(const SubmeshHandle_t sHnd)
 {
 	//TODO: make better implementation; this should be only temporary

@@ -13,10 +13,11 @@ public:
 	SceneHierarchy();
 	~SceneHierarchy();
 
-	void RenderSHierarchy(const SceneGraph<RenderableEntity> &entities, std::uint32_t& selectedEntity);
-	void RenderSHNode(const Node<RenderableEntity>* entity);
+	void RenderSHierarchy(RendererFrontend& sceneManager, std::uint32_t& selectedEntity);
+	void RenderSHNode(Node<RenderableEntity>* entity);
 
 	std::uint32_t selectedItem;
+	Node<RenderableEntity>* nodeToRemove;
 	ImGuiTreeNodeFlags baseFlags;
 
 };

@@ -45,6 +45,14 @@ void getToken(Tokenizer* tokenizer, Token* currentToken) {
 		tokenizer->at++;
 		type = zorya::TKTP::CLOSE_PARENTHESIS;
 		break;
+	case '[':
+		tokenizer->at++;
+		type = zorya::TKTP::OPEN_SQUARE_BRACKET;
+		break;
+	case ']':
+		tokenizer->at++;
+		type = zorya::TKTP::CLOSE_SQUARE_BRACKET;
+		break;
 	case '=':
 		tokenizer->at++;
 		type = zorya::TKTP::EQUALS;
@@ -92,6 +100,7 @@ zorya::VAR_REFL_TYPE getVarType(Token* token) {
 	if (strncmp(tp, "XMFLOAT2", len) == 0) return zorya::VAR_REFL_TYPE::XMFLOAT2;
 	if (strncmp(tp, "XMFLOAT3", len) == 0) return zorya::VAR_REFL_TYPE::XMFLOAT3;
 	if (strncmp(tp, "XMFLOAT4", len) == 0) return zorya::VAR_REFL_TYPE::XMFLOAT4;
+	if (strncmp(tp, "wchar_t", len) == 0) return zorya::VAR_REFL_TYPE::WCHAR;
 	return zorya::VAR_REFL_TYPE::NOT_SUPPORTED;
 }
 
@@ -125,6 +134,15 @@ void parseVarDef(Tokenizer* tokenizer, Token* currentToken, MemberIntermediateMe
 		Token varNameToken;
 		getToken(tokenizer, &varNameToken);
 		getToken(tokenizer, currentToken);
+
+		if (currentToken->type == zorya::TKTP::OPEN_SQUARE_BRACKET)
+		{
+			while (currentToken->type != zorya::TKTP::CLOSE_SQUARE_BRACKET) {
+				getToken(tokenizer, currentToken);
+			}
+
+			getToken(tokenizer, currentToken);
+		}
 
 		if (currentToken->type == zorya::TKTP::SEMICOLON) {
 			memberMeta->name = (char*)malloc(varNameToken.textLength + 1);
@@ -322,6 +340,8 @@ int recursiveFileSearch(const char* basePath, FILE* reflectionFile, int depth) {
 }
 
 int main() {
+	_chdir("C:\\Users\\Draga\\Documents\\GitHub\\derma-renderer");
+
 	const char* path = "./include/Reflection/Reflection_auto_generated.h";
 
 	FILE* file;

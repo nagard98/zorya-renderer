@@ -11,6 +11,8 @@
 #include <cassert>
 #include <iostream>
 #include <winerror.h>
+#include <cstdlib>
+#include <algorithm>
 
 #include "Model.h"
 #include "BufferCache.h"
@@ -22,7 +24,6 @@
 #include "Lights.h"
 #include "Transform.h"
 
-#include <cstdlib>
 
 namespace dx = DirectX;
 
@@ -94,7 +95,7 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
 
     aiNode* rootNode = scene->mRootNode;
 
-    materials.resize(materials.size() + scene->mNumMaterials);
+    materials.resize(max(materials.size(), materials.size() + scene->mNumMaterials - freedSceneMaterialIndices.size()));
     size_t sepIndex = filename.find_last_of("/");
     aiString basePath = aiString(filename.substr(0, sepIndex));
     scene->mMetaData->Add("basePath", basePath);
@@ -102,7 +103,10 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
     const char* name = scene->GetShortFilename(filename.c_str());
     scene->mMetaData->Add("modelName", name);
 
-    RenderableEntity rEnt{ hash_str_uint32(name), EntityType::COLLECTION, {SubmeshHandle_t{ 0,0,0 }}, name, IDENTITY_TRANSFORM };
+    time_t timestamp = time(NULL);
+    int randNoise = rand();
+
+    RenderableEntity rEnt{ hash_str_uint32(std::string(name).append(std::to_string(randNoise).append(std::to_string(timestamp)))), EntityType::COLLECTION, {SubmeshHandle_t{ 0,0,0 }}, name, IDENTITY_TRANSFORM };
     sceneGraph.insertNode(RenderableEntity{ 0 }, rEnt);
 
     LoadNodeChildren(scene, rootNode->mChildren, rootNode->mNumChildren, rEnt);
@@ -115,9 +119,23 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
 RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx::XMVECTOR direction, float shadowMapNearPlane, float shadowMapFarPlane)
 {
         LightHandle_t lightHnd;
-        lightHnd.index = sceneLights.size();
         lightHnd.tag = LightType::DIRECTIONAL;
-        sceneLights.emplace_back(LightInfo{ LightType::DIRECTIONAL, {DirectionalLight{direction, shadowMapNearPlane, shadowMapFarPlane}}, dx::XMMatrixIdentity() });
+
+        if (freedSceneLightIndices.size() > 0) {
+            lightHnd.index = freedSceneLightIndices.back();
+
+            LightInfo& lightInfo = sceneLights.at(lightHnd.index);
+            lightInfo.tag = LightType::DIRECTIONAL;
+            //TODO: define near/far plane computation based on some parameter thats still not defined
+            lightInfo.dirLight = DirectionalLight{direction, shadowMapNearPlane, shadowMapFarPlane};
+            lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
+
+            freedSceneLightIndices.pop_back();
+        }
+        else {
+            lightHnd.index = sceneLights.size();
+            sceneLights.emplace_back(LightInfo{ LightType::DIRECTIONAL, {DirectionalLight{direction, shadowMapNearPlane, shadowMapFarPlane}}, dx::XMMatrixIdentity() });
+        }
 
         //TODO:decide what to hash for id
         RenderableEntity rEnt;
@@ -142,14 +160,28 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
 RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx::XMVECTOR direction, dx::XMVECTOR position, float cutoffAngle)
 {
     LightHandle_t lightHnd;
-    lightHnd.index = sceneLights.size();
     lightHnd.tag = LightType::SPOT;
+ 
+    if (freedSceneLightIndices.size() > 0) {
+        lightHnd.index = freedSceneLightIndices.back();
 
-    LightInfo& lightInfo = sceneLights.emplace_back();
-    lightInfo.tag = LightType::SPOT;
-    //TODO: define near/far plane computation based on some parameter thats still not defined
-    lightInfo.spotLight = SpotLight{ position,direction, std::cos(cutoffAngle), 1.0f, 20.0f };
-    lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
+        LightInfo& lightInfo = sceneLights.at(lightHnd.index);
+        lightInfo.tag = LightType::SPOT;
+        //TODO: define near/far plane computation based on some parameter thats still not defined
+        lightInfo.spotLight = SpotLight{ position,direction, std::cos(cutoffAngle), 1.0f, 20.0f };
+        lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
+
+        freedSceneLightIndices.pop_back();
+    }
+    else {
+        lightHnd.index = sceneLights.size();
+
+        LightInfo& lightInfo = sceneLights.emplace_back();
+        lightInfo.tag = LightType::SPOT;
+        //TODO: define near/far plane computation based on some parameter thats still not defined
+        lightInfo.spotLight = SpotLight{ position,direction, std::cos(cutoffAngle), 1.0f, 20.0f };
+        lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
+    }
 
     //TODO:decide what to hash for id
     RenderableEntity rEnt;
@@ -174,15 +206,28 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
 RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx::XMVECTOR position, float constant, float linear, float quadratic)
 {
     LightHandle_t lightHnd;
-    lightHnd.index = sceneLights.size();
     lightHnd.tag = LightType::POINT;
 
     float maxLightDist = computeMaxDistance(constant, linear, quadratic);
 
-    LightInfo& lightInfo = sceneLights.emplace_back();
-    lightInfo.tag = LightType::POINT;
-    lightInfo.pointLight = PointLight{ position, constant, linear, quadratic, 1.0f, 1.0f + maxLightDist};
-    lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
+    if (freedSceneLightIndices.size() > 0) {
+        lightHnd.index = freedSceneLightIndices.back();
+
+        LightInfo& lightInfo = sceneLights.at(lightHnd.index);
+        lightInfo.tag = LightType::POINT;
+        lightInfo.pointLight = PointLight{ position, constant, linear, quadratic, 1.0f, 1.0f + maxLightDist };
+        lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
+
+        freedSceneLightIndices.pop_back();
+    }
+    else {
+        lightHnd.index = sceneLights.size();
+
+        LightInfo& lightInfo = sceneLights.emplace_back();
+        lightInfo.tag = LightType::POINT;
+        lightInfo.pointLight = PointLight{ position, constant, linear, quadratic, 1.0f, 1.0f + maxLightDist };
+        lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
+    }
 
     //TODO:decide what to hash for id
     RenderableEntity rEnt;
@@ -204,6 +249,50 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
 }
 
 
+int RendererFrontend::removeEntity(RenderableEntity& entityToRemove)
+{
+    std::vector<GenericEntityHandle> handlesToDeleteData = sceneGraph.removeNode(entityToRemove);
+    int numMeshEntitiesRemoved = 0, numLightEntitiesRemoved = 0;
+
+    for (GenericEntityHandle& entHnd : handlesToDeleteData) {
+        switch (entHnd.tag) {
+
+        case EntityType::LIGHT:
+            freedSceneLightIndices.push_back(entHnd.lightHnd.index);
+            numLightEntitiesRemoved += 1;
+            break;
+
+        case EntityType::MESH:
+            //TODO: fix this; dont use for, find a way to directly index 
+            for (int i = 0; i < sceneMeshes.size(); i++) {
+                SubmeshInfo& submeshInfo = sceneMeshes.at(i);
+                if (submeshInfo.submeshHnd.baseVertex == entHnd.submeshHnd.baseVertex) {
+                    freedSceneMeshIndices.push_back(i);
+                    freedSceneMaterialIndices.push_back(entHnd.submeshHnd.matDescIdx);
+                    materials.at(entHnd.submeshHnd.matDescIdx).shaderType = PShaderID::UNDEFINED;
+
+                    resourceCache.DeallocMaterial(submeshInfo.matCacheHnd);
+                    bufferCache.DeallocStaticGeom(submeshInfo.bufferHnd);
+
+                    freedStaticSceneVertexDataFragments.emplace_back(FragmentInfo{ entHnd.submeshHnd.baseVertex, entHnd.submeshHnd.numVertices });
+                    freedStaticSceneIndexDataFragments.emplace_back(FragmentInfo{ entHnd.submeshHnd.baseIndex, entHnd.submeshHnd.numIndexes });
+
+                    numMeshEntitiesRemoved += 1;
+
+                    break;
+                }
+            }
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    return numMeshEntitiesRemoved + numLightEntitiesRemoved;
+}
+
+
 void RendererFrontend::LoadNodeChildren(const aiScene* scene, aiNode** children, unsigned int numChildren, RenderableEntity& parentRE)
 {
     for (int i = 0; i < numChildren; i++) {
@@ -214,7 +303,9 @@ void RendererFrontend::LoadNodeChildren(const aiScene* scene, aiNode** children,
             rEnt = LoadNodeMeshes(scene, children[i]->mMeshes, children[i]->mNumMeshes, parentRE, localTransf);
         }
         else {
-            rEnt = RenderableEntity{ hash_str_uint32(children[i]->mName.C_Str()), EntityType::COLLECTION, { SubmeshHandle_t{ 0,0,0 } }, children[i]->mName.C_Str(), localTransf };
+            time_t timestamp = time(NULL);
+            int randNoise = rand();
+            rEnt = RenderableEntity{ hash_str_uint32(std::string(children[i]->mName.C_Str()).append(std::to_string(randNoise).append(std::to_string(timestamp)))), EntityType::COLLECTION, { SubmeshHandle_t{ 0,0,0 } }, children[i]->mName.C_Str(), localTransf };
             sceneGraph.insertNode(parentRE, rEnt);
             LoadNodeMeshes(scene, children[i]->mMeshes, children[i]->mNumMeshes, rEnt);
         }
@@ -244,9 +335,9 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
     localTransf.scal.z /= unitScaleFactor;
 
     //TODO: remove; just  for development
-    localTransf.scal.x = 10.0f;
-    localTransf.scal.y = 10.0f;
-    localTransf.scal.z = 10.0f;
+    //localTransf.scal.x = 10.0f;
+    //localTransf.scal.y = 10.0f;
+    //localTransf.scal.z = 10.0f;
     localTransf.pos.y = -2.2f;
 
     size_t numCharConverted = 0;
@@ -256,8 +347,17 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
         //TODO: implement reading material info in material desc-------------------------
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
-        std::uint16_t matDescId = materials.size() - scene->mNumMaterials + mesh->mMaterialIndex;
+        std::uint16_t matDescId = 0;
+        if (freedSceneMaterialIndices.size() > 0) {
+            matDescId = freedSceneMaterialIndices.back();
+            freedSceneMaterialIndices.pop_back();
+        }
+        else {
+            matDescId = materials.size() - scene->mNumMaterials + mesh->mMaterialIndex;
+        }
+
         MaterialDesc& matDesc = materials.at(matDescId);
+
         MaterialCacheHandle_t initMatCacheHnd{ 0, NO_UPDATE_MAT};
 
 
@@ -391,11 +491,39 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
         //---------------------------------------------------
 
         submeshHandle.matDescIdx = matDescId;
-        submeshHandle.numVertices = mesh->mNumVertices;
-        submeshHandle.baseVertex = staticSceneVertexData.size();
 
-        //TODO: hmmm? evaluate should if i reserve in advance? when?
-        staticSceneVertexData.reserve((size_t)submeshHandle.numVertices + (size_t)submeshHandle.baseVertex);
+        //Vertices--------------------
+        bool foundFreeFragment = false;
+
+        for (FragmentInfo& freedSceneVertexFragmentInfo : freedStaticSceneVertexDataFragments) {
+            if (mesh->mNumVertices <= freedSceneVertexFragmentInfo.length) {
+                submeshHandle.numVertices = mesh->mNumVertices;
+                submeshHandle.baseVertex = freedSceneVertexFragmentInfo.index;
+
+                //Fixing up remaining fragment after new reservation
+                std::uint32_t remainingFragmentLength = mesh->mNumVertices - freedSceneVertexFragmentInfo.length;
+                if (remainingFragmentLength == 0) {
+                    std::swap(freedSceneVertexFragmentInfo, freedStaticSceneVertexDataFragments.back());
+                    freedStaticSceneVertexDataFragments.pop_back();
+                }
+                else {
+                     freedSceneVertexFragmentInfo.index += (freedSceneVertexFragmentInfo.length - remainingFragmentLength);
+                     freedSceneVertexFragmentInfo.length = remainingFragmentLength;
+                }
+
+                foundFreeFragment = true;
+                break;
+            }
+        }
+
+        if (!foundFreeFragment) {
+            submeshHandle.numVertices = mesh->mNumVertices;
+            submeshHandle.baseVertex = staticSceneVertexData.size();
+
+            //TODO: hmmm? evaluate should if i reserve in advance? when?
+            staticSceneVertexData.reserve((size_t)submeshHandle.numVertices + (size_t)submeshHandle.baseVertex);
+        }
+
         bool hasTangents = mesh->HasTangentsAndBitangents();
         bool hasTexCoords = mesh->HasTextureCoords(0);
 
@@ -406,31 +534,91 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
             aiVector3D* textureCoord = &mesh->mTextureCoords[0][i];
             aiVector3D* tangent = &mesh->mTangents[i];
 
+            if (foundFreeFragment) {
+                staticSceneVertexData.at(submeshHandle.baseVertex + i) = Vertex(
+                    vert->x, vert->y, vert->z,
+                    hasTexCoords ? textureCoord->x : 0.0f, hasTexCoords ? textureCoord->y : 0.0f,
+                    normal->x, normal->y, normal->z,
+                    hasTangents ? tangent->x : 0.0f, hasTangents ? tangent->y : 0.0f, hasTangents ? tangent->z : 0.0f);
+            }
+            else {
+                staticSceneVertexData.push_back(Vertex(
+                    vert->x, vert->y, vert->z,
+                    hasTexCoords ? textureCoord->x : 0.0f, hasTexCoords ? textureCoord->y : 0.0f,
+                    normal->x, normal->y, normal->z,
+                    hasTangents ? tangent->x : 0.0f, hasTangents ? tangent->y : 0.0f, hasTangents ? tangent->z : 0.0f));
+            }
 
-            staticSceneVertexData.push_back(Vertex(
-                vert->x, vert->y, vert->z,
-                hasTexCoords ? textureCoord->x : 0.0f, hasTexCoords ? textureCoord->y : 0.0f,
-                normal->x, normal->y, normal->z,
-                hasTangents ? tangent->x : 0.0f, hasTangents ? tangent->y : 0.0f, hasTangents ? tangent->z : 0.0f));
         }
 
+
+        //Indices--------------
+        foundFreeFragment = false;
         int numFaces = mesh->mNumFaces;
-        submeshHandle.numIndexes = numFaces * 3;
-        submeshHandle.baseIndex = staticSceneIndexData.size();
 
-        staticSceneIndexData.reserve((size_t)submeshHandle.baseIndex + (size_t)submeshHandle.numIndexes);
+        for (FragmentInfo& freedSceneIndexFragmentInfo : freedStaticSceneIndexDataFragments) {
+            if (numFaces * 3 <= freedSceneIndexFragmentInfo.length) {
+                submeshHandle.numIndexes = numFaces * 3;
+                submeshHandle.baseIndex = freedSceneIndexFragmentInfo.index;
 
-        for (int i = 0; i < numFaces; i++) {
-            aiFace* face = &(mesh->mFaces[i]);
-            for (int j = 0; j < face->mNumIndices; j++) {
-                staticSceneIndexData.push_back(face->mIndices[j]);
+                //Fixing up remaining fragment after new reservation
+                std::uint32_t remainingFragmentLength = (numFaces * 3) - freedSceneIndexFragmentInfo.length;
+                if (remainingFragmentLength == 0) {
+                    std::swap(freedSceneIndexFragmentInfo, freedStaticSceneIndexDataFragments.back());
+                    freedStaticSceneIndexDataFragments.pop_back();
+                }
+                else {
+                    freedSceneIndexFragmentInfo.index += (freedSceneIndexFragmentInfo.length - remainingFragmentLength);
+                    freedSceneIndexFragmentInfo.length = remainingFragmentLength;
+                }
+
+                foundFreeFragment = true;
+                break;
             }
         }
 
-        //TODO: maybe implement move for submeshHandle?
-        sceneMeshes.emplace_back(SubmeshInfo{ submeshHandle, BufferCacheHandle_t{0,0}, initMatCacheHnd, dx::XMMatrixIdentity() });
 
-        rEnt = RenderableEntity{ hash_str_uint32(std::to_string(submeshHandle.baseVertex)), EntityType::MESH, {submeshHandle}, mesh->mName.C_Str(), localTransf };
+        if (!foundFreeFragment) {
+            submeshHandle.numIndexes = numFaces * 3;
+            submeshHandle.baseIndex = staticSceneIndexData.size();
+
+            staticSceneIndexData.reserve((size_t)submeshHandle.baseIndex + (size_t)submeshHandle.numIndexes);
+        }
+
+        int indicesCount = 0;
+
+        for (int i = 0; i < numFaces; i++) {
+            aiFace* face = &(mesh->mFaces[i]);
+
+            for (int j = 0; j < face->mNumIndices; j++) {
+                if (foundFreeFragment) {
+                    staticSceneIndexData.at(submeshHandle.baseIndex + indicesCount) = face->mIndices[j];
+                }
+                else {
+                    staticSceneIndexData.push_back(face->mIndices[j]);
+                }
+
+                indicesCount += 1;
+            }
+        }
+
+        if (freedSceneMeshIndices.size() > 0) {
+            int freeMeshIndex = freedSceneMeshIndices.back();
+            SubmeshInfo& submeshInfo = sceneMeshes.at(freeMeshIndex);
+            submeshInfo.submeshHnd = submeshHandle;
+            submeshInfo.bufferHnd = BufferCacheHandle_t{ 0,0 };
+            submeshInfo.matCacheHnd = initMatCacheHnd;
+            submeshInfo.finalWorldTransf = dx::XMMatrixIdentity();
+
+            freedSceneMeshIndices.pop_back();
+        }
+        else {
+            //TODO: maybe implement move for submeshHandle?
+            sceneMeshes.emplace_back(SubmeshInfo{ submeshHandle, BufferCacheHandle_t{0,0}, initMatCacheHnd, dx::XMMatrixIdentity() });
+        }
+
+        time_t tm = time(NULL);
+        rEnt = RenderableEntity{ hash_str_uint32(std::string(mesh->mName.C_Str()).append(std::to_string(tm))), EntityType::MESH, {submeshHandle}, mesh->mName.C_Str(), localTransf };
         sceneGraph.insertNode(parentRE, rEnt);
     }
 

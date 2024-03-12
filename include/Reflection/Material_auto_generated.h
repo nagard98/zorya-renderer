@@ -5,6 +5,7 @@
 #include <Material.h>
 
 const MemberMeta MaterialDesc_meta[] = {
+	{ "albedoPath", offsetof(MaterialDesc, albedoPath), zorya::VAR_REFL_TYPE::WCHAR }, 
 	{ "baseColor", offsetof(MaterialDesc, baseColor), zorya::VAR_REFL_TYPE::XMFLOAT4 }, 
 	{ "subsurfaceAlbedo", offsetof(MaterialDesc, subsurfaceAlbedo), zorya::VAR_REFL_TYPE::XMFLOAT4 }, 
 	{ "meanFreePathColor", offsetof(MaterialDesc, meanFreePathColor), zorya::VAR_REFL_TYPE::XMFLOAT4 }, 
@@ -12,6 +13,7 @@ const MemberMeta MaterialDesc_meta[] = {
 	{ "scale", offsetof(MaterialDesc, scale), zorya::VAR_REFL_TYPE::FLOAT }, 
 	{ "smoothnessValue", offsetof(MaterialDesc, smoothnessValue), zorya::VAR_REFL_TYPE::FLOAT }, 
 	{ "metalnessValue", offsetof(MaterialDesc, metalnessValue), zorya::VAR_REFL_TYPE::FLOAT }, 
+	{ "normalPath", offsetof(MaterialDesc, normalPath), zorya::VAR_REFL_TYPE::WCHAR }, 
 };
 
 BUILD_FOREACHFIELD(MaterialDesc)

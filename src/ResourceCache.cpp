@@ -29,8 +29,14 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 	Material* m;
 	int matIndex = matCacheHnd.index;
 	if ((matCacheHnd.isCached & IS_FIRST_MAT_ALLOC) == IS_FIRST_MAT_ALLOC) {
-		materialCache.push_back(Material{});
-		matIndex = materialCache.size() - 1;
+		if (freeMaterialCacheIndices.size() > 0) {
+			matIndex = freeMaterialCacheIndices.back();
+			freeMaterialCacheIndices.pop_back();
+		}
+		else {
+			materialCache.push_back(Material{});
+			matIndex = materialCache.size() - 1;
+		}
 	}
 
 	m = &materialCache.at(matIndex);	
@@ -90,6 +96,13 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 	}
 
 	return MaterialCacheHandle_t{ (std::uint16_t)matIndex, NO_UPDATE_MAT };
+}
+
+//TODO:implement material dealloc
+void ResourceCache::DeallocMaterial(MaterialCacheHandle_t& matCacheHnd)
+{
+	//TODO: what about deallocating the gpu resources (e.g. texture, ...)
+	freeMaterialCacheIndices.push_back(matCacheHnd.index);
 }
 
 void ResourceCache::UpdateMaterialSmoothness(const MaterialCacheHandle_t matHnd, float smoothness)

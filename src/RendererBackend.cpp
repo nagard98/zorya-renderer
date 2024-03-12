@@ -1028,7 +1028,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
 
     annot->BeginEvent(L"SSSSS Pass");
     {
-        Material& mat = resourceCache.materialCache.at(0);
+        Material& mat = resourceCache.materialCache.at(viewDesc.submeshesInfo.at(0).matCacheHnd.index);
 
         //for (int i = 0; i < nSamples; i++) {
         //    mat.matPrms.kernel[i] = kernel[i];

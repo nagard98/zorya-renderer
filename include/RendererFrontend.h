@@ -41,6 +41,19 @@ enum class EntityType : std::uint8_t{
 	COLLECTION
 };
 
+struct FragmentInfo {
+	std::uint32_t index;
+	std::uint32_t length;
+};
+
+struct GenericEntityHandle {
+	EntityType tag;
+	union {
+		SubmeshHandle_t submeshHnd;
+		LightHandle_t lightHnd;
+	};
+};
+
 struct RenderableEntity {
 	bool operator==(const RenderableEntity& r) {
 		return ID == r.ID;
@@ -94,6 +107,8 @@ public:
 	RenderableEntity AddLight(const RenderableEntity* attachTo, dx::XMVECTOR direction, dx::XMVECTOR position, float cutoffAngle); //add spotlight
 	RenderableEntity AddLight(const RenderableEntity* attachTo, dx::XMVECTOR position, float constant, float linear, float quadratic); //add point light
 
+	int removeEntity(RenderableEntity& entityToRemove);
+
 	ViewDesc ComputeView(const Camera& cam);
 
 	SubmeshInfo* findSubmeshInfo(SubmeshHandle_t sHnd);
@@ -116,6 +131,12 @@ private:
 	void ParseSceneGraph(const Node<RenderableEntity>* node, const dx::XMMATRIX& parentTransf, std::vector<SubmeshInfo>& submeshesInView, std::vector<LightInfo>& lightsInView);
 
 	Assimp::Importer importer;
+	std::vector<int> freedSceneLightIndices;
+	std::vector<int> freedSceneMeshIndices;
+	std::vector<int> freedSceneMaterialIndices;
+
+	std::vector<FragmentInfo> freedStaticSceneVertexDataFragments;
+	std::vector<FragmentInfo> freedStaticSceneIndexDataFragments;
 };
 
 

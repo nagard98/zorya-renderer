@@ -111,7 +111,7 @@ void Editor::RenderEditor(RendererFrontend& rf, Camera& editorCam, const ID3D11S
 
 	ImGui::Begin("Hierarchy");
 	{
-		sceneHier.RenderSHierarchy(rf.sceneGraph, selectedID);
+		sceneHier.RenderSHierarchy(rf, selectedID);
 	}
 	ImGui::End();
 
@@ -119,7 +119,8 @@ void Editor::RenderEditor(RendererFrontend& rf, Camera& editorCam, const ID3D11S
 	{
 		if (selectedID != (std::uint32_t)-1)
 		{
-			Node<RenderableEntity>* selectedNode = rf.sceneGraph.findNode(rf.sceneGraph.rootNode, RenderableEntity{ selectedID });
+			Node<RenderableEntity>* parentNode = nullptr;
+			Node<RenderableEntity>* selectedNode = rf.sceneGraph.findNode(rf.sceneGraph.rootNode, RenderableEntity{ selectedID }, &parentNode);
 			//TODO: change to something more generic, instead of submesh info; maybe here is where i should use reflection
 			switch (selectedNode->value.tag)
 			{

@@ -4,9 +4,12 @@
 #include "SceneGraph.h"
 #include "RendererFrontend.h"
 
+#include <vector>
+
 SceneHierarchy::SceneHierarchy()
 {
 	selectedItem = -1;
+    nodeToRemove = nullptr;
     baseFlags = ImGuiTreeNodeFlags_OpenOnArrow;
 }
 
@@ -14,18 +17,25 @@ SceneHierarchy::~SceneHierarchy()
 {
 }
 
-void SceneHierarchy::RenderSHierarchy(const SceneGraph<RenderableEntity>& entities, std::uint32_t& selectedEntity)
+void SceneHierarchy::RenderSHierarchy(RendererFrontend& sceneManager, std::uint32_t& selectedEntity)
 {
+    SceneGraph<RenderableEntity>& entities = sceneManager.sceneGraph;
 
-    for (const Node<RenderableEntity>* entity : entities.rootNode->children) {
+    for (Node<RenderableEntity>* entity : entities.rootNode->children) {
         RenderSHNode(entity);
+    }
+
+    if (nodeToRemove != nullptr) {
+        sceneManager.removeEntity(nodeToRemove->value);
+        nodeToRemove = nullptr;
+        selectedItem = -1;
     }
 
     selectedEntity = selectedItem;
 
 }
 
-void SceneHierarchy::RenderSHNode(const Node<RenderableEntity>* entity)
+void SceneHierarchy::RenderSHNode(Node<RenderableEntity>* entity)
 {
     ImGuiTreeNodeFlags nodeFlags = baseFlags;
     if (entity->children.size() == 0) {
@@ -34,12 +44,19 @@ void SceneHierarchy::RenderSHNode(const Node<RenderableEntity>* entity)
     if (entity->value.ID == selectedItem) {
         nodeFlags |= ImGuiTreeNodeFlags_Selected;
     }
+
+    ImGui::PushID(entity->value.ID);
     bool isNodeOpen = ImGui::TreeNodeEx(entity->value.entityName.c_str(), nodeFlags);
     if (ImGui::IsItemClicked()) {
         selectedItem = entity->value.ID;
     }
+    ImGui::PopID();
+
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+        nodeToRemove = entity;
+    }
     if (isNodeOpen) {
-        for (const Node<RenderableEntity>* childEnt : entity->children) {
+        for (Node<RenderableEntity>* childEnt : entity->children) {
             RenderSHNode(childEnt);
         }
         ImGui::TreePop();

@@ -38,6 +38,8 @@ public:
 		const std::uint16_t* itInd,
 		const Vertex* itVer);
 
+	void DeallocStaticGeom(BufferCacheHandle_t bufferHnd);
+
 	bool isCached(const SubmeshHandle_t sHnd);
 
 	VertexBuffer GetVertexBuffer(BufferCacheHandle_t bufHnd);

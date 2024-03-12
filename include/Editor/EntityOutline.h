@@ -3,6 +3,7 @@
 
 #include <RendererFrontend.h>
 #include "Material.h"
+#include "Reflection/Reflection.h"
 
 class EntityOutline {
 
@@ -13,7 +14,9 @@ public:
 	void RenderEProperties(RenderableEntity& entity, SubmeshInfo* smInfo, MaterialDesc* matDesc);
 	void RenderEProperties(RenderableEntity& entity, LightInfo& lightInfo);
 
-	char tmpCharBuff[128];
+	void RenderETransform(RenderableEntity& entity);
+
+	static char tmpCharBuff[128];
 };
 
 #endif // !ENTITY_PROPERTIES_H_

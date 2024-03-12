@@ -22,6 +22,8 @@ EntityOutline::~EntityOutline()
 {
 }
 
+char EntityOutline::tmpCharBuff[128];
+
 
 template<zorya::VAR_REFL_TYPE T>
 bool RenderEPropertyImpl(const char* structAddress, const MemberMeta& memMeta) {
@@ -84,6 +86,22 @@ bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT4>(const char* structAddre
 }
 
 
+template<>
+bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::WCHAR>(const char* structAddress, const MemberMeta& memMeta) {
+	ImGui::Spacing();
+
+	size_t numConvertedChars = 0;
+	wcstombs_s(&numConvertedChars, EntityOutline::tmpCharBuff, 128, (wchar_t*)(structAddress + memMeta.offset), 128);
+	ImGui::InputText(memMeta.name, EntityOutline::tmpCharBuff, 128);
+	mbstowcs_s(&numConvertedChars, (wchar_t*)(structAddress + memMeta.offset), 128, EntityOutline::tmpCharBuff, 128);
+	bool isEditingComplete = ImGui::IsItemDeactivatedAfterEdit();
+
+	ImGui::Spacing();
+
+	return isEditingComplete;
+}
+
+
 bool RenderEProperty(const char* structAddress, const MemberMeta& memMeta) {
 	switch (memMeta.type) {
 	case zorya::VAR_REFL_TYPE::FLOAT:
@@ -104,13 +122,14 @@ bool RenderEProperty(const char* structAddress, const MemberMeta& memMeta) {
 		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT3>(structAddress, std::forward<const MemberMeta>(memMeta));
 	case zorya::VAR_REFL_TYPE::XMFLOAT4:
 		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT4>(structAddress, std::forward<const MemberMeta>(memMeta));
+	case zorya::VAR_REFL_TYPE::WCHAR:
+		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::WCHAR>(structAddress, std::forward<const MemberMeta>(memMeta));
 	default:
 		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::NOT_SUPPORTED>(structAddress, std::forward<const MemberMeta>(memMeta));
 	}
 }
 
-void EntityOutline::RenderEProperties(RenderableEntity& entity, LightInfo& lightInfo)
-{
+void EntityOutline::RenderETransform(RenderableEntity& entity) {
 	constexpr float oePi = 180.0f * dx::XM_1DIVPI;
 	constexpr float invOePi = 1.0f / oePi;
 	entity.localWorldTransf.rot.x *= oePi;
@@ -127,6 +146,11 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, LightInfo& light
 	entity.localWorldTransf.rot.x *= invOePi;
 	entity.localWorldTransf.rot.y *= invOePi;
 	entity.localWorldTransf.rot.z *= invOePi;
+}
+
+void EntityOutline::RenderEProperties(RenderableEntity& entity, LightInfo& lightInfo)
+{
+	RenderETransform(entity);
 
 	ImGui::SeparatorText("Light Parameters");
 	{
@@ -154,88 +178,31 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, LightInfo& light
 
 	}
 
-
-
 }
 
 void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smInfo, MaterialDesc* matDesc)
 {
-	constexpr float oePi = 180.0f * dx::XM_1DIVPI;
-	constexpr float invOePi = 1.0f / oePi;
-	entity.localWorldTransf.rot.x *= oePi;
-	entity.localWorldTransf.rot.y *= oePi;
-	entity.localWorldTransf.rot.z *= oePi;
-
-	ImGui::SeparatorText("Transform");
-	{
-		ImGui::DragFloat3("Position", &entity.localWorldTransf.pos.x, 0.01f);
-		ImGui::DragFloat3("Rotation", &entity.localWorldTransf.rot.x, 0.1f, 0.0f, 0.0f, "%.3f", ImGuiSliderFlags_NoRoundToFormat);
-		ImGui::DragFloat3("Scale", &entity.localWorldTransf.scal.x, 0.01f, 0.0f, 0.0f, "%.3f");
-	}
-
-	entity.localWorldTransf.rot.x *= invOePi;
-	entity.localWorldTransf.rot.y *= invOePi;
-	entity.localWorldTransf.rot.z *= invOePi;
+	RenderETransform(entity);
 
 	//TODO: better check if entity has mesh; probably move check to callee of this function
 	if (smInfo != nullptr) {
 		assert(matDesc != nullptr);
 		ImGui::SeparatorText("Material");
 		{
+			size_t numConvertedChars = 0;
+
 			foreachfield(matDesc, [=](const char* structAddr, const MemberMeta& memMeta) {
 				bool isEdited = RenderEProperty(structAddr, std::forward<const MemberMeta>(memMeta));
+
 				if (isEdited) {
-					smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
+					if(memMeta.type == zorya::VAR_REFL_TYPE::WCHAR) smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
+					else smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
 				}
 				});
 
-			//ImGui::ColorEdit4("Base Color", &matDesc->baseColor.x);
-			//if (ImGui::IsItemEdited()) {
-			//	smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
-			//}
-
-			//ImGui::ColorEdit4("Subsurface Albedo", &matDesc->subsurfaceAlbedo.x);
-			//if (ImGui::IsItemEdited()) {
-			//	smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
-			//}
-
-			//ImGui::DragFloat4("Mean Free Path Color", &matDesc->meanFreePathColor.x, 0.01f, 0.001, ImGuiSliderFlags_AlwaysClamp);
-			//if (ImGui::IsItemEdited()) {
-			//	smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
-			//}
-			//
-			//ImGui::DragFloat("Mean Free Path Distance", &matDesc->meanFreePathDistance, 0.0001f, 0.0001f, 0.0f, "%.4f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_AlwaysClamp);
-			//if (ImGui::IsItemEdited()) {
-			//	smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
-			//}
-
-			//ImGui::DragFloat("scale", &matDesc->scale, 1.0f, 1.0f, 16.0f);
-			//if (ImGui::IsItemEdited()) {
-			//	smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
-			//}
-			size_t numConvertedChars = 0;
-			wcstombs_s(&numConvertedChars, tmpCharBuff, 128, matDesc->albedoPath, 128);
-			ImGui::InputText("Albedo Map", tmpCharBuff, 128);
-			if (ImGui::IsItemDeactivatedAfterEdit()) {
-				mbstowcs_s(&numConvertedChars, matDesc->albedoPath, tmpCharBuff, 128);
-				smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
-			}
-
-			ImGui::Spacing();
-			ImGui::Spacing();
-
-			wcstombs_s(&numConvertedChars, tmpCharBuff, matDesc->normalPath, 128);
-			ImGui::InputText("Normal Map", tmpCharBuff, 128);
-			if (ImGui::IsItemDeactivatedAfterEdit()) {
-				mbstowcs_s(&numConvertedChars, matDesc->normalPath, tmpCharBuff, 128);
-				smInfo->matCacheHnd.isCached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
-			}
-
-			ImGui::Spacing();
-			ImGui::Spacing();
-			
 			{
 				static int smoothnessMode = 0;
+				
 
 				if ((matDesc->unionTags & SMOOTHNESS_IS_MAP) == SMOOTHNESS_IS_MAP) {
 					smoothnessMode = 1;

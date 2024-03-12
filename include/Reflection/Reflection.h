@@ -27,6 +27,7 @@ namespace zorya {
 		"XMFLOAT2",
 		"XMFLOAT3",
 		"XMFLOAT4",
+		"WCHAR"
 	};
 }
 

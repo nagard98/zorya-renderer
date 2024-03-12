@@ -27,6 +27,7 @@ struct MaterialDesc {
 	PShaderID shaderType;
 	MatDescFlags_ unionTags;
 
+	PROPERTY()
 	wchar_t albedoPath[128];
 
 	PROPERTY()
@@ -56,6 +57,7 @@ struct MaterialDesc {
 		wchar_t metalnessMap[128];
 	};
 
+	PROPERTY()
 	wchar_t normalPath[128];
 };
 
