@@ -1028,36 +1028,40 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
 
     annot->BeginEvent(L"SSSSS Pass");
     {
-        Material& mat = resourceCache.materialCache.at(viewDesc.submeshesInfo.at(0).matCacheHnd.index);
 
-        //for (int i = 0; i < nSamples; i++) {
-        //    mat.matPrms.kernel[i] = kernel[i];
-        //}
-        mat.matPrms.dir = dx::XMFLOAT2(0.0f, 1.0f);
-        rhi.context->UpdateSubresource(matPrmsCB, 0, nullptr, &mat.matPrms, 0, 0);
-
-        rhi.context->PSSetShaderResources(2, 1, &nullSRV[0]);
-        rhi.context->OMSetRenderTargets(1, /*&skinRT[1]*/rhi.renderTargetView.GetAddressOf(), nullptr);
-        rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SSSSS), nullptr, 0);
-        //NOTA: skinSRV[3] is diffuse radiance
-        annot->BeginEvent(L"mips");
+        if (viewDesc.submeshesInfo.size() > 0)
         {
-            rhi.context->GenerateMips(skinSRV[3]);
-        }
-        annot->EndEvent();
+            Material& mat = resourceCache.materialCache.at(viewDesc.submeshesInfo.at(0).matCacheHnd.index);
 
-        rhi.context->PSSetShaderResources(0, 1, &skinSRV[3]);
-        rhi.context->PSSetShaderResources(1, 1, &GBufferSRV[GBuffer::ROUGH_MET]);
-        rhi.context->PSSetShaderResources(2, 1, &skinSRV[2]);
-        rhi.context->PSSetShaderResources(3, 1, &rhi.depthStencilShaderResourceView);
-        rhi.context->PSSetShaderResources(4, 1, &GBufferSRV[GBuffer::ALBEDO]);
-        rhi.context->Draw(4, 0);
+            //for (int i = 0; i < nSamples; i++) {
+            //    mat.matPrms.kernel[i] = kernel[i];
+            //}
+            mat.matPrms.dir = dx::XMFLOAT2(0.0f, 1.0f);
+            rhi.context->UpdateSubresource(matPrmsCB, 0, nullptr, &mat.matPrms, 0, 0);
 
-        //mat.matPrms.dir = dx::XMFLOAT2(1.0f, 0.0f);
-        //rhi.context->UpdateSubresource(matPrmsCB, 0, nullptr, &mat.matPrms, 0, 0);
-        //rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), nullptr);
-        //rhi.context->PSSetShaderResources(0, 1, &skinSRV[1]);
-        //rhi.context->Draw(4, 0);
+            rhi.context->PSSetShaderResources(2, 1, &nullSRV[0]);
+            rhi.context->OMSetRenderTargets(1, /*&skinRT[1]*/rhi.renderTargetView.GetAddressOf(), nullptr);
+            rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SSSSS), nullptr, 0);
+            //NOTA: skinSRV[3] is diffuse radiance
+            annot->BeginEvent(L"mips");
+            {
+                rhi.context->GenerateMips(skinSRV[3]);
+            }
+            annot->EndEvent();
+
+            rhi.context->PSSetShaderResources(0, 1, &skinSRV[3]);
+            rhi.context->PSSetShaderResources(1, 1, &GBufferSRV[GBuffer::ROUGH_MET]);
+            rhi.context->PSSetShaderResources(2, 1, &skinSRV[2]);
+            rhi.context->PSSetShaderResources(3, 1, &rhi.depthStencilShaderResourceView);
+            rhi.context->PSSetShaderResources(4, 1, &GBufferSRV[GBuffer::ALBEDO]);
+            rhi.context->Draw(4, 0);
+
+            //mat.matPrms.dir = dx::XMFLOAT2(1.0f, 0.0f);
+            //rhi.context->UpdateSubresource(matPrmsCB, 0, nullptr, &mat.matPrms, 0, 0);
+            //rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), nullptr);
+            //rhi.context->PSSetShaderResources(0, 1, &skinSRV[1]);
+            //rhi.context->Draw(4, 0); 
+    }
         
     }
     annot->EndEvent();

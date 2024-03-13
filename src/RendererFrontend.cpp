@@ -637,6 +637,7 @@ SubmeshInfo* RendererFrontend::findSubmeshInfo(SubmeshHandle_t sHnd) {
 
 void RendererFrontend::ParseSceneGraph(const Node<RenderableEntity>* node, const dx::XMMATRIX& parentTransf, std::vector<SubmeshInfo>& submeshesInView, std::vector<LightInfo>& lightsInView) {
     dx::XMMATRIX newTransf = mult(node->value.localWorldTransf, parentTransf);
+
     if (node->value.tag == EntityType::LIGHT) {
         LightInfo& lightInfo = sceneLights.at(node->value.lightHnd.index);
         lightInfo.finalWorldTransf = newTransf;

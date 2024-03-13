@@ -86,31 +86,34 @@ PS_OUT ps(float4 posFragQuad : SV_POSITION) : SV_Target
     float4 posVS = posFromDepth(uvCoord, sampledDepth, invCamProjMat);
     float4 posWS = mul(posVS, invCamViewMat);
     
-    float shadowing = 0.0f;
-
+    float totalArrivingLight = 0.0f;
+    
     //TODO : use stencil buffer for to exclude skybox, instead of branching
     //if (sampledDepth < 0.999f)
     float NdotL = 0.0f;
     
+    float totalNumLights = numPLights + numSpotLights;
+    
     if (dirLight.dir.w == 0.0f)
     {
         NdotL = dot(normal, -dirLight.dir.xyz);
-        shadowing = computeShadowing(posWS, 0.006f, NdotL);
+        totalArrivingLight += computeShadowing(posWS, 0.006f, NdotL);
+        totalNumLights += 1.0f;
     }
 
     for (int i = 0; i < numSpotLights; i++)
     {
-        shadowing = computeSpotShadowing(i, posWS, posVS, normal, 0.003f, 0.009f);
+        totalArrivingLight += computeSpotShadowing(i, posWS, posVS, normal, 0.003f, 0.009f);
     }
     
     for (int j = 0; j < numPLights; j++)
     {
-        shadowing = computeOmniShadowing(j, posWS, posVS, normal, 0.003f, 0.009f);
+        totalArrivingLight += computeOmniShadowing(j, posWS, posVS, normal, 0.003f, 0.009f);
     }
     
     PS_OUT ps_out;
-    ps_out.diffuseShadowed = float4(diffuseCol.rgb * shadowing + ambCol.rgb * (1.0f - shadowing), 1.0f);
-    ps_out.specularShadowed = float4(specCol.rgb * shadowing, 1.0f);
+    ps_out.diffuseShadowed = float4(diffuseCol.rgb * (totalArrivingLight * rcp(totalNumLights)) + ambCol.rgb, 1.0f);
+    ps_out.specularShadowed = float4(specCol.rgb * (totalArrivingLight * rcp(totalNumLights)), 1.0f);
     
     return ps_out;
 }

@@ -64,14 +64,15 @@ public:
 			switch (genericEntityHnd.tag) {
 			case EntityType::LIGHT:
 				genericEntityHnd.lightHnd = nodeToRemove->value.lightHnd;
+				genericHandlesToRemove.push_back(genericEntityHnd);
 				break;
 			case EntityType::MESH:
 				genericEntityHnd.submeshHnd = nodeToRemove->value.submeshHnd;
+				genericHandlesToRemove.push_back(genericEntityHnd);
 				break;
 			default:
 				break;
 			}
-			genericHandlesToRemove.push_back(genericEntityHnd);
 			
 			removeNodeRecursive(nodeToRemove->children, genericHandlesToRemove);
 			
@@ -96,17 +97,18 @@ public:
 	}
 
 
-	Node<T>* findNode(Node<T>* startNode, const T& nodeValue, Node<T>** nodeParent) const {
+	Node<T>* findNode(Node<T>* startNode, const T& nodeValue, Node<T>** nodeParent, Node<T>* currentParent = nullptr) const {
 		if (startNode == nullptr) return nullptr;
 
-		if (startNode->value == nodeValue) return startNode;
-		else {
-			Node<T>* tmpParentNode = startNode;
+		if (startNode->value == nodeValue) {
+			*nodeParent = currentParent;
+			return startNode;
+		}else {
 			for (auto node : startNode->children) {
-				Node<T>* nodeFound = findNode(node, nodeValue, nodeParent);
-				if (nodeFound != nullptr) {
-					*nodeParent = tmpParentNode;
-					return nodeFound;
+				Node<T>* foundNode = findNode(node, nodeValue, nodeParent, startNode);
+
+				if (foundNode != nullptr) {
+					return foundNode;
 				}
 			}
 		}

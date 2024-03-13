@@ -50,11 +50,16 @@ void SceneHierarchy::RenderSHNode(Node<RenderableEntity>* entity)
     if (ImGui::IsItemClicked()) {
         selectedItem = entity->value.ID;
     }
+
+    if (ImGui::BeginPopupContextItem()) {
+        if (ImGui::Selectable("Remove")) {
+            nodeToRemove = entity;
+        }
+        ImGui::EndPopup();
+    }
+
     ImGui::PopID();
 
-    if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
-        nodeToRemove = entity;
-    }
     if (isNodeOpen) {
         for (Node<RenderableEntity>* childEnt : entity->children) {
             RenderSHNode(childEnt);
