@@ -79,6 +79,8 @@ public:
 	ID3D11ShaderResourceView* getSRVPointer(const RenderSRVHandle srvHnd) const;
 	ID3D11DepthStencilView* getDSVPointer(const RenderDSVHandle dsvHnd) const;
 
+	void releaseAllResources();
+
 	//TODO: move to private when you add all the functionality in this abstraction layer
 	wrl::ComPtr<ID3D11Device> device;
 

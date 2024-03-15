@@ -23,30 +23,7 @@ DX11RenderDevice::DX11RenderDevice() :
 
 DX11RenderDevice::~DX11RenderDevice()
 {
-	for (size_t i = 0; i < srvCount; i++)
-	{
-		ID3D11ShaderResourceView* resource = srvResources.at(i);
-		if (resource)resource->Release();
-	}
-
-	for (size_t i = 0; i < rtvCount; i++)
-	{
-		ID3D11RenderTargetView* resource = rtvResources.at(i);
-		if (resource)resource->Release();
-	}
-
-	for (size_t i = 0; i < dsvCount; i++)
-	{
-		ID3D11DepthStencilView* resource = dsvResources.at(i);
-		if (resource)resource->Release();
-	}
-
-	for (size_t i = 0; i < tex2dCount; i++)
-	{
-		ID3D11Texture2D* resource = tex2DResources.at(i);
-		if (resource)resource->Release();
-	}
-
+	releaseAllResources();
 }
 
 ZRYResult DX11RenderDevice::createTex2D(RenderTextureHandle* texHandle, ZRYBindFlags bindFlags, ZRYFormat format, float width, float height, int numTex, RenderSRVHandle* srvHandle, RenderRTVHandle* rtvHandle, bool generateMips, int mipLevels, int arraySize, int sampleCount, int sampleQuality) {
@@ -280,4 +257,36 @@ ID3D11ShaderResourceView* DX11RenderDevice::getSRVPointer(const RenderSRVHandle 
 ID3D11DepthStencilView* DX11RenderDevice::getDSVPointer(const RenderDSVHandle dsvHnd) const
 {
 	return dsvResources.at(dsvHnd.index);;
+}
+
+void DX11RenderDevice::releaseAllResources()
+{
+	for (size_t i = 0; i < srvCount; i++)
+	{
+		ID3D11ShaderResourceView* resource = srvResources.at(i);
+		if (resource)resource->Release();
+	}
+	srvCount = 0;
+
+	for (size_t i = 0; i < rtvCount; i++)
+	{
+		ID3D11RenderTargetView* resource = rtvResources.at(i);
+		if (resource)resource->Release();
+	}
+	rtvCount = 0;
+
+	for (size_t i = 0; i < dsvCount; i++)
+	{
+		ID3D11DepthStencilView* resource = dsvResources.at(i);
+		if (resource)resource->Release();
+	}
+	dsvCount = 0;
+
+	for (size_t i = 0; i < tex2dCount; i++)
+	{
+		ID3D11Texture2D* resource = tex2DResources.at(i);
+		if (resource)resource->Release();
+	}
+
+	tex2dCount = 0;
 }

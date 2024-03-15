@@ -22,6 +22,7 @@ RendererBackend rb;
 RendererBackend::RendererBackend()
 {
     sm_viewport = D3D11_VIEWPORT{};
+    sceneViewport = D3D11_VIEWPORT{};
 
 	matPrmsCB = nullptr;
     lightsCB = nullptr;
@@ -384,9 +385,18 @@ std::vector<dx::XMFLOAT4> kernel;
 //
 //}
 
-HRESULT RendererBackend::Init()
+HRESULT RendererBackend::Init(bool reset)
 {
+    if (reset) rhi.device.releaseAllResources();
+
     rhi.context->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), (void**)&annot);
+
+    sceneViewport.TopLeftX = 0.0f;
+    sceneViewport.TopLeftY = 0.0f;
+    sceneViewport.Width = g_resolutionWidth;
+    sceneViewport.Height = g_resolutionHeight;
+    sceneViewport.MinDepth = 0.0f;
+    sceneViewport.MaxDepth = 1.0f;
 
     sm_viewport.TopLeftX = 0.0f;
     sm_viewport.TopLeftY = 0.0f;
@@ -468,7 +478,7 @@ HRESULT RendererBackend::Init()
     ZRYResult zr;
 
     RenderTextureHandle gBuffHnd[GBuffer::SIZE];
-    zr = rhi.device.createTex2D(&gBuffHnd[0], ZRYBindFlags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, g_windowWidth, g_windowHeight, GBuffer::SIZE, nullptr, nullptr, true, 4, 1);
+    zr = rhi.device.createTex2D(&gBuffHnd[0], ZRYBindFlags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, g_resolutionWidth, g_resolutionHeight, GBuffer::SIZE, nullptr, nullptr, true, 4, 1);
     RETURN_IF_FAILED(zr.value);
     for (int i = 0; i < GBuffer::SIZE; i++) {
         GBuffer[i] = rhi.device.getTex2DPointer(gBuffHnd[i]);
@@ -492,7 +502,7 @@ HRESULT RendererBackend::Init()
 
     //ambient setup------------------------------------------------
     RenderTextureHandle ambientHnd;
-    zr = rhi.device.createTex2D(&ambientHnd, ZRYBindFlags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, g_windowWidth, g_windowHeight, 1, nullptr, nullptr, true, 0, 1);
+    zr = rhi.device.createTex2D(&ambientHnd, ZRYBindFlags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, g_resolutionWidth, g_resolutionHeight, 1, nullptr, nullptr, true, 0, 1);
     RETURN_IF_FAILED(zr.value);
     ambientMap = rhi.device.getTex2DPointer(ambientHnd);
 
@@ -600,13 +610,13 @@ HRESULT RendererBackend::Init()
     RenderTextureHandle skinMapHnd[5];
     RenderRTVHandle skinRTViewHnd[5];
     RenderSRVHandle skinSRViewHnd[5];
-    zr = rhi.device.createTex2D(&skinMapHnd[0], ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRYFormat{ DXGI_FORMAT_R32G32B32A32_FLOAT }, g_windowWidth, g_windowHeight, 3, &skinSRViewHnd[0], &skinRTViewHnd[0]);
+    zr = rhi.device.createTex2D(&skinMapHnd[0], ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRYFormat{ DXGI_FORMAT_R32G32B32A32_FLOAT }, g_resolutionWidth, g_resolutionHeight, 3, &skinSRViewHnd[0], &skinRTViewHnd[0]);
     RETURN_IF_FAILED(zr.value);
 
-    zr = rhi.device.createTex2D(&skinMapHnd[4], ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRYFormat{ DXGI_FORMAT_R32G32B32A32_FLOAT }, g_windowWidth, g_windowHeight, 1, &skinSRViewHnd[4], &skinRTViewHnd[4]);
+    zr = rhi.device.createTex2D(&skinMapHnd[4], ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRYFormat{ DXGI_FORMAT_R32G32B32A32_FLOAT }, g_resolutionWidth, g_resolutionHeight, 1, &skinSRViewHnd[4], &skinRTViewHnd[4]);
     RETURN_IF_FAILED(zr.value);
 
-    zr = rhi.device.createTex2D(&skinMapHnd[3], ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRYFormat{ DXGI_FORMAT_R32G32B32A32_FLOAT }, g_windowWidth, g_windowHeight, 1, &skinSRViewHnd[3], &skinRTViewHnd[3], true, 8);
+    zr = rhi.device.createTex2D(&skinMapHnd[3], ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRYFormat{ DXGI_FORMAT_R32G32B32A32_FLOAT }, g_resolutionWidth, g_resolutionHeight, 1, &skinSRViewHnd[3], &skinRTViewHnd[3], true, 8);
     RETURN_IF_FAILED(zr.value);
 
     for (int i = 0; i < 5; i++) {
@@ -616,6 +626,37 @@ HRESULT RendererBackend::Init()
     }
 
     //-----------------------------------------------------------------
+
+    RenderTextureHandle hndFinalRT;
+    zr = rhi.device.createTex2D(&hndFinalRT, ZRYBindFlags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, g_resolutionWidth, g_resolutionHeight, 1, nullptr, nullptr, false, 1, 1);
+    RETURN_IF_FAILED(zr.value);
+    finalRenderTargetTex = rhi.device.getTex2DPointer(hndFinalRT);
+
+    RenderSRVHandle hndFinalSRV;
+    zr = rhi.device.createSRVTex2D(&hndFinalSRV, &hndFinalRT, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_UNORM });
+    RETURN_IF_FAILED(zr.value);
+    finalRenderTargetSRV = rhi.device.getSRVPointer(hndFinalSRV);
+
+    RenderRTVHandle hndFinalRTV;
+    zr = rhi.device.createRTVTex2D(&hndFinalRTV, &hndFinalRT, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_UNORM }, 1);
+    RETURN_IF_FAILED(zr.value);
+    finalRenderTargetView = rhi.device.getRTVPointer(hndFinalRTV);
+
+    //Depth stencil------------------------
+    RenderTextureHandle hndDepthTex;
+    zr = rhi.device.createTex2D(&hndDepthTex, ZRYBindFlags{ D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE }, ZRYFormat{ DXGI_FORMAT_R24G8_TYPELESS }, g_resolutionWidth, g_resolutionHeight, 1, nullptr, nullptr, false, 1, 1);
+    RETURN_IF_FAILED(zr.value);
+    depthTex = rhi.device.getTex2DPointer(hndDepthTex);
+
+    RenderSRVHandle hndDepthSRV;
+    zr = rhi.device.createSRVTex2D(&hndDepthSRV, &hndDepthTex, ZRYFormat{ DXGI_FORMAT_R24_UNORM_X8_TYPELESS });
+    RETURN_IF_FAILED(zr.value);
+    depthSRV = rhi.device.getSRVPointer(hndDepthSRV);
+
+    RenderDSVHandle hndDepthDSV;
+    zr = rhi.device.createDSVTex2D(&hndDepthDSV, &hndDepthTex, ZRYFormat{ DXGI_FORMAT_D24_UNORM_S8_UINT }, 1);
+    RETURN_IF_FAILED(zr.value);
+    depthDSV = rhi.device.getDSVPointer(hndDepthDSV);
 
 
     //thickness map
@@ -632,7 +673,6 @@ HRESULT RendererBackend::Init()
     //    OutputDebugString(std::to_string(abs(kernel[i].w - kernel[i - 1].w)).c_str());
     //    OutputDebugString("\n");
     //}
-
 
     return S_OK;
 }
@@ -882,7 +922,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
 
 
     //Actual rendering-------------------------------------------------------
-    rhi.context->RSSetViewports(1, &rhi.viewport);
+    rhi.context->RSSetViewports(1, &sceneViewport);
 
     ViewCB tmpVCB{ viewDesc.cam.getViewMatrixTransposed() };
     ProjCB tmpPCB{ viewDesc.cam.getProjMatrixTransposed() };
@@ -945,7 +985,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
         }
 
         ID3D11RenderTargetView* rt2[4] = { GBufferRTV[0], GBufferRTV[1], GBufferRTV[2], skinRT[4] };
-        rhi.context->OMSetRenderTargets(4, &rt2[0]/*&GBufferRTV[0]*/, rhi.depthStencilView);
+        rhi.context->OMSetRenderTargets(4, &rt2[0]/*&GBufferRTV[0]*/, depthDSV);
 
         for (SubmeshInfo const& sbPair : viewDesc.submeshesInfo) {
             rhi.context->IASetVertexBuffers(0, 1, bufferCache.GetVertexBuffer(sbPair.bufferHnd).buffer.GetAddressOf(), strides, offsets);
@@ -1001,7 +1041,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
         rhi.context->PSSetConstantBuffers(0, 1, &lightsCB);
         rhi.context->PSSetConstantBuffers(5, 1, &invMatCB);
         rhi.context->PSSetShaderResources(0, 3, &GBufferSRV[0]);
-        rhi.context->PSSetShaderResources(3, 1, &rhi.depthStencilShaderResourceView);
+        rhi.context->PSSetShaderResources(3, 1, &depthSRV);
         rhi.context->PSSetShaderResources(4, 1, &shadowMapSRV);
         rhi.context->PSSetShaderResources(5, 1, &shadowCubeMapSRV);
         rhi.context->PSSetShaderResources(6, 1, &spotShadowMapSRV);
@@ -1040,7 +1080,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
             rhi.context->UpdateSubresource(matPrmsCB, 0, nullptr, &mat.matPrms, 0, 0);
 
             rhi.context->PSSetShaderResources(2, 1, &nullSRV[0]);
-            rhi.context->OMSetRenderTargets(1, /*&skinRT[1]*/rhi.renderTargetView.GetAddressOf(), nullptr);
+            rhi.context->OMSetRenderTargets(1, /*&skinRT[1]*//*rhi.backBufferRTV.GetAddressOf()*/&finalRenderTargetView, nullptr);
             rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SSSSS), nullptr, 0);
             //NOTA: skinSRV[3] is diffuse radiance
             annot->BeginEvent(L"mips");
@@ -1052,7 +1092,7 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
             rhi.context->PSSetShaderResources(0, 1, &skinSRV[3]);
             rhi.context->PSSetShaderResources(1, 1, &GBufferSRV[GBuffer::ROUGH_MET]);
             rhi.context->PSSetShaderResources(2, 1, &skinSRV[2]);
-            rhi.context->PSSetShaderResources(3, 1, &rhi.depthStencilShaderResourceView);
+            rhi.context->PSSetShaderResources(3, 1, &depthSRV);
             rhi.context->PSSetShaderResources(4, 1, &GBufferSRV[GBuffer::ALBEDO]);
             rhi.context->Draw(4, 0);
 
@@ -1075,6 +1115,4 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
     rhi.context->PSSetShaderResources(0, 8, &nullSRV[0]);
 
     rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    //rhi.context->ClearDepthStencilView(rhi.depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-    rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), rhi.depthStencilView);
 }

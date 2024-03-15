@@ -96,6 +96,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 void Update(float deltaTime);
 void Render();
 void Cleanup();
+HRESULT InitData();
 
 int InitApplication(HINSTANCE hInstance, int cmdShow) {
     ImGui::CreateContext();
@@ -117,7 +118,7 @@ int InitApplication(HINSTANCE hInstance, int cmdShow) {
         return -1;
     }
 
-    RECT windowRect = { 0,0,g_windowWidth,g_windowHeight };
+    RECT windowRect = { 0,0,g_resolutionWidth,g_resolutionHeight };
     AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
     g_windowHandle = CreateWindow(
@@ -175,6 +176,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
         break;
     }
+    case WM_SIZE : {
+        HRESULT hr = rhi.ResizeWindow(LOWORD(lParam), HIWORD(lParam));
+        if (hr != S_FALSE && !FAILED(hr)) {
+            //rb.Init(true);
+        }
+        break;
+    }
     case WM_PAINT:
         BeginPaint(hwnd, &paintStruct);
         EndPaint(hwnd, &paintStruct);
@@ -218,7 +226,15 @@ int Run() {
 }
 
 HRESULT InitDevice() {
-    return rhi.Init(g_windowHandle);
+
+    HRESULT hr = rhi.Init(g_windowHandle);
+
+    //TODO: move gui initialization elsewhere
+    if (!FAILED(hr)) {
+        ImGui_ImplDX11_Init(rhi.device.device.Get(), rhi.context.Get());
+    }
+
+    return hr;
 }
 
 
@@ -307,9 +323,6 @@ dx::XMMATRIX scaleMat = dx::XMMatrixScaling(1.0f, 1.0f, 1.0f);
 
 HRESULT InitData() {
 
-    //TODO: move gui initialization elsewhere
-    ImGui_ImplDX11_Init(rhi.device.device.Get(), rhi.context.Get());
-
     HRESULT hr;
     
     hr = rb.Init();
@@ -395,10 +408,10 @@ void Render() {
     ImGui::NewFrame();
     ImGui::ShowDemoWindow();
 
-    //rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), rhi.depthStencilView.Get());
-
-    rhi.context->ClearRenderTargetView(rhi.renderTargetView.Get(), dx::Colors::Black);
-    rhi.context->ClearDepthStencilView(rhi.depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    rhi.context->ClearRenderTargetView(rb.finalRenderTargetView, dx::Colors::Black);
+    rhi.context->ClearDepthStencilView(rb.depthDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    rhi.context->OMSetRenderTargets(1, &rb.finalRenderTargetView, rb.depthDSV);
+    rhi.context->RSSetViewports(1, &rb.sceneViewport);
 
     std::uint32_t strides[] = { sizeof(Vertex) };
     std::uint32_t offsets[] = { 0 };
@@ -445,15 +458,16 @@ void Render() {
     rb.RenderView(vDesc);
     //-------------------------------------------------------------
 
+    rhi.context->ClearRenderTargetView(rhi.backBufferRTV.Get(), dx::Colors::Black);
+    rhi.context->ClearDepthStencilView(rhi.backBufferDepthDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+    rhi.context->OMSetRenderTargets(1, rhi.backBufferRTV.GetAddressOf(), rhi.backBufferDepthDSV);
+    rhi.context->RSSetViewports(1, &rhi.viewport);
+
     rb.annot->BeginEvent(L"Editor Pass");
     {
-        ID3D11Resource* srvTexture = nullptr;
-        ID3D11Resource* rtTexture = nullptr;
-        rhi.renderTargetShaderResourceView->GetResource(&srvTexture);
-        rhi.renderTargetView->GetResource(&rtTexture);
-        rhi.context->ResolveSubresource(srvTexture, 0, rtTexture, 0, DXGI_FORMAT_R8G8B8A8_UNORM);
+        //rhi.context->ResolveSubresource(rhi.editorSceneTex, 0, rtTexture, 0, DXGI_FORMAT_R8G8B8A8_UNORM);
 
-        editor.RenderEditor(rf, g_cam, rhi.renderTargetShaderResourceView);
+        editor.RenderEditor(rf, g_cam, rb.finalRenderTargetSRV);
         ImGui::Render();
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
     }

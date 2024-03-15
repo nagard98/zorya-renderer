@@ -3,8 +3,9 @@
 
 #include <Windows.h>
 
-const LONG g_windowWidth = 1280;
-const LONG g_windowHeight = 720;
+//TODO: change/remove window params
+const LONG g_resolutionWidth = 1280;
+const LONG g_resolutionHeight = 720;
 const LPCSTR g_windowClassName = "DirectXWindowClass";
 const LPCSTR g_windowName = "Derma";
 

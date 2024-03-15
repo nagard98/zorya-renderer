@@ -9,6 +9,7 @@
 #include "RenderHardwareInterface.h"
 #include "Material.h"
 #include "Editor/Logger.h"
+#include "ApplicationConfig.h"
 
 #include "WICTextureLoader.h"
 
@@ -162,27 +163,45 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     hRes = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.GetAddressOf()));
     RETURN_IF_FAILED(hRes);
 
-    hRes = device.device->CreateRenderTargetView(backBuffer.Get(), nullptr, renderTargetView.GetAddressOf());
+    hRes = device.device->CreateRenderTargetView(backBuffer.Get(), nullptr, backBufferRTV.GetAddressOf());
     RETURN_IF_FAILED(hRes);
 
 
     //Render Target for editor scene window?-----------------------------------------------------------------------
-    
-    RenderTextureHandle hndTexRenderTarget;
+    //
+    //RenderTextureHandle hndTexRenderTarget;
 
-    ZRYResult zRes = device.createTex2D(&hndTexRenderTarget, ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE }, ZRYFormat{ scd.BufferDesc.Format }, scd.BufferDesc.Width, scd.BufferDesc.Height, 1, nullptr, nullptr, false, 1);
-    RETURN_IF_FAILED(zRes.value);
-    /*ID3D11Texture2D* rtTexture = */device.getTex2DPointer(hndTexRenderTarget);
+    //ZRYResult zRes = device.createTex2D(&hndTexRenderTarget, ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE }, ZRYFormat{ scd.BufferDesc.Format }, scd.BufferDesc.Width, scd.BufferDesc.Height, 1, nullptr, nullptr, false, 1);
+    //RETURN_IF_FAILED(zRes.value);
+    ///*ID3D11Texture2D* rtTexture = */device.getTex2DPointer(hndTexRenderTarget);
 
-    RenderSRVHandle hndSrvRenderTarget;
-    zRes = device.createSRVTex2D(&hndSrvRenderTarget, &hndTexRenderTarget, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_UNORM }, 1, -1);
-    RETURN_IF_FAILED(zRes.value);
-    renderTargetShaderResourceView = device.getSRVPointer(hndSrvRenderTarget);
+    //RenderSRVHandle hndSrvRenderTarget;
+    //zRes = device.createSRVTex2D(&hndSrvRenderTarget, &hndTexRenderTarget, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_UNORM }, 1, -1);
+    //RETURN_IF_FAILED(zRes.value);
+    //renderTargetShaderResourceView = device.getSRVPointer(hndSrvRenderTarget);
+
+    //D3D11_TEXTURE2D_DESC editorSceneTexDesc;
+    //ZeroMemory(&editorSceneTexDesc, sizeof(editorSceneTexDesc));
+    //editorSceneTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    //editorSceneTexDesc.ArraySize = 1;
+    //editorSceneTexDesc.MipLevels = 1;
+    //editorSceneTexDesc.Usage = D3D11_USAGE_DEFAULT;
+    //editorSceneTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+    //editorSceneTexDesc.Height = height;
+    //editorSceneTexDesc.Width = width;
+    //editorSceneTexDesc.SampleDesc.Count = MULTISAMPLE_COUNT;
+    //editorSceneTexDesc.SampleDesc.Quality = 0;
+
+    //hRes = device.device->CreateTexture2D(&editorSceneTexDesc, NULL, &editorSceneTex);
+    //RETURN_IF_FAILED(hRes);
+
+    //hRes = device.device->CreateShaderResourceView(editorSceneTex, NULL, &editorSceneSRV);
+    //RETURN_IF_FAILED(hRes);
 
     //------------------------------------------------------------------------------
 
 
-    (context)->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), nullptr);
+    (context)->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), nullptr);
 
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
@@ -220,11 +239,28 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
 
     //TODO: move depth/stencil view creation somewhere else------------------
 
+    D3D11_TEXTURE2D_DESC depthStencilTexDesc{};
+    depthStencilTexDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+    depthStencilTexDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+    depthStencilTexDesc.Width = viewport.Width;
+    depthStencilTexDesc.Height = viewport.Height;
+    depthStencilTexDesc.MipLevels = 1;
+    depthStencilTexDesc.ArraySize = 1;
+    depthStencilTexDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthStencilTexDesc.SampleDesc.Count = MULTISAMPLE_COUNT;
+    depthStencilTexDesc.SampleDesc.Quality = 0;
+
+    hRes = device.device->CreateTexture2D(&depthStencilTexDesc, NULL, &backBufferDepthTex);
+    RETURN_IF_FAILED(hRes);
+
     D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
     dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
     dsvDesc.Flags = 0;
     dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
     dsvDesc.Texture2D.MipSlice = 0;
+
+    hRes = device.device->CreateDepthStencilView(backBufferDepthTex, &dsvDesc, &backBufferDepthDSV);
+    RETURN_IF_FAILED(hRes);
 
     D3D11_SHADER_RESOURCE_VIEW_DESC dsRsvDesc;
     dsRsvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
@@ -232,24 +268,10 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     dsRsvDesc.Texture2D.MostDetailedMip = 0;
     dsRsvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 
-    RenderTextureHandle hndTexDepthStencil;
-    zRes = device.createTex2D(&hndTexDepthStencil, ZRYBindFlags{ D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE }, ZRYFormat{ DXGI_FORMAT_R24G8_TYPELESS }, viewport.Width, viewport.Height, 1,
-        nullptr, nullptr, false, 1, 1, MULTISAMPLE_COUNT);
-    RETURN_IF_FAILED(zRes.value);
-    depthStencilTex = device.getTex2DPointer(hndTexDepthStencil);
+    hRes = device.device->CreateShaderResourceView(backBufferDepthTex, &dsRsvDesc, &backBufferDepthSRV);
+    RETURN_IF_FAILED(hRes);
 
-    RenderDSVHandle hndDsvDepthStencil;
-    zRes = device.createDSVTex2D(&hndDsvDepthStencil, &hndTexDepthStencil, ZRYFormat{ DXGI_FORMAT_D24_UNORM_S8_UINT });
-    RETURN_IF_FAILED(zRes.value);
-    depthStencilView = device.getDSVPointer(hndDsvDepthStencil);
-
-    RenderSRVHandle hndSrvDepthStencil;
-    zRes = device.createSRVTex2D(&hndSrvDepthStencil, &hndTexDepthStencil, ZRYFormat{ DXGI_FORMAT_R24_UNORM_X8_TYPELESS });
-    RETURN_IF_FAILED(zRes.value);
-    depthStencilShaderResourceView = device.getSRVPointer(hndSrvDepthStencil);
-
-
-    context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), depthStencilView);
+    context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), backBufferDepthDSV);
     //--------------------------------------------------
 
     //TODO: move blend desc somewhere else-------------
@@ -367,4 +389,77 @@ RHI_RESULT RenderHardwareInterface::LoadTexture(const wchar_t *path, ShaderTextu
         0, 0, convertToLinear ? dx::WIC_LOADER_SRGB_DEFAULT : dx::WIC_LOADER_IGNORE_SRGB, NULL, &shaderTexture.resourceView);
 
     return hRes==S_OK ? RHI_OK : RHI_ERR;
+}
+
+HRESULT RenderHardwareInterface::ResizeWindow(std::uint32_t width, std::uint32_t height)
+{
+    HRESULT hr = S_FALSE;
+
+    if (backBufferRTV.Get() != nullptr) {
+        context->OMSetRenderTargets(0, 0, 0);
+
+        // Resizing render target
+        backBufferRTV->Release();
+
+        hr = swapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+        RETURN_IF_FAILED(hr);
+
+        ID3D11Texture2D* backBuffer = nullptr;
+        hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
+        RETURN_IF_FAILED(hr);
+
+        hr = device.device->CreateRenderTargetView(backBuffer, NULL, backBufferRTV.GetAddressOf());
+        RETURN_IF_FAILED(hr);
+
+        backBuffer->Release();
+
+        //// Resizing depth stencil
+        if (backBufferDepthSRV) backBufferDepthSRV->Release();
+        if (backBufferDepthDSV) backBufferDepthDSV->Release();
+        if (backBufferDepthTex) backBufferDepthTex->Release();
+
+        D3D11_TEXTURE2D_DESC depthStencilTexDesc{};
+        depthStencilTexDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+        depthStencilTexDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+        depthStencilTexDesc.Width = width;
+        depthStencilTexDesc.Height = height;
+        depthStencilTexDesc.MipLevels = 1;
+        depthStencilTexDesc.ArraySize = 1;
+        depthStencilTexDesc.Usage = D3D11_USAGE_DEFAULT;
+        depthStencilTexDesc.SampleDesc.Count = MULTISAMPLE_COUNT;
+        depthStencilTexDesc.SampleDesc.Quality = 0;
+
+        hr = device.device->CreateTexture2D(&depthStencilTexDesc, NULL, &backBufferDepthTex);
+        RETURN_IF_FAILED(hr);
+
+        D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+        dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        dsvDesc.Flags = 0;
+        dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+        dsvDesc.Texture2D.MipSlice = 0;
+
+        hr = device.device->CreateDepthStencilView(backBufferDepthTex, &dsvDesc, &backBufferDepthDSV);
+        RETURN_IF_FAILED(hr);
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC dsRsvDesc;
+        dsRsvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+        dsRsvDesc.Texture2D.MipLevels = 1;
+        dsRsvDesc.Texture2D.MostDetailedMip = 0;
+        dsRsvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+
+        hr = device.device->CreateShaderResourceView(backBufferDepthTex, &dsRsvDesc, &backBufferDepthSRV);
+        RETURN_IF_FAILED(hr);
+
+        // Setting new viewport
+        viewport.Width = width;
+        viewport.Height = height;
+        viewport.MinDepth = 0.0f;
+        viewport.MaxDepth = 1.0f;
+        viewport.TopLeftX = 0.0f;
+        viewport.TopLeftY = 0.0f;
+
+        context->RSSetViewports(1, &viewport);
+    }
+
+    return hr;
 }

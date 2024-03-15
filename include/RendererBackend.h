@@ -58,10 +58,19 @@ public:
 	~RendererBackend();
 
 	//TODO: change return type to custom wrapper
-	HRESULT Init();
+	HRESULT Init(bool reset = false);
 	void RenderView(const ViewDesc& viewDesc);
 
 	ID3DUserDefinedAnnotation* annot;
+	D3D11_VIEWPORT sceneViewport;
+
+	ID3D11Texture2D* finalRenderTargetTex;
+	ID3D11RenderTargetView* finalRenderTargetView;
+	ID3D11ShaderResourceView* finalRenderTargetSRV;
+
+	ID3D11Texture2D* depthTex;
+	ID3D11DepthStencilView* depthDSV;
+	ID3D11ShaderResourceView* depthSRV;
 
 private:
 	void RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& dirShadowCB, OmniDirShadowCB& cbOmniDirShad);

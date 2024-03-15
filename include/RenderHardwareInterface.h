@@ -38,15 +38,19 @@ public:
 	void SetState(RHIState newState);
 	RHI_RESULT LoadTexture(const wchar_t *path, ShaderTexture2D &shaderTexture, bool convertToLinear = true, size_t maxSize = 0);
 
+	HRESULT ResizeWindow(std::uint32_t width, std::uint32_t height);
+
 	//wrl::ComPtr<ID3D11Device> device;
 	DX11RenderDevice device;
 
 	wrl::ComPtr<ID3D11DeviceContext> context;
 	wrl::ComPtr<IDXGISwapChain> swapChain;
-	wrl::ComPtr<ID3D11RenderTargetView> renderTargetView;
-	ID3D11ShaderResourceView* renderTargetShaderResourceView;
-	ID3D11DepthStencilView* depthStencilView;
-	ID3D11ShaderResourceView* depthStencilShaderResourceView;
+	
+	wrl::ComPtr<ID3D11RenderTargetView> backBufferRTV;
+
+	ID3D11Texture2D* backBufferDepthTex;
+	ID3D11DepthStencilView* backBufferDepthDSV;
+	ID3D11ShaderResourceView* backBufferDepthSRV;
 
 	D3D_FEATURE_LEVEL featureLevel; //feature level found for device
 	D3D11_VIEWPORT viewport;
@@ -61,9 +65,6 @@ private:
 
 	D3D11_RASTERIZER_DESC tmpRastDesc;
 	D3D11_DEPTH_STENCIL_DESC tmpDepthStenDesc;
-
-	//wrl::ComPtr<ID3D11Texture2D> depthStencilBuff;
-	ID3D11Texture2D* depthStencilTex;
 	
 };
 
