@@ -155,11 +155,6 @@ float4 RadiusRootFindByApproximation(float D, float4 RandomNumber)
     return D * ((2.0f - 2.6f) * RandomNumber - 2.0f) * log(1.0f - RandomNumber);
 }
 
-float4 vs(uint vId : SV_VertexID) : SV_Position
-{
-    float2 texCoord = float2(vId & 1, vId >> 1);
-    return float4((texCoord.x - 0.5f) * 2.0f, -(texCoord.y - 0.5f) * 2.0f, 0.0f, 1.0f);
-}
 
 float4 ps(float4 fragPos : SV_Position) : SV_Target
 {

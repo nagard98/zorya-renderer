@@ -12,4 +12,5 @@ _deps
 build
 .vs/
 src/shaders/assets
+include/shaders/*.h
 *_old*

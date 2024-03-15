@@ -32,9 +32,11 @@ enum class PShaderID : std::uint8_t {
 
 class Shaders {
 public:
+    ~Shaders();
 
     HRESULT Init();
     HRESULT BuildDefaultShaders();
+    HRESULT LoadDefaultShaders();
 
     std::vector<ID3D11VertexShader*> vertexShaders;
     std::vector<ID3D11PixelShader*> pixelShaders;

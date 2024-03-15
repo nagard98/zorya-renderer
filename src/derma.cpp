@@ -74,9 +74,6 @@ wrl::ComPtr<ID3D11Buffer> g_cbPerProj;
 
 wrl::ComPtr<ID3D11VertexShader> g_d3dVertexShader;
 
-wrl::ComPtr<ID3D11PixelShader> g_d3dPixelShaderSkybox;
-wrl::ComPtr<ID3D11VertexShader> g_d3dVertexShaderSkybox;
-
 wrl::ComPtr<ID3D11SamplerState> samplerStateCube;
 
 Camera g_cam;
@@ -245,15 +242,6 @@ HRESULT LoadSkybox(const wchar_t *skyboxPath) {
     wrl::ComPtr<ID3D11Resource> skyTexture;
     hr = dx::CreateDDSTextureFromFileEx(rhi.device.device.Get(), skyboxPath, 0, D3D11_USAGE_DEFAULT,
         D3D11_BIND_SHADER_RESOURCE, 0, D3D11_RESOURCE_MISC_TEXTURECUBE, dx::DX11::DDS_LOADER_DEFAULT, skyTexture.GetAddressOf(), cubemapView.GetAddressOf());
-    RETURN_IF_FAILED(hr);
-
-    wrl::ComPtr<ID3DBlob> verShaderBlob2;
-    wrl::ComPtr<ID3DBlob> pixShaderBlob2;
-
-    hr = LoadShader<ID3D11VertexShader>(L"./shaders/SkyboxVS.hlsl", "vs", verShaderBlob2.GetAddressOf(), g_d3dVertexShaderSkybox.GetAddressOf(), rhi.device.device.Get());
-    RETURN_IF_FAILED(hr);
-
-    hr = LoadShader<ID3D11PixelShader>(L"./shaders/SkyboxPS.hlsl", "ps", pixShaderBlob2.GetAddressOf(), g_d3dPixelShaderSkybox.GetAddressOf(), rhi.device.device.Get());
     RETURN_IF_FAILED(hr);
 
     D3D11_BUFFER_DESC cubeBuffDesc;
@@ -425,7 +413,7 @@ void Render() {
         ViewCB viewCB{ dx::XMMatrixTranspose(g_cam.getRotationMatrix()) };
         ProjCB projCB{ g_cam.getProjMatrixTransposed() };
 
-        rhi.context->VSSetShader(g_d3dVertexShaderSkybox.Get(), 0, 0);
+        rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::SKYBOX), 0, 0);
         rhi.context->IASetInputLayout(shaders.vertexLayout);
         rhi.context->VSSetConstantBuffers(0, 1, g_cbPerObj.GetAddressOf());
         rhi.context->VSSetConstantBuffers(1, 1, g_cbPerCam.GetAddressOf());
@@ -440,7 +428,7 @@ void Render() {
         rhi.context->IASetVertexBuffers(0, 1, g_d3dVertexBufferSkybox.GetAddressOf(), strides, offsets);
         rhi.context->IASetIndexBuffer(g_d3dIndexBufferSkybox.Get(), DXGI_FORMAT_R16_UINT, 0);
 
-        rhi.context->PSSetShader(g_d3dPixelShaderSkybox.Get(), 0, 0);
+        rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SKYBOX), 0, 0);
 
         rhi.context->PSSetShaderResources(0, 1, cubemapView.GetAddressOf());
 
@@ -488,7 +476,6 @@ void Cleanup() {
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
-
 
     if (rhi.context) {
         rhi.context->ClearState();

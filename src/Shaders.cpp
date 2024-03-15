@@ -5,13 +5,37 @@
 #include <Windows.h>
 #include <d3d11_1.h>
 
+#include "shaders/DepthPS.h"
+#include "shaders/DepthVS.h"
+#include "shaders/GBufferPS.h"
+#include "shaders/GBufferVS.h"
+#include "shaders/Lighting.h"
+#include "shaders/Present.h"
+#include "shaders/ShadowMapping.h"
+#include "shaders/SkyboxPS.h"
+#include "shaders/SkyboxVS.h"
+#include "shaders/SSSSS.h"
+#include "shaders/FullscreenQuad.h"
+
 Shaders shaders;
+
 D3D11_INPUT_ELEMENT_DESC vertexLayoutDesc[4] = {
     {"position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
     { "texcoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     { "normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     { "tangent", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 };
+
+Shaders::~Shaders()
+{
+    for (ID3D11PixelShader* ps : pixelShaders) {
+        if (ps) ps->Release();
+    }
+    
+    for (ID3D11VertexShader* vs : vertexShaders) {
+        if (vs) vs->Release();
+    }
+}
 
 HRESULT Shaders::Init() {
     vertexShaders.resize((std::uint8_t)VShaderID::NUM_SHADERS);
@@ -20,9 +44,10 @@ HRESULT Shaders::Init() {
     vertexLayout = nullptr;
     simpleVertexLayout = nullptr;
 
-    BuildDefaultShaders();
+    HRESULT hr = LoadDefaultShaders();
+    //BuildDefaultShaders();
 
-    return S_OK;
+    return hr;
 }
 
 HRESULT Shaders::BuildDefaultShaders() {
@@ -38,7 +63,7 @@ HRESULT Shaders::BuildDefaultShaders() {
     RETURN_IF_FAILED(hRes);
     hRes = LoadShader<ID3D11VertexShader>(L"./shaders/SkyboxVS.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::SKYBOX), rhi.device.device.Get());
     RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/SSSSS.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::FULL_QUAD), rhi.device.device.Get());
+    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/FullcreenQuad.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::FULL_QUAD), rhi.device.device.Get());
     RETURN_IF_FAILED(hRes);
 
     
@@ -57,7 +82,39 @@ HRESULT Shaders::BuildDefaultShaders() {
 
     if (shaderBlob != nullptr) shaderBlob->Release();
 
-    return S_OK;
+    return hRes;
+}
+
+HRESULT Shaders::LoadDefaultShaders()
+{
+    HRESULT hRes;
+
+    hRes = rhi.device.device->CreateVertexShader(g_GBufferVS, sizeof(g_GBufferVS), nullptr, &vertexShaders.at((std::uint8_t)VShaderID::STANDARD));
+    RETURN_IF_FAILED(hRes);
+    hRes = rhi.device.device->CreateInputLayout(vertexLayoutDesc, 4, g_GBufferVS, sizeof(g_GBufferVS), &vertexLayout);
+    RETURN_IF_FAILED(hRes);
+
+    hRes = rhi.device.device->CreateVertexShader(g_DepthVS, sizeof(g_DepthVS), nullptr, &vertexShaders.at((std::uint8_t)VShaderID::DEPTH));
+    RETURN_IF_FAILED(hRes);
+    hRes = rhi.device.device->CreateVertexShader(g_SkyboxVS, sizeof(g_SkyboxVS), nullptr, &vertexShaders.at((std::uint8_t)VShaderID::SKYBOX));
+    RETURN_IF_FAILED(hRes);
+    hRes = rhi.device.device->CreateVertexShader(g_FullscreenQuad, sizeof(g_FullscreenQuad), nullptr, &vertexShaders.at((std::uint8_t)VShaderID::FULL_QUAD));
+    RETURN_IF_FAILED(hRes);
+
+    hRes = rhi.device.device->CreatePixelShader(g_GBufferPS, sizeof(g_GBufferPS), nullptr, &pixelShaders.at((std::uint8_t)PShaderID::STANDARD));
+    RETURN_IF_FAILED(hRes);
+    hRes = rhi.device.device->CreatePixelShader(g_SkyboxPS, sizeof(g_SkyboxPS), nullptr, &pixelShaders.at((std::uint8_t)PShaderID::SKYBOX));
+    RETURN_IF_FAILED(hRes);
+    hRes = rhi.device.device->CreatePixelShader(g_SSSSS, sizeof(g_SSSSS), nullptr, &pixelShaders.at((std::uint8_t)PShaderID::SSSSS));
+    RETURN_IF_FAILED(hRes);
+    hRes = rhi.device.device->CreatePixelShader(g_Lighting, sizeof(g_Lighting), nullptr, &pixelShaders.at((std::uint8_t)PShaderID::LIGHTING));
+    RETURN_IF_FAILED(hRes);
+    hRes = rhi.device.device->CreatePixelShader(g_ShadowMapping, sizeof(g_ShadowMapping), nullptr, &pixelShaders.at((std::uint8_t)PShaderID::SHADOW_MAP));
+    RETURN_IF_FAILED(hRes);
+    hRes = rhi.device.device->CreatePixelShader(g_Present, sizeof(g_Present), nullptr, &pixelShaders.at((std::uint8_t)PShaderID::PRESENT));
+    RETURN_IF_FAILED(hRes);
+
+    return hRes;
 }
 
 template<>
