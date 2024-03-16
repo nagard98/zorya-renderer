@@ -24,7 +24,7 @@ RenderHardwareInterface::RenderHardwareInterface()
 
 RenderHardwareInterface::~RenderHardwareInterface()
 {
-    
+   
 }
 
 HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
@@ -81,10 +81,10 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
             featureLevNum,
             D3D11_SDK_VERSION,
             &scd,
-            swapChain.GetAddressOf(),
+            &swapChain,
             &(device.device),
             &featureLevel,
-            context.GetAddressOf()
+            &context
         );
 
         if (SUCCEEDED(hRes)) break;
@@ -162,7 +162,7 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     hRes = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backBuffer.GetAddressOf()));
     RETURN_IF_FAILED(hRes);
 
-    hRes = device.device->CreateRenderTargetView(backBuffer.Get(), nullptr, backBufferRTV.GetAddressOf());
+    hRes = device.device->CreateRenderTargetView(backBuffer.Get(), nullptr, &backBufferRTV);
     RETURN_IF_FAILED(hRes);
 
 
@@ -200,7 +200,7 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     //------------------------------------------------------------------------------
 
 
-    (context)->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), nullptr);
+    (context)->OMSetRenderTargets(1, &backBufferRTV, nullptr);
 
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
@@ -270,7 +270,7 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     hRes = device.device->CreateShaderResourceView(backBufferDepthTex, &dsRsvDesc, &backBufferDepthSRV);
     RETURN_IF_FAILED(hRes);
 
-    context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), backBufferDepthDSV);
+    context->OMSetRenderTargets(1, &backBufferRTV, backBufferDepthDSV);
     //--------------------------------------------------
 
     //TODO: move blend desc somewhere else-------------
@@ -380,7 +380,7 @@ RHI_RESULT RenderHardwareInterface::LoadTexture(const wchar_t *path, ShaderTextu
         textureRes = nullptr;
     }
 
-    HRESULT hRes = dx::CreateWICTextureFromFileEx(device.device.Get(), context.Get(),
+    HRESULT hRes = dx::CreateWICTextureFromFileEx(device.device, context,
         path,
         maxSize,
         D3D11_USAGE_DEFAULT,
@@ -394,7 +394,7 @@ HRESULT RenderHardwareInterface::ResizeWindow(std::uint32_t width, std::uint32_t
 {
     HRESULT hr = S_FALSE;
 
-    if (backBufferRTV.Get() != nullptr) {
+    if (backBufferRTV != nullptr) {
         context->OMSetRenderTargets(0, 0, 0);
 
         // Resizing render target
@@ -407,7 +407,7 @@ HRESULT RenderHardwareInterface::ResizeWindow(std::uint32_t width, std::uint32_t
         hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
         RETURN_IF_FAILED(hr);
 
-        hr = device.device->CreateRenderTargetView(backBuffer, NULL, backBufferRTV.GetAddressOf());
+        hr = device.device->CreateRenderTargetView(backBuffer, NULL, &backBufferRTV);
         RETURN_IF_FAILED(hr);
 
         backBuffer->Release();
@@ -461,4 +461,32 @@ HRESULT RenderHardwareInterface::ResizeWindow(std::uint32_t width, std::uint32_t
     }
 
     return hr;
+}
+
+void RenderHardwareInterface::ReleaseAllResources()
+{
+    if (backBufferDepthDSV) backBufferDepthDSV->Release();
+    if (backBufferDepthSRV) backBufferDepthSRV->Release();
+    if (backBufferDepthTex) backBufferDepthTex->Release();
+    if (backBufferRTV) backBufferRTV->Release();
+
+    if(swapChain) swapChain->Release();
+
+    for (auto& rasterizerState : rastVariants) {
+        if(rasterizerState.pStateObject) rasterizerState.pStateObject->Release();
+    }
+
+    for (auto& depthStencilState : depthStenVariants) {
+        if(depthStencilState.pStateObject) depthStencilState.pStateObject->Release();
+    }
+
+    for (auto& blendState : blendVariants) {
+        if(blendState.pStateObject) blendState.pStateObject->Release();
+    }
+
+    for (auto& samplerState : samplerVariants) {
+        if(samplerState.pStateObject) samplerState.pStateObject->Release();
+    }
+
+    device.releaseAllResources();
 }

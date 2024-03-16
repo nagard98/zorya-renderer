@@ -16,6 +16,8 @@ public:
 	ResourceCache();
 	~ResourceCache();
 
+	void ReleaseAllResources();
+
 	MaterialCacheHandle_t AllocMaterial(const MaterialDesc &matDesc, MaterialCacheHandle_t& updateOpts);
 	void DeallocMaterial(MaterialCacheHandle_t& matCacheHnd);
 	void UpdateMaterialSmoothness(const MaterialCacheHandle_t matHnd, float smoothness );

@@ -38,6 +38,8 @@ public:
     HRESULT BuildDefaultShaders();
     HRESULT LoadDefaultShaders();
 
+    void ReleaseAllResources();
+
     std::vector<ID3D11VertexShader*> vertexShaders;
     std::vector<ID3D11PixelShader*> pixelShaders;
 

@@ -61,6 +61,8 @@ public:
 	HRESULT Init(bool reset = false);
 	void RenderView(const ViewDesc& viewDesc);
 
+	void ReleaseAllResources();
+
 	ID3DUserDefinedAnnotation* annot;
 	D3D11_VIEWPORT sceneViewport;
 

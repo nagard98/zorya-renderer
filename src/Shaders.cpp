@@ -28,13 +28,6 @@ D3D11_INPUT_ELEMENT_DESC vertexLayoutDesc[4] = {
 
 Shaders::~Shaders()
 {
-    for (ID3D11PixelShader* ps : pixelShaders) {
-        if (ps) ps->Release();
-    }
-    
-    for (ID3D11VertexShader* vs : vertexShaders) {
-        if (vs) vs->Release();
-    }
 }
 
 HRESULT Shaders::Init() {
@@ -54,30 +47,30 @@ HRESULT Shaders::BuildDefaultShaders() {
     ID3DBlob* shaderBlob = nullptr;
     HRESULT hRes;
 
-    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/GBufferVS.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::STANDARD), rhi.device.device.Get());
+    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/GBufferVS.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::STANDARD), rhi.device.device);
     RETURN_IF_FAILED(hRes);
     hRes = rhi.device.device->CreateInputLayout(vertexLayoutDesc, 4, shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), &vertexLayout);
     RETURN_IF_FAILED(hRes);
 
-    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/DepthVS.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::DEPTH), rhi.device.device.Get());
+    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/DepthVS.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::DEPTH), rhi.device.device);
     RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/SkyboxVS.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::SKYBOX), rhi.device.device.Get());
+    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/SkyboxVS.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::SKYBOX), rhi.device.device);
     RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/FullcreenQuad.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::FULL_QUAD), rhi.device.device.Get());
+    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/FullcreenQuad.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::FULL_QUAD), rhi.device.device);
     RETURN_IF_FAILED(hRes);
 
     
-    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/GBufferPS.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::STANDARD), rhi.device.device.Get());
+    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/GBufferPS.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::STANDARD), rhi.device.device);
     RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/SkyboxPS.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::SKYBOX), rhi.device.device.Get());
+    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/SkyboxPS.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::SKYBOX), rhi.device.device);
     RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/SSSSS.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::SSSSS), rhi.device.device.Get());
+    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/SSSSS.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::SSSSS), rhi.device.device);
     RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/Lighting.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::LIGHTING), rhi.device.device.Get());
+    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/Lighting.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::LIGHTING), rhi.device.device);
     RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/ShadowMapping.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::SHADOW_MAP), rhi.device.device.Get());
+    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/ShadowMapping.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::SHADOW_MAP), rhi.device.device);
     RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/Present.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::PRESENT), rhi.device.device.Get());
+    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/Present.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::PRESENT), rhi.device.device);
     RETURN_IF_FAILED(hRes);
 
     if (shaderBlob != nullptr) shaderBlob->Release();
@@ -115,6 +108,19 @@ HRESULT Shaders::LoadDefaultShaders()
     RETURN_IF_FAILED(hRes);
 
     return hRes;
+}
+
+void Shaders::ReleaseAllResources()
+{
+    for (ID3D11PixelShader* ps : pixelShaders) {
+        if (ps) ps->Release();
+    }
+
+    for (ID3D11VertexShader* vs : vertexShaders) {
+        if (vs) vs->Release();
+    }
+
+    if (vertexLayout) vertexLayout->Release();
 }
 
 template<>

@@ -16,6 +16,15 @@ BufferCache::~BufferCache()
 {
 }
 
+void BufferCache::ReleaseAllResources()
+{
+	staticCache.vertexBuffers.clear();
+	staticCache.topVertexBuffer = 0;
+
+	staticCache.indexBuffers.clear();
+	staticCache.topIndexBuffer = 0;
+}
+
 BufferCacheHandle_t BufferCache::AllocStaticGeom(const SubmeshHandle_t sHnd, const std::uint16_t* geomIndStart, const Vertex* geomVertStart)
 {
 	ID3D11Buffer* iBuffer = nullptr;

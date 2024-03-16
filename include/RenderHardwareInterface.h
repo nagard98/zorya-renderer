@@ -40,13 +40,15 @@ public:
 
 	HRESULT ResizeWindow(std::uint32_t width, std::uint32_t height);
 
+	void ReleaseAllResources();
+
 	//wrl::ComPtr<ID3D11Device> device;
 	DX11RenderDevice device;
 
-	wrl::ComPtr<ID3D11DeviceContext> context;
-	wrl::ComPtr<IDXGISwapChain> swapChain;
+	ID3D11DeviceContext* context;
+	IDXGISwapChain* swapChain;
 	
-	wrl::ComPtr<ID3D11RenderTargetView> backBufferRTV;
+	ID3D11RenderTargetView* backBufferRTV;
 
 	ID3D11Texture2D* backBufferDepthTex;
 	ID3D11DepthStencilView* backBufferDepthDSV;

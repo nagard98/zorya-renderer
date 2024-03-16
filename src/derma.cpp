@@ -59,22 +59,18 @@ Assimp::Importer importer;
 
 Editor editor;
 
-wrl::ComPtr<ID3D11ShaderResourceView> cubemapView;
+ID3D11ShaderResourceView* cubemapView;
 
-wrl::ComPtr<ID3D11DepthStencilState> g_d3dDepthStencilStateSkybox;
+ID3D11Buffer* g_d3dVertexBufferSkybox;
+ID3D11Buffer* g_d3dIndexBufferSkybox;
 
-wrl::ComPtr<ID3D11InputLayout> g_d3dInputLayout;
+ID3D11Buffer* g_cbPerObj;
+ID3D11Buffer* g_cbPerCam;
+ID3D11Buffer* g_cbPerProj;
 
-wrl::ComPtr<ID3D11Buffer> g_d3dVertexBufferSkybox;
-wrl::ComPtr<ID3D11Buffer> g_d3dIndexBufferSkybox;
+ID3D11Debug* g_debugLayer;
 
-wrl::ComPtr<ID3D11Buffer> g_cbPerObj;
-wrl::ComPtr<ID3D11Buffer> g_cbPerCam;
-wrl::ComPtr<ID3D11Buffer> g_cbPerProj;
 
-wrl::ComPtr<ID3D11VertexShader> g_d3dVertexShader;
-
-wrl::ComPtr<ID3D11SamplerState> samplerStateCube;
 
 Camera g_cam;
 
@@ -228,7 +224,7 @@ HRESULT InitDevice() {
 
     //TODO: move gui initialization elsewhere
     if (!FAILED(hr)) {
-        ImGui_ImplDX11_Init(rhi.device.device.Get(), rhi.context.Get());
+        ImGui_ImplDX11_Init(rhi.device.device, rhi.context);
     }
 
     return hr;
@@ -240,8 +236,8 @@ HRESULT LoadSkybox(const wchar_t *skyboxPath) {
 
     //----------------------------Skybox----------------------
     wrl::ComPtr<ID3D11Resource> skyTexture;
-    hr = dx::CreateDDSTextureFromFileEx(rhi.device.device.Get(), skyboxPath, 0, D3D11_USAGE_DEFAULT,
-        D3D11_BIND_SHADER_RESOURCE, 0, D3D11_RESOURCE_MISC_TEXTURECUBE, dx::DX11::DDS_LOADER_DEFAULT, skyTexture.GetAddressOf(), cubemapView.GetAddressOf());
+    hr = dx::CreateDDSTextureFromFileEx(rhi.device.device, skyboxPath, 0, D3D11_USAGE_DEFAULT,
+        D3D11_BIND_SHADER_RESOURCE, 0, D3D11_RESOURCE_MISC_TEXTURECUBE, dx::DX11::DDS_LOADER_DEFAULT, skyTexture.GetAddressOf(), &cubemapView);
     RETURN_IF_FAILED(hr);
 
     D3D11_BUFFER_DESC cubeBuffDesc;
@@ -255,7 +251,7 @@ HRESULT LoadSkybox(const wchar_t *skyboxPath) {
     cubeData.SysMemPitch = 0;
     cubeData.SysMemSlicePitch = 0;
 
-    hr = rhi.device.device->CreateBuffer(&cubeBuffDesc, &cubeData, g_d3dVertexBufferSkybox.GetAddressOf());
+    hr = rhi.device.device->CreateBuffer(&cubeBuffDesc, &cubeData, &g_d3dVertexBufferSkybox);
     RETURN_IF_FAILED(hr);
 
     D3D11_BUFFER_DESC cubeIndexBuffDesc;
@@ -269,7 +265,7 @@ HRESULT LoadSkybox(const wchar_t *skyboxPath) {
     cubeIndexData.SysMemPitch = 0;
     cubeIndexData.SysMemSlicePitch = 0;
 
-    hr = rhi.device.device->CreateBuffer(&cubeIndexBuffDesc, &cubeIndexData, g_d3dIndexBufferSkybox.GetAddressOf());
+    hr = rhi.device.device->CreateBuffer(&cubeIndexBuffDesc, &cubeIndexData, &g_d3dIndexBufferSkybox);
     RETURN_IF_FAILED(hr);
 
     D3D11_BUFFER_DESC cubeObjCB;
@@ -279,7 +275,7 @@ HRESULT LoadSkybox(const wchar_t *skyboxPath) {
     cubeObjCB.Usage = D3D11_USAGE_DEFAULT;
     cubeObjCB.CPUAccessFlags = 0;
 
-    hr = rhi.device.device->CreateBuffer(&cubeObjCB, nullptr, g_cbPerObj.GetAddressOf());
+    hr = rhi.device.device->CreateBuffer(&cubeObjCB, nullptr, &g_cbPerObj);
     RETURN_IF_FAILED(hr);
 
     D3D11_BUFFER_DESC cubeViewCB;
@@ -289,7 +285,7 @@ HRESULT LoadSkybox(const wchar_t *skyboxPath) {
     cubeViewCB.Usage = D3D11_USAGE_DEFAULT;
     cubeViewCB.CPUAccessFlags = 0;
 
-    hr = rhi.device.device->CreateBuffer(&cubeViewCB, nullptr, g_cbPerCam.GetAddressOf());
+    hr = rhi.device.device->CreateBuffer(&cubeViewCB, nullptr, &g_cbPerCam);
     RETURN_IF_FAILED(hr);
 
     D3D11_BUFFER_DESC cubeProjCB;
@@ -299,7 +295,7 @@ HRESULT LoadSkybox(const wchar_t *skyboxPath) {
     cubeProjCB.Usage = D3D11_USAGE_DEFAULT;
     cubeProjCB.CPUAccessFlags = 0;
 
-    hr = rhi.device.device->CreateBuffer(&cubeProjCB, nullptr, g_cbPerProj.GetAddressOf());
+    hr = rhi.device.device->CreateBuffer(&cubeProjCB, nullptr, &g_cbPerProj);
     RETURN_IF_FAILED(hr);
 
     return hr;
@@ -343,17 +339,7 @@ HRESULT InitData() {
     rf.AddLight(nullptr, dx::XMVectorSet(1.0f, 0.0f, 0.0, 0.0f), 1.0f, 8.0f);
     //rf.AddLight(nullptr, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.22f, 0.20f);
 
-    //wrl::ComPtr<ID3DBlob> verShaderBlob ;
-    //hr = LoadShader<ID3D11VertexShader>(L"./shaders/BasicVertexShader.hlsl", "vs", verShaderBlob.GetAddressOf(), g_d3dVertexShader.GetAddressOf(), rhi.device.device.Get());
-    //RETURN_IF_FAILED(hr);
-
-    //rhi.context->VSSetShader(g_d3dVertexShader.Get(), 0, 0);
-
-    //wrl::ComPtr<ID3D11InputLayout> vertLayout;
-    //hr = rhi.device.device->CreateInputLayout(vertexLayoutDesc, 4, verShaderBlob->GetBufferPointer(), verShaderBlob->GetBufferSize(), vertLayout.GetAddressOf());
-    //RETURN_IF_FAILED(hr);
-
-    rhi.context->IASetInputLayout(shaders.vertexLayout/*vertLayout.Get()*/);
+    rhi.context->IASetInputLayout(shaders.vertexLayout);
     rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 
@@ -415,22 +401,22 @@ void Render() {
 
         rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::SKYBOX), 0, 0);
         rhi.context->IASetInputLayout(shaders.vertexLayout);
-        rhi.context->VSSetConstantBuffers(0, 1, g_cbPerObj.GetAddressOf());
-        rhi.context->VSSetConstantBuffers(1, 1, g_cbPerCam.GetAddressOf());
-        rhi.context->VSSetConstantBuffers(2, 1, g_cbPerProj.GetAddressOf());
+        rhi.context->VSSetConstantBuffers(0, 1, &g_cbPerObj);
+        rhi.context->VSSetConstantBuffers(1, 1, &g_cbPerCam);
+        rhi.context->VSSetConstantBuffers(2, 1, &g_cbPerProj);
 
-        rhi.context->UpdateSubresource(g_cbPerObj.Get(), 0, nullptr, &tmpOCB, 0, 0);
-        rhi.context->UpdateSubresource(g_cbPerCam.Get(), 0, nullptr, &viewCB, 0, 0);
-        rhi.context->UpdateSubresource(g_cbPerProj.Get(), 0, nullptr, &projCB, 0, 0);
+        rhi.context->UpdateSubresource(g_cbPerObj, 0, nullptr, &tmpOCB, 0, 0);
+        rhi.context->UpdateSubresource(g_cbPerCam, 0, nullptr, &viewCB, 0, 0);
+        rhi.context->UpdateSubresource(g_cbPerProj, 0, nullptr, &projCB, 0, 0);
 
         //rhi.context->UpdateSubresource(rb.objectCB, 0, NULL, &tmpOCB, 0, 0);
 
-        rhi.context->IASetVertexBuffers(0, 1, g_d3dVertexBufferSkybox.GetAddressOf(), strides, offsets);
-        rhi.context->IASetIndexBuffer(g_d3dIndexBufferSkybox.Get(), DXGI_FORMAT_R16_UINT, 0);
+        rhi.context->IASetVertexBuffers(0, 1, &g_d3dVertexBufferSkybox, strides, offsets);
+        rhi.context->IASetIndexBuffer(g_d3dIndexBufferSkybox, DXGI_FORMAT_R16_UINT, 0);
 
         rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SKYBOX), 0, 0);
 
-        rhi.context->PSSetShaderResources(0, 1, cubemapView.GetAddressOf());
+        rhi.context->PSSetShaderResources(0, 1, &cubemapView);
 
         RHI_OM_DS_SET_DEPTH_COMP_LESS_EQ(rhiState);
         RHI_RS_SET_CULL_FRONT(rhiState);
@@ -440,15 +426,13 @@ void Render() {
     rb.annot->EndEvent();
 
     //models-----------------------------------------------------    
-    rhi.context->VSSetShader(g_d3dVertexShader.Get(), 0, 0);
-    
     const ViewDesc vDesc = rf.ComputeView(g_cam);
     rb.RenderView(vDesc);
     //-------------------------------------------------------------
 
-    rhi.context->ClearRenderTargetView(rhi.backBufferRTV.Get(), dx::Colors::Black);
+    rhi.context->ClearRenderTargetView(rhi.backBufferRTV, dx::Colors::Black);
     rhi.context->ClearDepthStencilView(rhi.backBufferDepthDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-    rhi.context->OMSetRenderTargets(1, rhi.backBufferRTV.GetAddressOf(), rhi.backBufferDepthDSV);
+    rhi.context->OMSetRenderTargets(1, &rhi.backBufferRTV, rhi.backBufferDepthDSV);
     rhi.context->RSSetViewports(1, &rhi.viewport);
 
     rb.annot->BeginEvent(L"Editor Pass");
@@ -460,6 +444,17 @@ void Render() {
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
     }
     rb.annot->EndEvent();
+
+    //rhi.context->OMSetRenderTargets(1, &rhi.backBufferRTV, nullptr);
+    //rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::FULL_QUAD), nullptr, 0);
+    //rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::PRESENT), nullptr, 0);
+
+    //rhi.context->PSSetShaderResources(0, 1, &rb.finalRenderTargetSRV);
+    //rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+    //rhi.context->Draw(4, 0);
+    //rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    //ID3D11ShaderResourceView* nullSRV[] = { nullptr };
+    //rhi.context->PSSetShaderResources(0, 1, nullSRV);
 
     rhi.swapChain->Present(g_enableVSync, 0);
 }
@@ -477,11 +472,32 @@ void Cleanup() {
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
-    if (rhi.context) {
-        rhi.context->ClearState();
-        rhi.context->Flush();
+    if (cubemapView) cubemapView->Release();
+
+    if (g_d3dVertexBufferSkybox) g_d3dVertexBufferSkybox->Release();
+    if (g_d3dIndexBufferSkybox) g_d3dIndexBufferSkybox->Release();
+
+    if (g_cbPerObj) g_cbPerObj->Release();
+    if (g_cbPerCam) g_cbPerCam->Release();
+    if (g_cbPerProj) g_cbPerProj->Release();
+
+    bufferCache.ReleaseAllResources();
+    resourceCache.ReleaseAllResources();
+    shaders.ReleaseAllResources();
+    rb.ReleaseAllResources();
+    rhi.ReleaseAllResources();
+
+    rhi.context->ClearState();
+    rhi.context->Flush();
+
+    if (rhi.context)rhi.context->Release();
+    if (rhi.device.device) rhi.device.device->Release();
+
+    if (g_debugLayer) {
+        g_debugLayer->ReportLiveDeviceObjects(D3D11_RLDO_FLAGS::D3D11_RLDO_DETAIL);
+        g_debugLayer->Release();
     }
-}
+    }
 
 
 
@@ -505,6 +521,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
         Cleanup();
         return -1;
     }
+
+#ifdef _DEBUG
+    if (FAILED(rhi.device.device->QueryInterface(__uuidof(ID3D11Debug), reinterpret_cast<void**>(&g_debugLayer)))) {
+        MessageBox(NULL, "Failed to initialize correctly d3d debug layer", "Error", MB_OK);
+        Cleanup();
+        return -1;
+    }
+#endif // _DEBUG
 
     if (FAILED(InitData())) {
         MessageBox(NULL, "Failed to initialize correctly scene data", "Error", MB_OK);

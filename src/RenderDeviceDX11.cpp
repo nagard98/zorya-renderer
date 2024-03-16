@@ -23,7 +23,7 @@ DX11RenderDevice::DX11RenderDevice() :
 
 DX11RenderDevice::~DX11RenderDevice()
 {
-	releaseAllResources();
+
 }
 
 ZRYResult DX11RenderDevice::createTex2D(RenderTextureHandle* texHandle, ZRYBindFlags bindFlags, ZRYFormat format, float width, float height, int numTex, RenderSRVHandle* srvHandle, RenderRTVHandle* rtvHandle, bool generateMips, int mipLevels, int arraySize, int sampleCount, int sampleQuality) {

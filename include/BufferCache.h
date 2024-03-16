@@ -34,6 +34,8 @@ public:
 	BufferCache();
 	~BufferCache();
 
+	void ReleaseAllResources();
+
 	BufferCacheHandle_t AllocStaticGeom(const SubmeshHandle_t sHnd,
 		const std::uint16_t* itInd,
 		const Vertex* itVer);

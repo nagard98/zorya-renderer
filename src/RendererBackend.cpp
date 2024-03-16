@@ -62,11 +62,16 @@ RendererBackend::RendererBackend()
 
 RendererBackend::~RendererBackend()
 {
+}
+
+void RendererBackend::ReleaseAllResources() {
     if (matPrmsCB) matPrmsCB->Release();
     if (lightsCB) lightsCB->Release();
     if (objectCB) objectCB->Release();
     if (viewCB) viewCB->Release();
     if (projCB) projCB->Release();
+    if (dirShadCB) dirShadCB->Release();
+    if (omniDirShadCB) omniDirShadCB->Release();
 
     if (invMatCB) invMatCB->Release();
     if (annot) annot->Release();

@@ -82,7 +82,7 @@ public:
 	void releaseAllResources();
 
 	//TODO: move to private when you add all the functionality in this abstraction layer
-	wrl::ComPtr<ID3D11Device> device;
+	ID3D11Device* device;
 
 private:
 	

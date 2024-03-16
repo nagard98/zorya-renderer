@@ -24,6 +24,15 @@ ResourceCache::~ResourceCache()
 {
 }
 
+void ResourceCache::ReleaseAllResources()
+{
+	for (Material& mat : materialCache) {
+		if (mat.albedoMap.resourceView) mat.albedoMap.resourceView->Release();
+		if (mat.smoothnessMap.resourceView) mat.metalnessMap.resourceView->Release();
+		if (mat.smoothnessMap.resourceView) mat.smoothnessMap.resourceView->Release();
+	}
+}
+
 MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, MaterialCacheHandle_t& matCacheHnd)
 {
 	Material* m;
