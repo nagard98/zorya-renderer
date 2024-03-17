@@ -9,8 +9,6 @@
 #include <DirectXMath.h>
 #include <d3dcompiler.h>
 #include <DirectXColors.h>
-#include <WICTextureLoader.h>
-#include <DDSTextureLoader.h>
 
 #include <wrl/client.h>
 
@@ -56,21 +54,9 @@ namespace wrl = Microsoft::WRL;
 HWND g_windowHandle = 0;
 
 Assimp::Importer importer;
-
 Editor editor;
 
-ID3D11ShaderResourceView* cubemapView;
-
-ID3D11Buffer* g_d3dVertexBufferSkybox;
-ID3D11Buffer* g_d3dIndexBufferSkybox;
-
-ID3D11Buffer* g_cbPerObj;
-ID3D11Buffer* g_cbPerCam;
-ID3D11Buffer* g_cbPerProj;
-
 ID3D11Debug* g_debugLayer;
-
-
 
 Camera g_cam;
 
@@ -230,79 +216,6 @@ HRESULT InitDevice() {
     return hr;
 }
 
-
-HRESULT LoadSkybox(const wchar_t *skyboxPath) {
-    HRESULT hr;
-
-    //----------------------------Skybox----------------------
-    wrl::ComPtr<ID3D11Resource> skyTexture;
-    hr = dx::CreateDDSTextureFromFileEx(rhi.device.device, skyboxPath, 0, D3D11_USAGE_DEFAULT,
-        D3D11_BIND_SHADER_RESOURCE, 0, D3D11_RESOURCE_MISC_TEXTURECUBE, dx::DX11::DDS_LOADER_DEFAULT, skyTexture.GetAddressOf(), &cubemapView);
-    RETURN_IF_FAILED(hr);
-
-    D3D11_BUFFER_DESC cubeBuffDesc;
-    ZeroMemory(&cubeBuffDesc, sizeof(cubeBuffDesc));
-    cubeBuffDesc.ByteWidth = sizeof(Vertex) * cubeVertices.size();
-    cubeBuffDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    cubeBuffDesc.Usage = D3D11_USAGE_DEFAULT;
-
-    D3D11_SUBRESOURCE_DATA cubeData;
-    cubeData.pSysMem = cubeVertices.data();
-    cubeData.SysMemPitch = 0;
-    cubeData.SysMemSlicePitch = 0;
-
-    hr = rhi.device.device->CreateBuffer(&cubeBuffDesc, &cubeData, &g_d3dVertexBufferSkybox);
-    RETURN_IF_FAILED(hr);
-
-    D3D11_BUFFER_DESC cubeIndexBuffDesc;
-    ZeroMemory(&cubeIndexBuffDesc, sizeof(cubeIndexBuffDesc));
-    cubeIndexBuffDesc.ByteWidth = sizeof(std::uint16_t) * cubeIndices.size();
-    cubeIndexBuffDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    cubeIndexBuffDesc.Usage = D3D11_USAGE_DEFAULT;
-
-    D3D11_SUBRESOURCE_DATA cubeIndexData;
-    cubeIndexData.pSysMem = cubeIndices.data();
-    cubeIndexData.SysMemPitch = 0;
-    cubeIndexData.SysMemSlicePitch = 0;
-
-    hr = rhi.device.device->CreateBuffer(&cubeIndexBuffDesc, &cubeIndexData, &g_d3dIndexBufferSkybox);
-    RETURN_IF_FAILED(hr);
-
-    D3D11_BUFFER_DESC cubeObjCB;
-    ZeroMemory(&cubeObjCB, sizeof(cubeObjCB));
-    cubeObjCB.ByteWidth = sizeof(ObjCB);
-    cubeObjCB.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    cubeObjCB.Usage = D3D11_USAGE_DEFAULT;
-    cubeObjCB.CPUAccessFlags = 0;
-
-    hr = rhi.device.device->CreateBuffer(&cubeObjCB, nullptr, &g_cbPerObj);
-    RETURN_IF_FAILED(hr);
-
-    D3D11_BUFFER_DESC cubeViewCB;
-    ZeroMemory(&cubeViewCB, sizeof(cubeViewCB));
-    cubeViewCB.ByteWidth = sizeof(ObjCB);
-    cubeViewCB.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    cubeViewCB.Usage = D3D11_USAGE_DEFAULT;
-    cubeViewCB.CPUAccessFlags = 0;
-
-    hr = rhi.device.device->CreateBuffer(&cubeViewCB, nullptr, &g_cbPerCam);
-    RETURN_IF_FAILED(hr);
-
-    D3D11_BUFFER_DESC cubeProjCB;
-    ZeroMemory(&cubeProjCB, sizeof(cubeProjCB));
-    cubeProjCB.ByteWidth = sizeof(ObjCB);
-    cubeProjCB.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    cubeProjCB.Usage = D3D11_USAGE_DEFAULT;
-    cubeProjCB.CPUAccessFlags = 0;
-
-    hr = rhi.device.device->CreateBuffer(&cubeProjCB, nullptr, &g_cbPerProj);
-    RETURN_IF_FAILED(hr);
-
-    return hr;
-    //---------------------------------------------------------------------
-}
-
-
 dx::XMMATRIX scaleMat = dx::XMMatrixScaling(1.0f, 1.0f, 1.0f);
 
 HRESULT InitData() {
@@ -314,9 +227,6 @@ HRESULT InitData() {
 
     hr = shaders.Init();
     RETURN_IF_FAILED(hr);  
-
-    hr = LoadSkybox(L"./shaders/assets/skybox.dds");
-    RETURN_IF_FAILED(hr);
 
     //RenderableEntity mHnd4 = rf.LoadModelFromFile("./shaders/assets/nissan/source/nissan2.obj");
     //RenderableEntity mHnd5 = rf.LoadModelFromFile("./shaders/assets/cornell/cornell.fbx");
@@ -387,45 +297,9 @@ void Render() {
     rhi.context->OMSetRenderTargets(1, &rb.finalRenderTargetView, rb.depthDSV);
     rhi.context->RSSetViewports(1, &rb.sceneViewport);
 
-    std::uint32_t strides[] = { sizeof(Vertex) };
-    std::uint32_t offsets[] = { 0 };
-
     //g_cam.rotateAroundCamAxis(0.0f, -0.00f, 0.0f);    
 
-    rb.annot->BeginEvent(L"Skybox Pass");
-    {
-        //Using cam rotation matrix as view, to ignore cam translation, making skybox always centered
-        ObjCB tmpOCB{ dx::XMMatrixIdentity() };
-        ViewCB viewCB{ dx::XMMatrixTranspose(g_cam.getRotationMatrix()) };
-        ProjCB projCB{ g_cam.getProjMatrixTransposed() };
-
-        rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::SKYBOX), 0, 0);
-        rhi.context->IASetInputLayout(shaders.vertexLayout);
-        rhi.context->VSSetConstantBuffers(0, 1, &g_cbPerObj);
-        rhi.context->VSSetConstantBuffers(1, 1, &g_cbPerCam);
-        rhi.context->VSSetConstantBuffers(2, 1, &g_cbPerProj);
-
-        rhi.context->UpdateSubresource(g_cbPerObj, 0, nullptr, &tmpOCB, 0, 0);
-        rhi.context->UpdateSubresource(g_cbPerCam, 0, nullptr, &viewCB, 0, 0);
-        rhi.context->UpdateSubresource(g_cbPerProj, 0, nullptr, &projCB, 0, 0);
-
-        //rhi.context->UpdateSubresource(rb.objectCB, 0, NULL, &tmpOCB, 0, 0);
-
-        rhi.context->IASetVertexBuffers(0, 1, &g_d3dVertexBufferSkybox, strides, offsets);
-        rhi.context->IASetIndexBuffer(g_d3dIndexBufferSkybox, DXGI_FORMAT_R16_UINT, 0);
-
-        rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SKYBOX), 0, 0);
-
-        rhi.context->PSSetShaderResources(0, 1, &cubemapView);
-
-        RHI_OM_DS_SET_DEPTH_COMP_LESS_EQ(rhiState);
-        RHI_RS_SET_CULL_FRONT(rhiState);
-        rhi.SetState(rhiState);
-        rhi.context->DrawIndexed(36, 0, 0);
-    }
-    rb.annot->EndEvent();
-
-    //models-----------------------------------------------------    
+    // Rendering cam view -----------------------------------------------------    
     const ViewDesc vDesc = rf.ComputeView(g_cam);
     rb.RenderView(vDesc);
     //-------------------------------------------------------------
@@ -471,15 +345,6 @@ void Cleanup() {
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
-
-    if (cubemapView) cubemapView->Release();
-
-    if (g_d3dVertexBufferSkybox) g_d3dVertexBufferSkybox->Release();
-    if (g_d3dIndexBufferSkybox) g_d3dIndexBufferSkybox->Release();
-
-    if (g_cbPerObj) g_cbPerObj->Release();
-    if (g_cbPerCam) g_cbPerCam->Release();
-    if (g_cbPerProj) g_cbPerProj->Release();
 
     bufferCache.ReleaseAllResources();
     resourceCache.ReleaseAllResources();

@@ -1,4 +1,4 @@
-#include "BRDF.hlsl"
+#include "BRDF.hlsli"
 
 #define CUBEMAP_FACE_POSITIVE_X 0.0f
 #define CUBEMAP_FACE_NEGATIVE_X 1.0f

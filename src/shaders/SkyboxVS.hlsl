@@ -1,9 +1,4 @@
-struct VS_INPUT
-{
-    float4 pos : POSITION0;
-    float2 texCoord : TEXCOORD0;
-    float3 vNormal : NORMAL0;
-};
+#include "CubeData.hlsli"
 
 struct VS_OUTPUT
 {
@@ -26,14 +21,14 @@ cbuffer cbPerProj : register(b2)
     float4x4 projMatrix;
 };
 
-VS_OUTPUT vs(VS_INPUT input)
+VS_OUTPUT vs(uint vertexID : SV_VertexID)
 {
     VS_OUTPUT output;
     
     float4x4 WVPMat = mul(worldMatrix, mul(viewMatrix, projMatrix));
-    float4 k = mul(input.pos, WVPMat);
+    float4 k = mul(CUBE[vertexID], WVPMat);
     output.pos = float4(k.x, k.y, k.w, k.w);
-    output.texCoord = input.pos.xyz;
+    output.texCoord = CUBE[vertexID].xyz;
     
     return output;
 }

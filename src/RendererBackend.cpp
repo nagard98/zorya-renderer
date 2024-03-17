@@ -10,6 +10,8 @@
 #include "RenderDevice.h"
 #include "ApplicationConfig.h"
 
+#include <DDSTextureLoader.h>
+
 #include <d3d11_1.h>
 #include <vector>
 #include <cassert>
@@ -35,6 +37,8 @@ RendererBackend::RendererBackend()
     shadowMap = nullptr;
     shadowMapDSV = nullptr;
     shadowMapSRV = nullptr;
+
+    cubemapView = nullptr;
     
     shadowCubeMap = nullptr;
     shadowCubeMapSRV = nullptr;
@@ -77,6 +81,7 @@ void RendererBackend::ReleaseAllResources() {
     if (annot) annot->Release();
 
     if (thicknessMapSRV.resourceView) thicknessMapSRV.resourceView->Release();
+    if (cubemapView) cubemapView->Release();
 }
 
 struct KernelSample
@@ -390,6 +395,7 @@ std::vector<dx::XMFLOAT4> kernel;
 //
 //}
 
+
 HRESULT RendererBackend::Init(bool reset)
 {
     if (reset) rhi.device.releaseAllResources();
@@ -664,6 +670,15 @@ HRESULT RendererBackend::Init(bool reset)
     depthDSV = rhi.device.getDSVPointer(hndDepthDSV);
 
 
+    //----------------------------Skybox----------------------
+    wrl::ComPtr<ID3D11Resource> skyTexture;
+    hr = dx::CreateDDSTextureFromFileEx(rhi.device.device, L"./shaders/assets/skybox.dds", 0, D3D11_USAGE_DEFAULT,
+        D3D11_BIND_SHADER_RESOURCE, 0, D3D11_RESOURCE_MISC_TEXTURECUBE, dx::DX11::DDS_LOADER_DEFAULT, skyTexture.GetAddressOf(), &cubemapView);
+    RETURN_IF_FAILED(hr);
+
+    return hr;
+    //---------------------------------------------------------------------
+
     //thickness map
     rhi.LoadTexture(L"./shaders/assets/Human/Textures/Head/JPG/baked_translucency_4096.jpg", thicknessMapSRV, false);
     
@@ -875,6 +890,35 @@ void RendererBackend::RenderView(const ViewDesc& viewDesc)
 {
 	std::uint32_t strides[] = { sizeof(Vertex) };
 	std::uint32_t offsets[] = { 0 };
+
+    rb.annot->BeginEvent(L"Skybox Pass");
+    {
+        //Using cam rotation matrix as view, to ignore cam translation, making skybox always centered
+        ObjCB tmpOCB{ dx::XMMatrixIdentity() };
+        ViewCB tmpVCB{ dx::XMMatrixTranspose(viewDesc.cam.getRotationMatrix()) };
+        ProjCB tmpPCB{ viewDesc.cam.getProjMatrixTransposed() };
+
+        rhi.context->VSSetShader(shaders.vertexShaders.at((std::uint8_t)VShaderID::SKYBOX), 0, 0);
+        rhi.context->IASetInputLayout(nullptr);
+        rhi.context->VSSetConstantBuffers(0, 1, &objectCB);
+        rhi.context->VSSetConstantBuffers(1, 1, &viewCB);
+        rhi.context->VSSetConstantBuffers(2, 1, &projCB);
+
+        rhi.context->UpdateSubresource(objectCB, 0, nullptr, &tmpOCB, 0, 0);
+        rhi.context->UpdateSubresource(viewCB, 0, nullptr, &tmpVCB, 0, 0);
+        rhi.context->UpdateSubresource(projCB, 0, nullptr, &tmpPCB, 0, 0);
+
+        rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::SKYBOX), 0, 0);
+
+        rhi.context->PSSetShaderResources(0, 1, &cubemapView);
+
+        RHI_OM_DS_SET_DEPTH_COMP_LESS_EQ(rhiState);
+        RHI_RS_SET_CULL_BACK(rhiState);
+        rhi.SetState(rhiState);
+        rhi.context->Draw(36, 0);
+    }
+    rb.annot->EndEvent();
+
 	
     std::vector<LightInfo> dirLights;
     std::vector<LightInfo> spotLights;

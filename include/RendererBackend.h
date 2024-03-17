@@ -116,6 +116,8 @@ private:
 	ID3D11RenderTargetView* skinRT[5];
 	ID3D11ShaderResourceView* skinSRV[5];
 
+	ID3D11ShaderResourceView* cubemapView; //skybox view
+
 	//TODO: what did I intend to do with this?
 	//std::hash<std::uint16_t> submeshHash;
 };
