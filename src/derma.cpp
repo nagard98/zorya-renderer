@@ -17,18 +17,20 @@
 #include "imgui_impl_dx11.h"
 #include "imgui_impl_win32.h"
 
-#include <Editor/Logger.h>
+#include "editor/Logger.h"
+#include "editor/Editor.h"
 
-#include "Camera.h"
-#include "Shaders.h"
-#include "Model.h"
-#include "RHIState.h"
-#include "RenderHardwareInterface.h"
-#include "RendererFrontend.h"
-#include "RendererBackend.h"
+#include "renderer/frontend/Camera.h"
+#include "renderer/frontend/Shaders.h"
+#include "renderer/frontend/Model.h"
+#include "renderer/frontend/SceneGraph.h"
+#include "renderer/frontend/RendererFrontend.h"
+
+#include "renderer/backend/rhi/RHIState.h"
+#include "renderer/backend/rhi/RenderHardwareInterface.h"
+#include "renderer/backend/RendererBackend.h"
+
 #include "ApplicationConfig.h"
-#include <Editor/Editor.h>
-#include "SceneGraph.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -245,7 +247,7 @@ HRESULT InitData() {
     //RenderableEntity mHnd15 = rf.LoadModelFromFile("./shaders/assets/plane.obj", true);
     //RenderableEntity mHnd16 = rf.LoadModelFromFile("./shaders/assets/cornell-box/CornellBox-Original.obj");
     //RenderableEntity mHnd17 = rf.LoadModelFromFile("./shaders/assets/sphere.dae");
-    RenderableEntity mHnd18 = rf.LoadModelFromFile("./shaders/assets/brocc-the-athlete/source/Sporter_Retopo.fbx");
+    RenderableEntity mHnd18 = rf.LoadModelFromFile("./assets/brocc-the-athlete/source/Sporter_Retopo.fbx");
     rf.AddLight(nullptr, dx::XMVectorSet(1.0f, 0.0f, 0.0, 0.0f), 1.0f, 8.0f);
     //rf.AddLight(nullptr, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.22f, 0.20f);
 

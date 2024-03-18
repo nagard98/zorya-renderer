@@ -1,9 +1,10 @@
 #ifndef RENDERER_FRONTEND_H_
 #define RENDERER_FRONTEND_H_
 
+#include "renderer/backend/BufferCache.h"
+#include "renderer/backend/ResourceCache.h"
+
 #include "Model.h"
-#include "BufferCache.h"
-#include "ResourceCache.h"
 #include "Camera.h"
 #include "SceneGraph.h"
 #include "Lights.h"

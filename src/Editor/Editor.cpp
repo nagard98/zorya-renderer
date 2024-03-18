@@ -1,14 +1,16 @@
-#include "Editor/Editor.h"
-#include "Editor/SceneHierarchy.h"
-#include "Editor/EntityOutline.h"
-#include "Editor/Logger.h"
+#include "editor/Editor.h"
+#include "editor/SceneHierarchy.h"
+#include "editor/EntityOutline.h"
+#include "editor/Logger.h"
+
+#include "renderer/frontend/RendererFrontend.h"
+#include "renderer/frontend/SceneGraph.h"
 
 #include <vector>
-#include <RendererFrontend.h>
-#include <SceneGraph.h>
 
 #include "imgui.h"
 #include "imgui_internal.h"
+
 #include <d3d11_1.h>
 
 

@@ -1,9 +1,10 @@
 #ifndef ENTITY_PROPERTIES_H_
 #define ENTITY_PROPERTIES_H_
 
-#include <RendererFrontend.h>
-#include "Material.h"
-#include "Reflection/Reflection.h"
+#include "renderer/frontend/RendererFrontend.h"
+#include "renderer/frontend/Material.h"
+
+#include "reflection/Reflection.h"
 
 class EntityOutline {
 

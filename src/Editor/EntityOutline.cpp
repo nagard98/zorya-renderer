@@ -1,9 +1,11 @@
-#include "Editor/EntityOutline.h"
-#include "Editor/Logger.h"
-#include "RendererFrontend.h"
-#include "Material.h"
-#include "Reflection/Reflection.h"
-#include "Reflection/Reflection_auto_generated.h"
+#include "editor/EntityOutline.h"
+#include "editor/Logger.h"
+
+#include "renderer/frontend/RendererFrontend.h"
+#include "renderer/frontend/Material.h"
+
+#include "reflection/Reflection.h"
+#include "reflection/Reflection_auto_generated.h"
 
 #include "DirectXMath.h"
 #include <cassert>

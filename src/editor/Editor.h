@@ -1,11 +1,12 @@
 #ifndef EDITOR_H_
 #define EDITOR_H_
 
-#include "SceneHierarchy.h"
-#include "EntityOutline.h"
+#include "editor/SceneHierarchy.h"
+#include "editor/EntityOutline.h"
 
-#include <SceneGraph.h>
-#include <RendererFrontend.h>
+#include "renderer/frontend/SceneGraph.h"
+#include "renderer/frontend/RendererFrontend.h"
+
 #include <vector>
 
 #include "imgui.h"

@@ -1,5 +1,5 @@
-#include "BRDF.hlsli"
-#include "LightStruct.hlsli"
+#include "common/BRDF.hlsli"
+#include "common/LightStruct.hlsli"
 
 Texture2D gbuffer_albedo : register(t0);
 Texture2D gbuffer_normal : register(t1);

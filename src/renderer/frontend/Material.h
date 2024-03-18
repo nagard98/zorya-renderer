@@ -7,7 +7,7 @@
 #include <d3d11.h>
 
 #include "Shaders.h"
-#include "Reflection/Reflection.h"
+#include "reflection/Reflection.h"
 
 namespace dx = DirectX;
 

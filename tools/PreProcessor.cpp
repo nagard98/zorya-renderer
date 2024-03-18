@@ -5,8 +5,8 @@
 #include <direct.h>
 #include <windows.h>
 
-#include "BuildTools/PreProcessor.h"
-#include "Reflection/Reflection.h"
+#include "PreProcessor.h"
+#include "reflection/Reflection.h"
 
 #define INDENT_PRINTF(num) for (int i = 0; i < num; i++) putchar('\t');
 
@@ -207,7 +207,7 @@ bool parse(Tokenizer* tokenizer, MemberIntermediateMeta* memberMeta, int* member
 
 }
 
-void generateMetaFile(char* parsedFileName, MemberIntermediateMeta* memberMeta, int memberCount, char* pathFileToGenerate, int depth) {
+void generateMetaFile(char* parsedFileName, char* relativeFilePath, MemberIntermediateMeta* memberMeta, int memberCount, char* pathFileToGenerate, int depth) {
 	FILE* file;
 	errno_t er = fopen_s(&file, pathFileToGenerate, "w");
 
@@ -219,7 +219,7 @@ void generateMetaFile(char* parsedFileName, MemberIntermediateMeta* memberMeta, 
 		fprintf(file, "#pragma once\n\n");
 
 		fprintf(file, "#include \"Reflection.h\"\n");
-		fprintf(file, "#include <%s.h>\n\n", parsedFileName);
+		fprintf(file, "#include \"%s\"\n\n", relativeFilePath);
 
 		for (int i = 0; i < memberCount; i++)
 		{
@@ -250,9 +250,6 @@ int parseAndGenerateMetaFile(char* fileName, char* filePath, char* generatedFile
 	int memberCount = 0;
 
 	if (er == 0) {
-		INDENT_PRINTF(depth)
-		printf("Parsing file %s\n", filePath);
-
 		fseek(file, 0, SEEK_END);
 		size_t sizeInBytes = ftell(file);
 		fseek(file, 0, SEEK_SET);
@@ -266,9 +263,16 @@ int parseAndGenerateMetaFile(char* fileName, char* filePath, char* generatedFile
 
 		MemberIntermediateMeta* memberMeta = (MemberIntermediateMeta*)malloc(sizeof(MemberIntermediateMeta) * 255);
 
+		INDENT_PRINTF(depth)
+		printf("Parsing file %s\n", filePath);
 		parse(&tokenizer, memberMeta, &memberCount, 255);
-
-		if(memberCount > 0) generateMetaFile(fileName, memberMeta, memberCount, generatedFilename, depth);
+		
+		if (memberCount > 0) {
+			char* context = nullptr;
+			//char* includePath = strtok_s(filePath, "/", &context);
+			//if (includePath != nullptr) includePath = strtok_s(nullptr, "/", &context);
+			generateMetaFile(fileName, &filePath[6], memberMeta, memberCount, generatedFilename, depth);
+		}
 
 		free(memberMeta);
 		free(buffer);
@@ -296,7 +300,7 @@ int recursiveFileSearch(const char* basePath, FILE* reflectionFile, int depth) {
 			if ((fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && 
 					strcmp(fileData.cFileName, ".") != 0 &&
 					strcmp(fileData.cFileName, "..") != 0 &&
-					strcmp(fileData.cFileName, "Reflection") != 0) {
+					strcmp(fileData.cFileName, "reflection") != 0) {
 
 				printf("Searching files inside directory %s\n", fileData.cFileName);
 				char newSubPath[MAX_PATH];
@@ -321,7 +325,7 @@ int recursiveFileSearch(const char* basePath, FILE* reflectionFile, int depth) {
 			
 
 			char* nextTok = nullptr;
-			strcpy_s(generatedFilename, MAX_PATH, "./include/Reflection/");
+			strcpy_s(generatedFilename, MAX_PATH, "./src/reflection/");
 			strcat_s(generatedFilename, MAX_PATH, strtok_s(fileData.cFileName, ".", &nextTok)); 
 			strcat_s(generatedFilename, MAX_PATH, "_auto_generated.h");
 			int memberCount = parseAndGenerateMetaFile(fileData.cFileName, newSubPath, generatedFilename, depth);
@@ -342,7 +346,7 @@ int recursiveFileSearch(const char* basePath, FILE* reflectionFile, int depth) {
 int main() {
 	_chdir("C:\\Users\\Draga\\Documents\\GitHub\\derma-renderer");
 
-	const char* path = "./include/Reflection/Reflection_auto_generated.h";
+	const char* path = "./src/reflection/Reflection_auto_generated.h";
 
 	FILE* file;
 	errno_t er = fopen_s(&file, path, "w");
@@ -350,7 +354,7 @@ int main() {
 		fprintf(file, "// !WARNING! : This file was generated automatically during build. DO NOT modify.\n");
 		fprintf(file, "#pragma once\n\n");
 
-		int numGeneratedFiles = recursiveFileSearch("./include/\0", file, 0);
+		int numGeneratedFiles = recursiveFileSearch("./src/\0", file, 0);
 
 		printf("\nCompleted Pre-Processing: Generated %d files\n\n", numGeneratedFiles);
 

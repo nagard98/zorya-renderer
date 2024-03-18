@@ -1,7 +1,8 @@
-#include "ResourceCache.h"
-#include "RenderHardwareInterface.h"
-#include "Shaders.h"
-#include "Material.h"
+#include "renderer/backend/ResourceCache.h"
+#include "renderer/backend/rhi/RenderHardwareInterface.h"
+
+#include "renderer/frontend/Shaders.h"
+#include "renderer/frontend/Material.h"
 
 #include <d3d11_1.h>
 #include <wrl/client.h>

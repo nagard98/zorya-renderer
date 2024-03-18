@@ -12,5 +12,6 @@ _deps
 build
 .vs/
 src/shaders/assets
-include/shaders/*.h
+src/shaders/headers/*.h
 *_old*
+src/reflection/*_auto_generated.h

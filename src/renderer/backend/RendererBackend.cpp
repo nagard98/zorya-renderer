@@ -1,13 +1,16 @@
-#include "RendererBackend.h"
-#include "RendererFrontend.h"
-#include "RenderHardwareInterface.h"
-#include "RHIState.h"
-#include "BufferCache.h"
-#include "ResourceCache.h"
-#include "Material.h"
-#include "Lights.h"
-#include "Camera.h"
-#include "RenderDevice.h"
+#include "renderer/backend/RendererBackend.h"
+#include "renderer/backend/BufferCache.h"
+#include "renderer/backend/ResourceCache.h"
+
+#include "renderer/backend/rhi/RenderHardwareInterface.h"
+#include "renderer/backend/rhi/RHIState.h"
+#include "renderer/backend/rhi/RenderDevice.h"
+
+#include "renderer/frontend/RendererFrontend.h"
+#include "renderer/frontend/Material.h"
+#include "renderer/frontend/Lights.h"
+#include "renderer/frontend/Camera.h"
+
 #include "ApplicationConfig.h"
 
 #include <DDSTextureLoader.h>
@@ -672,7 +675,7 @@ HRESULT RendererBackend::Init(bool reset)
 
     //----------------------------Skybox----------------------
     wrl::ComPtr<ID3D11Resource> skyTexture;
-    hr = dx::CreateDDSTextureFromFileEx(rhi.device.device, L"./shaders/assets/skybox.dds", 0, D3D11_USAGE_DEFAULT,
+    hr = dx::CreateDDSTextureFromFileEx(rhi.device.device, L"./assets/skybox.dds", 0, D3D11_USAGE_DEFAULT,
         D3D11_BIND_SHADER_RESOURCE, 0, D3D11_RESOURCE_MISC_TEXTURECUBE, dx::DX11::DDS_LOADER_DEFAULT, skyTexture.GetAddressOf(), &cubemapView);
     RETURN_IF_FAILED(hr);
 
@@ -680,7 +683,7 @@ HRESULT RendererBackend::Init(bool reset)
     //---------------------------------------------------------------------
 
     //thickness map
-    rhi.LoadTexture(L"./shaders/assets/Human/Textures/Head/JPG/baked_translucency_4096.jpg", thicknessMapSRV, false);
+    //rhi.LoadTexture(L"./shaders/assets/Human/Textures/Head/JPG/baked_translucency_4096.jpg", thicknessMapSRV, false);
     
     std::vector<float> krn;
     ////loadKernelFile("./shaders/assets/Skin2_PreInt_DISCSEP.bn", krn);

@@ -4,11 +4,14 @@
 #include <iostream>
 #include <cstdint>
 
-#include "RenderDevice.h"
-#include "RHIState.h"
-#include "RenderHardwareInterface.h"
-#include "Material.h"
-#include "Editor/Logger.h"
+#include "editor/Logger.h"
+
+#include "renderer/backend/rhi/RenderDevice.h"
+#include "renderer/backend/rhi/RHIState.h"
+#include "renderer/backend/rhi/RenderHardwareInterface.h"
+
+#include "renderer/frontend/Material.h"
+
 #include "ApplicationConfig.h"
 
 #include "WICTextureLoader.h"

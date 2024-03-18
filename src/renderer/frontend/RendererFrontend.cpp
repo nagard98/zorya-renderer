@@ -1,6 +1,16 @@
 #include "RendererFrontend.h"
+#include "Model.h"
+#include "Material.h"
+#include "Camera.h"
+#include "SceneGraph.h"
+#include "Shaders.h"
+#include "Lights.h"
+#include "Transform.h"
 
-#include "Editor/Logger.h"
+#include "renderer/backend/ResourceCache.h"
+#include "renderer/backend/BufferCache.h"
+
+#include "editor/Logger.h"
 
 #include "assimp/Importer.hpp"
 #include "assimp/postprocess.h"
@@ -13,16 +23,6 @@
 #include <winerror.h>
 #include <cstdlib>
 #include <algorithm>
-
-#include "Model.h"
-#include "BufferCache.h"
-#include "Material.h"
-#include "ResourceCache.h"
-#include "Camera.h"
-#include "SceneGraph.h"
-#include "Shaders.h"
-#include "Lights.h"
-#include "Transform.h"
 
 
 namespace dx = DirectX;

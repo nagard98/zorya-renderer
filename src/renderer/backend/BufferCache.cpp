@@ -1,6 +1,7 @@
-#include "BufferCache.h"
-#include "RenderHardwareInterface.h"
-#include "Model.h"
+#include "renderer/backend/BufferCache.h"
+#include "renderer/backend/rhi/RenderHardwareInterface.h"
+
+#include "renderer/frontend/Model.h"
 
 BufferCache bufferCache;
 

@@ -1,4 +1,4 @@
-#include "Editor/Logger.h"
+#include "editor/Logger.h"
 
 #include <cstdint>
 #include <cstdarg>

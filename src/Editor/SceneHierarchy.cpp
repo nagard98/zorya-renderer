@@ -1,8 +1,11 @@
-#include <Editor/SceneHierarchy.h>
-#include "ResourceCache.h"
+#include "editor/SceneHierarchy.h"
+
+#include "renderer/backend/ResourceCache.h"
+
+#include "renderer/frontend/SceneGraph.h"
+#include "renderer/frontend/RendererFrontend.h"
+
 #include "imgui.h"
-#include "SceneGraph.h"
-#include "RendererFrontend.h"
 
 #include <vector>
 

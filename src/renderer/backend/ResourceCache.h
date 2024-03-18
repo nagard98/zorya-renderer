@@ -4,7 +4,7 @@
 #include <vector>
 #include <cstdint>
 
-#include "Material.h"
+#include "renderer/frontend/Material.h"
 
 struct MaterialCacheHandle_t {
 	std::uint16_t index;

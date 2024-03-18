@@ -5,8 +5,9 @@
 #include <vector>
 #include <d3d11_1.h>
 
-#include "BufferObject.h"
-#include "Model.h"
+#include "renderer/backend/rhi/BufferObject.h"
+
+#include "renderer/frontend/Model.h"
 
 constexpr int MIN_VERTEX_CACHE_SIZE = 4096;
 constexpr int MIN_INDEX_CACHE_SIZE = 4096;

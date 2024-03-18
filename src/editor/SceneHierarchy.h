@@ -1,11 +1,12 @@
 #ifndef SCENE_HIERARCHY_H_
 #define SCENE_HIERARCHY_H_
 
-#include <imgui.h>
+#include "imgui.h"
 
 #include <vector>
-#include <RendererFrontend.h>
-#include <SceneGraph.h>
+
+#include "renderer/frontend/RendererFrontend.h"
+#include "renderer/frontend/SceneGraph.h"
 
 class SceneHierarchy {
 

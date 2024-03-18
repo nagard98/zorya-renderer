@@ -1,10 +1,11 @@
 #ifndef RENDERER_BACKEND_H_
 #define RENDERER_BACKEND_H_
 
-#include "BufferCache.h"
-#include "RendererFrontend.h"
-#include "Lights.h"
-#include "RenderDevice.h"
+#include "renderer/backend/BufferCache.h"
+#include "renderer/backend/rhi/RenderDevice.h"
+
+#include "renderer/frontend/RendererFrontend.h"
+#include "renderer/frontend/Lights.h"
 
 #include <functional>
 #include <cstdint>

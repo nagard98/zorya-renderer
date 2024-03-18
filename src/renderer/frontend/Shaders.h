@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <vector>
 
-#include <Editor/Logger.h>
+#include "editor/Logger.h"
 
 enum class VShaderID : std::uint8_t {
     STANDARD,

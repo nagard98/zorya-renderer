@@ -1,21 +1,22 @@
-#include "Shaders.h"
-#include "RenderHardwareInterface.h"
+#include "renderer/frontend/Shaders.h"
+
+#include "renderer/backend/rhi/RenderHardwareInterface.h"
 
 #include <string>
 #include <Windows.h>
 #include <d3d11_1.h>
 
-#include "shaders/DepthPS.h"
-#include "shaders/DepthVS.h"
-#include "shaders/GBufferPS.h"
-#include "shaders/GBufferVS.h"
-#include "shaders/Lighting.h"
-#include "shaders/Present.h"
-#include "shaders/ShadowMapping.h"
-#include "shaders/SkyboxPS.h"
-#include "shaders/SkyboxVS.h"
-#include "shaders/SSSSS.h"
-#include "shaders/FullscreenQuad.h"
+#include "shaders/headers/DepthPS.h"
+#include "shaders/headers/DepthVS.h"
+#include "shaders/headers/GBufferPS.h"
+#include "shaders/headers/GBufferVS.h"
+#include "shaders/headers/Lighting.h"
+#include "shaders/headers/Present.h"
+#include "shaders/headers/ShadowMapping.h"
+#include "shaders/headers/SkyboxPS.h"
+#include "shaders/headers/SkyboxVS.h"
+#include "shaders/headers/SSSSS.h"
+#include "shaders/headers/FullscreenQuad.h"
 
 Shaders shaders;
 

@@ -1,4 +1,4 @@
-#include "CubeData.hlsli"
+#include "common/CubeData.hlsli"
 
 struct VS_OUTPUT
 {

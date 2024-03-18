@@ -3,12 +3,13 @@
 
 #include <d3d11_1.h>
 #include <wrl/client.h>
-#include <RHIState.h>
 #include <cstdint>
 #include <array>
 
-#include "RenderDevice.h"
-#include "Material.h"
+#include "renderer/backend/rhi/RHIState.h"
+#include "renderer/backend/rhi/RenderDevice.h"
+
+#include "renderer/frontend/Material.h"
 
 namespace wrl = Microsoft::WRL;
 
