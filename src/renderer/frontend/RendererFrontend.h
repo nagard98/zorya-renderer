@@ -9,6 +9,7 @@
 #include "SceneGraph.h"
 #include "Lights.h"
 #include "Transform.h"
+#include "Material.h"
 
 #include <DirectXMath.h>
 
@@ -121,7 +122,7 @@ public:
 	std::vector<SubmeshInfo> sceneMeshes;  //scene meshes indexed by model handle
 	std::vector<LightInfo> sceneLights;
 	
-	std::vector<MaterialDesc> materials; //material indexed by part of submesh handle
+	std::vector<MaterialDesc*> materials; //material indexed by part of submesh handle
 	std::vector<Vertex> staticSceneVertexData; //mesh vertex data base indexed by part of submesh handle
 	std::vector<std::uint16_t> staticSceneIndexData; //mesh index data base indexed by part of submesh handle
 

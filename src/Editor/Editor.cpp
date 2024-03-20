@@ -129,13 +129,13 @@ void Editor::RenderEditor(RendererFrontend& rf, Camera& editorCam, const ID3D11S
 				case EntityType::MESH:
 				{
 					SubmeshInfo* smInfo = rf.findSubmeshInfo(selectedNode->value.submeshHnd);
-					entityProps.RenderEProperties(selectedNode->value, smInfo, &rf.materials.at(selectedNode->value.submeshHnd.matDescIdx));
+					entityProps.RenderEProperties(selectedNode->value, smInfo, rf.materials.at(selectedNode->value.submeshHnd.matDescIdx));
 					break;
 				}
 				case EntityType::COLLECTION:
 				{
 					SubmeshInfo* smInfo = rf.findSubmeshInfo(selectedNode->value.submeshHnd);
-					entityProps.RenderEProperties(selectedNode->value, smInfo, &rf.materials.at(selectedNode->value.submeshHnd.matDescIdx));
+					entityProps.RenderEProperties(selectedNode->value, smInfo, rf.materials.at(selectedNode->value.submeshHnd.matDescIdx));
 					break;
 				}
 				case EntityType::LIGHT:

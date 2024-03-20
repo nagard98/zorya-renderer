@@ -11,6 +11,8 @@
 
 namespace dx = DirectX;
 
+using MaterialDesc = ReflectionBase;
+
 typedef std::uint8_t MatUpdateFlags_;
 
 constexpr MatUpdateFlags_ NO_UPDATE_MAT = 0;
@@ -23,7 +25,7 @@ typedef std::uint8_t MatDescFlags_;
 constexpr MatDescFlags_ SMOOTHNESS_IS_MAP = 1;
 constexpr MatDescFlags_ METALNESS_IS_MAP = 2;
 
-struct MaterialDesc {
+struct StandardMaterialDesc {
 	PShaderID shaderType;
 	MatDescFlags_ unionTags;
 
@@ -61,6 +63,7 @@ struct MaterialDesc {
 	wchar_t normalPath[128];
 };
 
+
 struct Texture2D {
 	ID3D11Texture2D* resource;
 };
@@ -77,7 +80,7 @@ struct MaterialParams {
 	float samples[64];
 	dx::XMFLOAT4 baseColor;
 	dx::XMFLOAT4 subsurfaceAlbedo;
-	PROPERTY()
+
 	dx::XMFLOAT4 meanFreePathColor;
 
 	std::uint32_t hasAlbedoMap;
@@ -85,14 +88,13 @@ struct MaterialParams {
 	std::uint32_t hasNormalMap;
 	std::uint32_t hasSmoothnessMap;
 
-	PROPERTY(asd)
 	float roughness;
-	PROPERTY(bbb)
+
 	float metalness;
-	PROPERTY(qwe)
 	float meanFreePathDist;
 	float scale;
 
+	
 	dx::XMFLOAT4 kernel[16];
 	dx::XMFLOAT2 dir;
 	std::uint8_t pad[8];

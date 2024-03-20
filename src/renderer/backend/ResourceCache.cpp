@@ -34,7 +34,7 @@ void ResourceCache::ReleaseAllResources()
 	}
 }
 
-MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, MaterialCacheHandle_t& matCacheHnd)
+MaterialCacheHandle_t ResourceCache::AllocMaterial(const ReflectionBase* matDesc, MaterialCacheHandle_t& matCacheHnd)
 {
 	Material* m;
 	int matIndex = matCacheHnd.index;
@@ -49,18 +49,25 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 		}
 	}
 
+	auto& standardMaterialDesc = static_cast<ReflectionContainer<StandardMaterialDesc>*>(const_cast<ReflectionBase*>(matDesc))->reflectedStruct;
+
 	m = &materialCache.at(matIndex);	
-	m->model.shader = shaders.pixelShaders.at((std::uint8_t)matDesc.shaderType);
+	m->model.shader = shaders.pixelShaders.at((std::uint8_t)standardMaterialDesc.shaderType);
+
+	//m->matPrms.hasAlbedoMap = false;
+	//m->matPrms.hasMetalnessMap = false;
+	//m->matPrms.hasNormalMap = false;
+	//m->matPrms.hasSmoothnessMap = false;
 
 	if ((matCacheHnd.isCached & UPDATE_MAT_MAPS)) {
-		rhi.LoadTexture(matDesc.albedoPath, m->albedoMap, false);
-		rhi.LoadTexture(matDesc.normalPath, m->normalMap, false);
-		if ((matDesc.unionTags & METALNESS_IS_MAP) == METALNESS_IS_MAP) {
-			rhi.LoadTexture(matDesc.metalnessMap, m->metalnessMap, false);
+		rhi.LoadTexture(standardMaterialDesc.albedoPath, m->albedoMap, false);
+		rhi.LoadTexture(standardMaterialDesc.normalPath, m->normalMap, false);
+		if ((standardMaterialDesc.unionTags & METALNESS_IS_MAP) == METALNESS_IS_MAP) {
+			rhi.LoadTexture(standardMaterialDesc.metalnessMap, m->metalnessMap, false);
 			m->matPrms.hasMetalnessMap = true;
 		}
-		if ((matDesc.unionTags & SMOOTHNESS_IS_MAP) == SMOOTHNESS_IS_MAP) {
-			rhi.LoadTexture(matDesc.smoothnessMap, m->smoothnessMap, false);
+		if ((standardMaterialDesc.unionTags & SMOOTHNESS_IS_MAP) == SMOOTHNESS_IS_MAP) {
+			rhi.LoadTexture(standardMaterialDesc.smoothnessMap, m->smoothnessMap, false);
 			m->matPrms.hasSmoothnessMap = true;
 		}
 	}
@@ -70,13 +77,13 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 		m->matPrms.hasNormalMap = m->normalMap.resourceView != nullptr;
 		m->matPrms.hasMetalnessMap = m->metalnessMap.resourceView != nullptr;
 
-		m->matPrms.baseColor = matDesc.baseColor;
-		m->matPrms.subsurfaceAlbedo = matDesc.subsurfaceAlbedo;
-		m->matPrms.meanFreePathColor = matDesc.meanFreePathColor; 
-		m->matPrms.meanFreePathDist = matDesc.meanFreePathDistance; //from cm to m
-		m->matPrms.scale = fmax(0.0f, matDesc.scale);
+		m->matPrms.baseColor = standardMaterialDesc.baseColor;
+		m->matPrms.subsurfaceAlbedo = standardMaterialDesc.subsurfaceAlbedo;
+		m->matPrms.meanFreePathColor = standardMaterialDesc.meanFreePathColor;
+		m->matPrms.meanFreePathDist = standardMaterialDesc.meanFreePathDistance; //from cm to m
+		m->matPrms.scale = fmax(0.0f, standardMaterialDesc.scale);
 
-		srand((int)matDesc.scale);
+		srand((int)standardMaterialDesc.scale);
 
 		std::random_device rd;
 		std::mt19937 gen(6.0f);
@@ -87,19 +94,19 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const MaterialDesc& matDesc, 
 		}
 
 		std::sort(m->matPrms.samples, m->matPrms.samples + (int)(m->matPrms.scale * 4.0f));
-		std::sort(m->matPrms.samples + (int)(m->matPrms.scale * 4.0f), m->matPrms.samples + (int)(m->matPrms.scale * 4.0f) + (int)(std::trunc(matDesc.subsurfaceAlbedo.y * 255.0f)*4.0f));
+		std::sort(m->matPrms.samples + (int)(m->matPrms.scale * 4.0f), m->matPrms.samples + (int)(m->matPrms.scale * 4.0f) + (int)(std::trunc(standardMaterialDesc.subsurfaceAlbedo.y * 255.0f)*4.0f));
 
 		//for (int i = 0; i < 64; i++) {
 		//	m->matPrms.samples[i] = (float)(rand() % 10000) / 10000.0f;
 		//}
 
-		if ((matDesc.unionTags & METALNESS_IS_MAP) == 0) {
-			m->matPrms.metalness = matDesc.metalnessValue;
+		if ((standardMaterialDesc.unionTags & METALNESS_IS_MAP) == 0) {
+			m->matPrms.metalness = standardMaterialDesc.metalnessValue;
 			m->matPrms.hasMetalnessMap = false;
 		}
 
-		if ((matDesc.unionTags & SMOOTHNESS_IS_MAP) == 0) {
-			m->matPrms.roughness = 1.0f - matDesc.smoothnessValue;
+		if ((standardMaterialDesc.unionTags & SMOOTHNESS_IS_MAP) == 0) {
+			m->matPrms.roughness = 1.0f - standardMaterialDesc.smoothnessValue;
 			m->matPrms.hasSmoothnessMap = false;
 		}
 

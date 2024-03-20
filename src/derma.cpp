@@ -263,26 +263,6 @@ HRESULT InitData() {
     g_cam = Camera(camPos, camDir, camUp, dx::XM_PIDIV2 * rhi.viewport.Height / rhi.viewport.Width, rhi.viewport.Width / rhi.viewport.Height, 0.05f, 100.0f);
     //-----------------------------------------------------------------------------
 
-    //Vertex v(1.0f, 1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 2.3, 4.4f, 1.2f, 1.2, 3.5f);
-    //std::ofstream of("test.dscene", std::ios::out | std::ios::binary);
-    //if (!of) {
-    //    std::cout << "failed to openfile" << std::endl;
-    //    return E_ACCESSDENIED;
-    //}
-
-    //of.write((char*)&v, sizeof(Vertex));
-    //of.close();
-    //
-    //std::ifstream ifs("test.dscene", std::ios::out | std::ios::binary);
-    //if (!ifs) {
-    //    std::cout << "failed to open file" << std::endl;
-    //    return E_ACCESSDENIED;
-    //}
-
-    //Vertex v2(0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f);
-    //ifs.read((char*)&v2, sizeof(Vertex));
-    //ifs.close();
-
     return hr;
 }
 

@@ -7,6 +7,8 @@
 #include "Lights.h"
 #include "Transform.h"
 
+#include "reflection/Reflection.h"
+
 #include "renderer/backend/ResourceCache.h"
 #include "renderer/backend/BufferCache.h"
 
@@ -269,7 +271,7 @@ int RendererFrontend::removeEntity(RenderableEntity& entityToRemove)
                 if (submeshInfo.submeshHnd.baseVertex == entHnd.submeshHnd.baseVertex) {
                     freedSceneMeshIndices.push_back(i);
                     freedSceneMaterialIndices.push_back(entHnd.submeshHnd.matDescIdx);
-                    materials.at(entHnd.submeshHnd.matDescIdx).shaderType = PShaderID::UNDEFINED;
+                    static_cast<ReflectionContainer<StandardMaterialDesc>*>(materials.at(entHnd.submeshHnd.matDescIdx))->reflectedStruct.shaderType = PShaderID::UNDEFINED;
 
                     resourceCache.DeallocMaterial(submeshInfo.matCacheHnd);
                     bufferCache.DeallocStaticGeom(submeshInfo.bufferHnd);
@@ -356,17 +358,20 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
             matDescId = materials.size() - scene->mNumMaterials + mesh->mMaterialIndex;
         }
 
-        MaterialDesc& matDesc = materials.at(matDescId);
+        //ReflectionBase* matDesc = materials.at(matDescId);
+        ReflectionContainer<StandardMaterialDesc>* matDesc = new ReflectionContainer<StandardMaterialDesc>();
+        materials.at(matDescId) = matDesc;
+        auto& materialParams = matDesc->reflectedStruct;
+        materialParams.shaderType = PShaderID::UNDEFINED;
 
         MaterialCacheHandle_t initMatCacheHnd{ 0, NO_UPDATE_MAT};
 
+        if (materialParams.shaderType == PShaderID::UNDEFINED) {
 
-        if (matDesc.shaderType == PShaderID::UNDEFINED) {
-
-            matDesc.meanFreePathDistance = 0.01f;
-            matDesc.meanFreePathColor = dx::XMFLOAT4(3.68f, 1.37f, 0.68f, 1.0f);
-            matDesc.subsurfaceAlbedo = dx::XMFLOAT4(0.436f, 0.015688f, 0.131f,1.0f);
-            matDesc.scale = 5.0f;
+            materialParams.meanFreePathDistance = 0.01f;
+            materialParams.meanFreePathColor = dx::XMFLOAT4(3.68f, 1.37f, 0.68f, 1.0f);
+            materialParams.subsurfaceAlbedo = dx::XMFLOAT4(0.436f, 0.015688f, 0.131f,1.0f);
+            materialParams.scale = 5.0f;
 
             wchar_t tmpString[128];
 
@@ -375,7 +380,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                 Logger::AddLog(Logger::Channel::ERR, "%s\n", importer.GetErrorString());
             }
 
-            matDesc.shaderType = PShaderID::STANDARD;
+            materialParams.shaderType = PShaderID::STANDARD;
 
             aiString diffTexName;
             int count = material->GetTextureCount(aiTextureType_DIFFUSE);
@@ -389,7 +394,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     albedoPath.Append("/");
                     albedoPath.Append(diffTexName.C_Str());
                     mbstowcs_s(&numCharConverted, tmpString, albedoPath.C_Str(), 128);
-                    wcscpy_s(matDesc.albedoPath, tmpString);
+                    wcscpy_s(materialParams.albedoPath, tmpString);
 
                     // L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg";
                 }
@@ -420,12 +425,12 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
             aiColor4D col;
             success = material->Get(AI_MATKEY_COLOR_DIFFUSE, col);
             if (aiReturn_SUCCESS == success) {
-                matDesc.baseColor = dx::XMFLOAT4(col.r, col.g, col.b, col.a);
+                materialParams.baseColor = dx::XMFLOAT4(col.r, col.g, col.b, col.a);
             }
             else {
-                matDesc.baseColor = dx::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+                materialParams.baseColor = dx::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
             }
-            matDesc.baseColor = dx::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);//TODO: REMOVE AFTER TESTING
+            materialParams.baseColor = dx::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);//TODO: REMOVE AFTER TESTING
 
             aiString roughTexName;
             count = material->GetTextureCount(aiTextureType_DIFFUSE_ROUGHNESS);
@@ -439,9 +444,9 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     roughnessMapPath.Append("/");
                     roughnessMapPath.Append(roughTexName.C_Str());
                     mbstowcs_s(&numCharConverted, tmpString, roughnessMapPath.C_Str(), 128);
-                    wcscpy_s(matDesc.smoothnessMap, tmpString);
+                    wcscpy_s(materialParams.smoothnessMap, tmpString);
                     //wcscpy(matDesc.smoothnessMap, L"");
-                    matDesc.unionTags |= SMOOTHNESS_IS_MAP;
+                    materialParams.unionTags |= SMOOTHNESS_IS_MAP;
                 }
             }
             else {
@@ -449,14 +454,14 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                 success = material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
                 if (aiReturn_SUCCESS == success) {
                     //TODO:: do correct conversion roughness surface
-                    matDesc.smoothnessValue = 1.0f - roughness;
+                    materialParams.smoothnessValue = 1.0f - roughness;
                 }
                 else {
-                    matDesc.smoothnessValue = 0.5f;
+                    materialParams.smoothnessValue = 0.5f;
                 }
             }
 
-            matDesc.smoothnessValue = 0.30f; //TODO: REMOVE AFTER TESTING
+            materialParams.smoothnessValue = 0.30f; //TODO: REMOVE AFTER TESTING
 
             aiString metTexName;
             count = material->GetTextureCount(aiTextureType_METALNESS);
@@ -470,19 +475,19 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                     metalnessMapPath.Append("/");
                     metalnessMapPath.Append(metTexName.C_Str());
                     mbstowcs_s(&numCharConverted, tmpString, metalnessMapPath.C_Str(), 128);
-                    wcscpy_s(matDesc.metalnessMap, tmpString);
+                    wcscpy_s(materialParams.metalnessMap, tmpString);
                     //wcscpy(matDesc.metalnessMap, L"");
-                    matDesc.unionTags |= METALNESS_IS_MAP;
+                    materialParams.unionTags |= METALNESS_IS_MAP;
                 }
             }
             else {
                 float metalness = 0.0f;
                 success = material->Get(AI_MATKEY_METALLIC_FACTOR, metalness);
                 if (aiReturn_SUCCESS == success) {
-                    matDesc.metalnessValue = metalness;
+                    materialParams.metalnessValue = metalness;
                 }
                 else {
-                    matDesc.metalnessValue = 0.0f;
+                    materialParams.metalnessValue = 0.0f;
                 }
             }
 

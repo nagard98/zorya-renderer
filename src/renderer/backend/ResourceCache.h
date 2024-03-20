@@ -6,6 +6,8 @@
 
 #include "renderer/frontend/Material.h"
 
+#include "reflection/Reflection.h"
+
 struct MaterialCacheHandle_t {
 	std::uint16_t index;
 	MatUpdateFlags_ isCached;
@@ -18,7 +20,7 @@ public:
 
 	void ReleaseAllResources();
 
-	MaterialCacheHandle_t AllocMaterial(const MaterialDesc &matDesc, MaterialCacheHandle_t& updateOpts);
+	MaterialCacheHandle_t AllocMaterial(const ReflectionBase *matDesc, MaterialCacheHandle_t& updateOpts);
 	void DeallocMaterial(MaterialCacheHandle_t& matCacheHnd);
 	void UpdateMaterialSmoothness(const MaterialCacheHandle_t matHnd, float smoothness );
 	void UpdateMaterialAlbedoMap(const MaterialCacheHandle_t matHnd, const wchar_t* albedoMapPath);

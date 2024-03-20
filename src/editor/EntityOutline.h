@@ -12,7 +12,7 @@ public:
 	EntityOutline();
 	~EntityOutline();
 
-	void RenderEProperties(RenderableEntity& entity, SubmeshInfo* smInfo, MaterialDesc* matDesc);
+	void RenderEProperties(RenderableEntity& entity, SubmeshInfo* smInfo, ReflectionBase* matDesc);
 	void RenderEProperties(RenderableEntity& entity, LightInfo& lightInfo);
 
 	void RenderETransform(RenderableEntity& entity);
