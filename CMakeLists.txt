@@ -4,7 +4,7 @@ project(derma-renderer)
 add_subdirectory("external/imgui")
 add_subdirectory("external/assimp")
 add_subdirectory("external/DirectXTK")
-add_executable(derma WIN32 "src/derma.cpp"  "src/renderer/backend/rhi/BufferObject.cpp" "src/renderer/frontend/Camera.cpp"  "src/renderer/frontend/Shaders.cpp" "src/renderer/backend/BufferCache.cpp"  "src/renderer/backend/rhi/RenderHardwareInterface.cpp"  "src/renderer/backend/rhi/RHIState.cpp"   "src/renderer/frontend/RendererFrontend.cpp" "src/renderer/backend/RendererBackend.cpp"  "src/renderer/backend/ResourceCache.cpp" "src/renderer/frontend/Model.cpp"  "src/editor/SceneHierarchy.cpp" "src/renderer/frontend/Lights.cpp"  "src/editor/Editor.cpp"  "src/editor/EntityOutline.cpp"  "src/renderer/frontend/SceneGraph.cpp"  "src/editor/Logger.cpp"  "src/renderer/frontend/Transform.cpp"  "src/renderer/backend/rhi/RenderDeviceDX11.cpp"  )
+add_executable(derma WIN32 "src/derma.cpp"   "src/renderer/backend/rhi/BufferObject.cpp" "src/renderer/frontend/Camera.cpp"  "src/renderer/frontend/Shaders.cpp" "src/renderer/backend/BufferCache.cpp"  "src/renderer/backend/rhi/RenderHardwareInterface.cpp"  "src/renderer/backend/rhi/RHIState.cpp"   "src/renderer/frontend/RendererFrontend.cpp" "src/renderer/backend/RendererBackend.cpp"  "src/renderer/backend/ResourceCache.cpp" "src/renderer/frontend/Model.cpp"  "src/editor/SceneHierarchy.cpp" "src/renderer/frontend/Lights.cpp"  "src/editor/Editor.cpp"  "src/editor/EntityOutline.cpp"  "src/renderer/frontend/SceneGraph.cpp"  "src/editor/Logger.cpp"  "src/renderer/frontend/Transform.cpp"  "src/renderer/backend/rhi/RenderDeviceDX11.cpp"   "src/renderer/frontend/Material.cpp" "src/renderer/frontend/Shader.cpp")
 
 target_include_directories(derma PRIVATE "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(derma PRIVATE DirectXTK imgui assimp::assimp)
@@ -56,17 +56,32 @@ set_source_files_properties("src/shaders/SSSSS.hlsl" PROPERTIES ShaderType "ps")
 set_source_files_properties("src/shaders/FullscreenQuad.hlsl" PROPERTIES ShaderType "vs")
 set_source_files_properties(${HLSL_SHADER_FILES} PROPERTIES ShaderModel "5_0")
 
-foreach(FILE ${HLSL_SHADER_FILES})
-  get_filename_component(FILE_WE ${FILE} NAME_WE)
-  get_source_file_property(shadertype ${FILE} ShaderType)
-  get_source_file_property(shadermodel ${FILE} ShaderModel)
-  add_custom_command(OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/headers/${FILE_WE}.h"
-                     COMMAND fxc.exe /nologo /E${shadertype} /Vn g_${FILE_WE} /T${shadertype}_${shadermodel} $<IF:$<CONFIG:DEBUG>,/Od,/O1> /Zi /Fh "./src/shaders/headers/${FILE_WE}.h" /Fd "${CMAKE_BINARY_DIR}/shaders/${FILE_WE}.pdb" ${FILE}
-                     MAIN_DEPENDENCY ${FILE}
-                     COMMENT "Compiling HLSL ${FILE}..."
-                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                     VERBATIM)
+set_source_files_properties(${HLSL_SHADER_FILES} PROPERTIES ShaderOptions NOOPTIONS)
 
-  add_custom_target(shaders_${FILE_WE} DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/headers/${FILE_WE}.h")
-  add_dependencies(derma shaders_${FILE_WE})
+set_property(
+  SOURCE "src/shaders/SSSSS.hlsl"
+  APPEND
+  PROPERTY ShaderOptions
+  OP1 OP2
+)
+
+
+foreach(FILE ${HLSL_SHADER_FILES})
+    get_filename_component(FILE_WE ${FILE} NAME_WE)
+    get_source_file_property(shadertype ${FILE} ShaderType)
+    get_source_file_property(shadermodel ${FILE} ShaderModel)
+    get_source_file_property(shaderoptions ${FILE} ShaderOptions)
+
+    foreach(shaderopt ${shaderoptions})
+        add_custom_command(OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/headers/${FILE_WE}_${shaderopt}.h"
+                         COMMAND fxc.exe /nologo /E${shadertype} /Vn g_${FILE_WE} /I "${PROJECT_SOURCE_DIR}/src" /D ${shaderopt} /T${shadertype}_${shadermodel} $<IF:$<CONFIG:DEBUG>,/Od,/O1> /Zi /Fh "./src/shaders/headers/${FILE_WE}_${shaderopt}.h" /Fd "${CMAKE_BINARY_DIR}/shaders/${FILE_WE}_${shaderopt}.pdb" ${FILE}
+                         MAIN_DEPENDENCY ${FILE}
+                         COMMENT "Compiling HLSL ${FILE}..."
+                         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                         VERBATIM)
+
+        add_custom_target(shaders_${FILE_WE}_${shaderopt} DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/headers/${FILE_WE}_${shaderopt}.h")
+        add_dependencies(derma shaders_${FILE_WE}_${shaderopt})
+    endforeach(shaderopt)
+
 endforeach(FILE)

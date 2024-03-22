@@ -1,10 +1,14 @@
 #include "renderer/frontend/Shaders.h"
+#include "renderer/frontend/Shader.h"
 
 #include "renderer/backend/rhi/RenderHardwareInterface.h"
 
 #include <string>
 #include <Windows.h>
 #include <d3d11_1.h>
+#include <d3d11shader.h>
+#include <d3dcompiler.h>
+#include <d3dcompiler.inl>
 
 #include "shaders/headers/DepthPS.h"
 #include "shaders/headers/DepthVS.h"
@@ -15,17 +19,11 @@
 #include "shaders/headers/ShadowMapping.h"
 #include "shaders/headers/SkyboxPS.h"
 #include "shaders/headers/SkyboxVS.h"
-#include "shaders/headers/SSSSS.h"
+#include "shaders/headers/SSSSS_NOOPTIONS.h"
 #include "shaders/headers/FullscreenQuad.h"
 
-Shaders shaders;
+//Shaders shaders;
 
-D3D11_INPUT_ELEMENT_DESC vertexLayoutDesc[4] = {
-    {"position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-    { "texcoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    { "normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    { "tangent", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
-};
 
 Shaders::~Shaders()
 {
@@ -107,6 +105,13 @@ HRESULT Shaders::LoadDefaultShaders()
     RETURN_IF_FAILED(hRes);
     hRes = rhi.device.device->CreatePixelShader(g_Present, sizeof(g_Present), nullptr, &pixelShaders.at((std::uint8_t)PShaderID::PRESENT));
     RETURN_IF_FAILED(hRes);
+
+
+    //ID3D11ShaderReflection* shaderReflection = nullptr;
+    //hRes = D3DReflect(g_SSSSS, sizeof(g_SSSSS), IID_ID3D11ShaderReflection, (void**)&shaderReflection);
+    //RETURN_IF_FAILED(hRes);
+    //D3D11_SHADER_DESC shaderDesc;
+    //shaderReflection->GetDesc(&shaderDesc);
 
     return hRes;
 }

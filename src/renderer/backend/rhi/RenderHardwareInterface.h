@@ -10,6 +10,7 @@
 #include "renderer/backend/rhi/RenderDevice.h"
 
 #include "renderer/frontend/Material.h"
+#include "renderer/frontend/Shader.h"
 
 namespace wrl = Microsoft::WRL;
 

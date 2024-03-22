@@ -10,25 +10,6 @@
 
 #include "editor/Logger.h"
 
-enum class VShaderID : std::uint8_t {
-    STANDARD,
-    SKYBOX,
-    DEPTH,
-    FULL_QUAD,
-    NUM_SHADERS
-};
-
-enum class PShaderID : std::uint8_t {
-    UNDEFINED,
-    STANDARD,
-    SKYBOX,
-    SKIN,
-    SSSSS,
-    LIGHTING,
-    SHADOW_MAP,
-    PRESENT,
-    NUM_SHADERS
-};
 
 class Shaders {
 public:
@@ -47,12 +28,12 @@ public:
     ID3D11InputLayout* simpleVertexLayout;
 };
 
-extern Shaders shaders;
+//extern Shaders shaders;
 
-extern std::vector<ID3D11VertexShader*> vertexShaders;
-extern std::vector<ID3D11PixelShader*> pixelShaders;
-
-extern D3D11_INPUT_ELEMENT_DESC vertexLayoutDesc[4];
+//extern std::vector<ID3D11VertexShader*> vertexShaders;
+//extern std::vector<ID3D11PixelShader*> pixelShaders;
+//
+//extern D3D11_INPUT_ELEMENT_DESC vertexLayoutDesc[4];
 
 template<class ShaderClass>
 HRESULT CreateShader(ID3DBlob* pShaderBlob, ShaderClass** pShader, ID3D11Device* g_d3dDevice);

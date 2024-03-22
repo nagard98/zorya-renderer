@@ -1,7 +1,7 @@
 #include "renderer/backend/ResourceCache.h"
 #include "renderer/backend/rhi/RenderHardwareInterface.h"
 
-#include "renderer/frontend/Shaders.h"
+#include "renderer/frontend/Shader.h"
 #include "renderer/frontend/Material.h"
 
 #include <d3d11_1.h>
@@ -52,7 +52,10 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const ReflectionBase* matDesc
 	auto& standardMaterialDesc = static_cast<ReflectionContainer<StandardMaterialDesc>*>(const_cast<ReflectionBase*>(matDesc))->reflectedStruct;
 
 	m = &materialCache.at(matIndex);	
-	m->model.shader = shaders.pixelShaders.at((std::uint8_t)standardMaterialDesc.shaderType);
+	//m->model.shader = shaders.pixelShaders.at((std::uint8_t)standardMaterialDesc.shaderType);
+	
+	//ShaderBytecode shaderBytecode = shaders.pixelShaderBytecodeBuffers[(std::uint8_t)standardMaterialDesc.shaderType];
+	m->model = PixelShader::create(standardMaterialDesc.shaderType);
 
 	//m->matPrms.hasAlbedoMap = false;
 	//m->matPrms.hasMetalnessMap = false;

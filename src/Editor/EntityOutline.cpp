@@ -208,6 +208,7 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 				}
 				});
 
+			//./assets/brocc-the-athlete/textures/Sporter_Albedo.png
 			//{
 			//	static int smoothnessMode = 0;
 			//	

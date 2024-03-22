@@ -6,6 +6,7 @@
 
 #include "renderer/frontend/RendererFrontend.h"
 #include "renderer/frontend/Lights.h"
+#include "renderer/frontend/Shader.h"
 
 #include <functional>
 #include <cstdint>
@@ -118,6 +119,19 @@ private:
 	ID3D11ShaderResourceView* skinSRV[5];
 
 	ID3D11ShaderResourceView* cubemapView; //skybox view
+
+	VertexShader shadowMapVertexShader;
+	PixelShader shadowMapPixelShader;
+
+	VertexShader GBufferVertexShader;
+	VertexShader fullscreenQuadShader;
+
+	PixelShader lightingShader;
+
+	VertexShader skyboxVertexShader;
+	PixelShader skyboxPixelShader;
+
+	PixelShader sssssPixelShader;
 
 	//TODO: what did I intend to do with this?
 	//std::hash<std::uint16_t> submeshHash;

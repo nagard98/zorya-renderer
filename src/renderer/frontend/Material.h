@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <d3d11.h>
 
-#include "Shaders.h"
+#include "Shader.h"
 #include "reflection/Reflection.h"
 
 namespace dx = DirectX;
@@ -68,13 +68,6 @@ struct Texture2D {
 	ID3D11Texture2D* resource;
 };
 
-struct ShaderTexture2D {
-	ID3D11ShaderResourceView* resourceView;
-};
-
-struct MaterialModel {
-	ID3D11PixelShader* shader;
-};
 
 struct MaterialParams {
 	float samples[64];
@@ -103,7 +96,7 @@ struct MaterialParams {
 
 
 struct Material {
-	MaterialModel model;
+	PixelShader model;
 
 	ShaderTexture2D albedoMap;
 	ShaderTexture2D metalnessMap;

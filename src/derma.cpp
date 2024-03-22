@@ -21,10 +21,10 @@
 #include "editor/Editor.h"
 
 #include "renderer/frontend/Camera.h"
-#include "renderer/frontend/Shaders.h"
 #include "renderer/frontend/Model.h"
 #include "renderer/frontend/SceneGraph.h"
 #include "renderer/frontend/RendererFrontend.h"
+#include "renderer/frontend/Shader.h"
 
 #include "renderer/backend/rhi/RHIState.h"
 #include "renderer/backend/rhi/RenderHardwareInterface.h"
@@ -227,8 +227,8 @@ HRESULT InitData() {
     hr = rb.Init();
     RETURN_IF_FAILED(hr);
 
-    hr = shaders.Init();
-    RETURN_IF_FAILED(hr);  
+    /*hr = shaders.Init();
+    RETURN_IF_FAILED(hr);  */
 
     //RenderableEntity mHnd4 = rf.LoadModelFromFile("./shaders/assets/nissan/source/nissan2.obj");
     //RenderableEntity mHnd5 = rf.LoadModelFromFile("./shaders/assets/cornell/cornell.fbx");
@@ -251,7 +251,7 @@ HRESULT InitData() {
     rf.AddLight(nullptr, dx::XMVectorSet(1.0f, 0.0f, 0.0, 0.0f), 1.0f, 8.0f);
     //rf.AddLight(nullptr, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.22f, 0.20f);
 
-    rhi.context->IASetInputLayout(shaders.vertexLayout);
+    //rhi.context->IASetInputLayout(shaders.vertexLayout);
     rhi.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 
@@ -330,7 +330,7 @@ void Cleanup() {
 
     bufferCache.ReleaseAllResources();
     resourceCache.ReleaseAllResources();
-    shaders.ReleaseAllResources();
+    //shaders.ReleaseAllResources();
     rb.ReleaseAllResources();
     rhi.ReleaseAllResources();
 

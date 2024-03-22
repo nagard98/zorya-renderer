@@ -109,9 +109,9 @@ zorya::VAR_REFL_TYPE getVarType(Token* token) {
 	if (strncmp(tp, "uint16_t", len) == 0) return zorya::VAR_REFL_TYPE::UINT16;
 	if (strncmp(tp, "uint32_t", len) == 0) return zorya::VAR_REFL_TYPE::UINT32;
 	if (strncmp(tp, "uint64_t", len) == 0) return zorya::VAR_REFL_TYPE::UINT64;
-	if (strncmp(tp, "XMFLOAT2", len) == 0) return zorya::VAR_REFL_TYPE::XMFLOAT2;
-	if (strncmp(tp, "XMFLOAT3", len) == 0) return zorya::VAR_REFL_TYPE::XMFLOAT3;
-	if (strncmp(tp, "XMFLOAT4", len) == 0) return zorya::VAR_REFL_TYPE::XMFLOAT4;
+	if (strncmp(tp, "XMFLOAT2", len) == 0 || strncmp(tp, "float2", len) == 0) return zorya::VAR_REFL_TYPE::XMFLOAT2;
+	if (strncmp(tp, "XMFLOAT3", len) == 0 || strncmp(tp, "float3", len) == 0) return zorya::VAR_REFL_TYPE::XMFLOAT3;
+	if (strncmp(tp, "XMFLOAT4", len) == 0 || strncmp(tp, "float4", len) == 0) return zorya::VAR_REFL_TYPE::XMFLOAT4;
 	if (strncmp(tp, "wchar_t", len) == 0) return zorya::VAR_REFL_TYPE::WCHAR;
 	return zorya::VAR_REFL_TYPE::NOT_SUPPORTED;
 }

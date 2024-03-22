@@ -1,6 +1,8 @@
 #ifndef LIGHTS_H_
 #define LIGHTS_H_
 
+#ifdef __cplusplus
+
 #include <DirectXMath.h>
 #include <cstdint>
 
@@ -8,61 +10,67 @@
 
 namespace dx = DirectX;
 
-enum class LightType : std::uint8_t{
+using float4 = dx::XMFLOAT4;
+using float3 = dx::XMFLOAT3;
+using float2 = dx::XMFLOAT2;
+
+#else
+
+#endif
+
+struct DirectionalLight
+{
+    float4 dir;
+
+    PROPERTY(asd)
+    float nearPlaneDist;
+    PROPERTY(asd)
+    float farPlaneDist;
+
+    float2 pad;
+};
+
+struct PointLight
+{
+    float4 posWorldSpace;
+
+    PROPERTY(asd)
+    float constant;
+    PROPERTY(asd)
+    float lin;
+    PROPERTY(asd)
+    float quad;
+
+    PROPERTY(asd)
+    float nearPlaneDist;
+    PROPERTY(asd)
+    float farPlaneDist;
+
+    float3 pad;
+};
+
+struct SpotLight
+{
+    float4 posWorldSpace;
+    float4 direction;
+
+    PROPERTY(asd)
+    float cosCutoffAngle;
+
+    PROPERTY(asd)
+    float nearPlaneDist;
+    PROPERTY(asd)
+    float farPlaneDist;
+
+    float pad;
+};
+
+#ifdef __cplusplus
+
+enum class LightType : std::uint8_t {
     DIRECTIONAL,
     POINT,
     SPOT
-};
-
-struct DirectionalLight {
-    dx::XMVECTOR direction;
-
-    PROPERTY()
-    float shadowMapNearPlane;
-    
-    PROPERTY()
-    float shadowMapFarPlane;
-
-    float pad[2];
-};
-
-struct PointLight {
-    dx::XMVECTOR posWorldSpace;
-
-    PROPERTY()
-    float constant;
-    
-    PROPERTY()
-    float linear;
-    
-    PROPERTY()
-    float quadratic;
-
-
-    PROPERTY()
-    float shadowMapNearPlane;
-    
-    PROPERTY()
-    float shadowMapFarPlane;
-    
-    float pad[3];
-};
-
-struct SpotLight {
-    dx::XMVECTOR posWorldSpace;
-    dx::XMVECTOR direction;
-
-    PROPERTY()
-    float cosCutoffAngle;
-
-
-    PROPERTY()
-    float shadowMapNearPlane;
-    
-    PROPERTY()
-    float shadowMapFarPlane;
-
-    float pad;
 };
 
 struct LightHandle_t {
@@ -100,5 +108,7 @@ struct OmniDirShadowCB {
     dx::XMMATRIX spotLightViewMat[16];
     dx::XMMATRIX spotLightProjMat[16];
 };
+
+#endif
 
 #endif

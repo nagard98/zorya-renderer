@@ -3,7 +3,7 @@
 #include "Material.h"
 #include "Camera.h"
 #include "SceneGraph.h"
-#include "Shaders.h"
+#include "Shader.h"
 #include "Lights.h"
 #include "Transform.h"
 
@@ -129,14 +129,18 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
             LightInfo& lightInfo = sceneLights.at(lightHnd.index);
             lightInfo.tag = LightType::DIRECTIONAL;
             //TODO: define near/far plane computation based on some parameter thats still not defined
-            lightInfo.dirLight = DirectionalLight{direction, shadowMapNearPlane, shadowMapFarPlane};
+            lightInfo.dirLight = DirectionalLight{ {}, shadowMapNearPlane, shadowMapFarPlane };
+            dx::XMStoreFloat4(&lightInfo.dirLight.dir, direction);
             lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
 
             freedSceneLightIndices.pop_back();
         }
         else {
             lightHnd.index = sceneLights.size();
-            sceneLights.emplace_back(LightInfo{ LightType::DIRECTIONAL, {DirectionalLight{direction, shadowMapNearPlane, shadowMapFarPlane}}, dx::XMMatrixIdentity() });
+            {
+                LightInfo& lightInfo = sceneLights.emplace_back(LightInfo{ LightType::DIRECTIONAL, {DirectionalLight{{}, shadowMapNearPlane, shadowMapFarPlane}}, dx::XMMatrixIdentity() });
+                dx::XMStoreFloat4(&lightInfo.dirLight.dir, direction);
+            }
         }
 
         //TODO:decide what to hash for id
@@ -170,7 +174,9 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
         LightInfo& lightInfo = sceneLights.at(lightHnd.index);
         lightInfo.tag = LightType::SPOT;
         //TODO: define near/far plane computation based on some parameter thats still not defined
-        lightInfo.spotLight = SpotLight{ position,direction, std::cos(cutoffAngle), 1.0f, 20.0f };
+        lightInfo.spotLight = SpotLight{ {}, {}, std::cos(cutoffAngle), 1.0f, 20.0f };
+        dx::XMStoreFloat4(&lightInfo.spotLight.direction, direction);
+        dx::XMStoreFloat4(&lightInfo.spotLight.posWorldSpace, position);
         lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
 
         freedSceneLightIndices.pop_back();
@@ -181,7 +187,9 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
         LightInfo& lightInfo = sceneLights.emplace_back();
         lightInfo.tag = LightType::SPOT;
         //TODO: define near/far plane computation based on some parameter thats still not defined
-        lightInfo.spotLight = SpotLight{ position,direction, std::cos(cutoffAngle), 1.0f, 20.0f };
+        lightInfo.spotLight = SpotLight{ {}, {}, std::cos(cutoffAngle), 1.0f, 20.0f };
+        dx::XMStoreFloat4(&lightInfo.spotLight.direction, direction);
+        dx::XMStoreFloat4(&lightInfo.spotLight.posWorldSpace, position);
         lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
     }
 
@@ -217,7 +225,9 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
 
         LightInfo& lightInfo = sceneLights.at(lightHnd.index);
         lightInfo.tag = LightType::POINT;
-        lightInfo.pointLight = PointLight{ position, constant, linear, quadratic, 1.0f, 1.0f + maxLightDist };
+        lightInfo.pointLight = PointLight{ {}, constant, linear, quadratic, 1.0f, 1.0f + maxLightDist };
+        dx::XMStoreFloat4(&lightInfo.pointLight.posWorldSpace, position);
+
         lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
 
         freedSceneLightIndices.pop_back();
@@ -227,7 +237,8 @@ RenderableEntity RendererFrontend::AddLight(const RenderableEntity* attachTo, dx
 
         LightInfo& lightInfo = sceneLights.emplace_back();
         lightInfo.tag = LightType::POINT;
-        lightInfo.pointLight = PointLight{ position, constant, linear, quadratic, 1.0f, 1.0f + maxLightDist };
+        lightInfo.pointLight = PointLight{ {}, constant, linear, quadratic, 1.0f, 1.0f + maxLightDist };
+        dx::XMStoreFloat4(&lightInfo.pointLight.posWorldSpace, position);
         lightInfo.finalWorldTransf = dx::XMMatrixIdentity();
     }
 

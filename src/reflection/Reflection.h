@@ -7,7 +7,6 @@
 
 #include "ReflectionGenerationUtils.h"
 
-
 #define PROPERTY(params)
 
 struct ReflectionBase {
