@@ -1,5 +1,6 @@
 #include "editor/EntityOutline.h"
 #include "editor/Logger.h"
+#include "Editor.h"
 
 #include "renderer/frontend/RendererFrontend.h"
 #include "renderer/frontend/Material.h"
@@ -12,6 +13,7 @@
 #include <variant>
 
 #include "imgui.h"
+#include "imfilebrowser.h"
 
 
 namespace dx = DirectX;
@@ -25,7 +27,7 @@ EntityOutline::~EntityOutline()
 }
 
 char EntityOutline::tmpCharBuff[128];
-
+ImGuiID EntityOutline::idDialogOpen = 0;
 
 template<zorya::VAR_REFL_TYPE T>
 bool RenderEPropertyImpl(const char* structAddress, const MemberMeta& memMeta) {
@@ -91,12 +93,29 @@ bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT4>(const char* structAddre
 template<>
 bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::WCHAR>(const char* structAddress, const MemberMeta& memMeta) {
 	ImGui::Spacing();
-
 	size_t numConvertedChars = 0;
+
 	wcstombs_s(&numConvertedChars, EntityOutline::tmpCharBuff, 128, (wchar_t*)(structAddress + memMeta.offset), 128);
 	ImGui::InputText(memMeta.name, EntityOutline::tmpCharBuff, 128);
 	mbstowcs_s(&numConvertedChars, (wchar_t*)(structAddress + memMeta.offset), 128, EntityOutline::tmpCharBuff, 128);
 	bool isEditingComplete = ImGui::IsItemDeactivatedAfterEdit();
+
+	ImGui::PushID((void*)(structAddress + memMeta.offset));
+	ImGuiID idCurrentDialog = ImGui::GetItemID();
+
+	if (ImGui::Button("Import")) {
+		zorya::fileBrowser.Open();
+		EntityOutline::idDialogOpen = idCurrentDialog;
+	}
+
+	if (EntityOutline::idDialogOpen == idCurrentDialog && zorya::fileBrowser.HasSelected()) {
+		std::wstring importFilepath = zorya::fileBrowser.GetSelected().wstring();
+		wcsncpy_s((wchar_t*)(structAddress + memMeta.offset), 128, importFilepath.c_str(), wcsnlen_s(importFilepath.c_str(), MAX_PATH));
+		zorya::fileBrowser.ClearSelected();
+		isEditingComplete = true;
+	}
+
+	ImGui::PopID();
 
 	ImGui::Spacing();
 
@@ -207,6 +226,8 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 					return 0;
 				}
 				});
+
+			zorya::fileBrowser.Display();
 
 			//./assets/brocc-the-athlete/textures/Sporter_Albedo.png
 			//{

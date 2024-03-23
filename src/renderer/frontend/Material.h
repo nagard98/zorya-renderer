@@ -48,8 +48,9 @@ struct StandardMaterialDesc {
 	float scale;
 
 	union {
-		PROPERTY()
+		
 		float smoothnessValue;
+		PROPERTY()
 		wchar_t smoothnessMap[128];
 	};
 

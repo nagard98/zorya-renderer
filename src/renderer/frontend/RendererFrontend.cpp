@@ -97,7 +97,7 @@ RenderableEntity RendererFrontend::LoadModelFromFile(const std::string& filename
 
     aiNode* rootNode = scene->mRootNode;
 
-    materials.resize(max(materials.size(), materials.size() + scene->mNumMaterials - freedSceneMaterialIndices.size()));
+    materials.resize(max(materials.size(), abs((int)(materials.size() + scene->mNumMaterials - freedSceneMaterialIndices.size()))));
     size_t sepIndex = filename.find_last_of("/");
     aiString basePath = aiString(filename.substr(0, sepIndex));
     scene->mMetaData->Add("basePath", basePath);

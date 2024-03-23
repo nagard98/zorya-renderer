@@ -56,7 +56,7 @@ namespace wrl = Microsoft::WRL;
 HWND g_windowHandle = 0;
 
 Assimp::Importer importer;
-Editor editor;
+zorya::Editor editor;
 
 ID3D11Debug* g_debugLayer;
 

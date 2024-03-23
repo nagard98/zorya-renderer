@@ -7,26 +7,36 @@
 #include "renderer/frontend/SceneGraph.h"
 #include "renderer/frontend/RendererFrontend.h"
 
-#include <vector>
-
 #include "imgui.h"
+#include "imfilebrowser.h"
+
+#include <vector>
 #include <d3d11_1.h>
 
-class Editor {
+namespace zorya {
 
-public:
-	Editor();
-	void Init(const ImGuiID& dockspaceID);
+	static ImGui::FileBrowser fileBrowser;
 
-	void RenderEditor(RendererFrontend& rf, Camera& editorCam, const ID3D11ShaderResourceView* rtSRV);
+	class Editor {
 
-	SceneHierarchy sceneHier;
-	EntityOutline entityProps;
-	bool firstLoop;
-	ImGuiID sceneId;
+	public:
+		Editor();
+		void Init(const ImGuiID& dockspaceID);
 
-	bool isSceneClicked;
-	char textBuff[128];
-};
+		void RenderEditor(RendererFrontend& rf, Camera& editorCam, const ID3D11ShaderResourceView* rtSRV);
+
+
+		bool fileBrowserOpen = false;
+
+		SceneHierarchy sceneHier;
+		EntityOutline entityProps;
+		bool firstLoop;
+		ImGuiID sceneId;
+
+		bool isSceneClicked;
+		char textBuff[128];
+	};
+
+}
 
 #endif

@@ -6,6 +6,9 @@
 
 #include "reflection/Reflection.h"
 
+#include "imgui.h"
+#include "imfilebrowser.h"
+
 class EntityOutline {
 
 public:
@@ -16,6 +19,9 @@ public:
 	void RenderEProperties(RenderableEntity& entity, LightInfo& lightInfo);
 
 	void RenderETransform(RenderableEntity& entity);
+
+	//static ImGui::FileBrowser fileBrowserDialog;
+	static ImGuiID idDialogOpen;
 
 	static char tmpCharBuff[128];
 };

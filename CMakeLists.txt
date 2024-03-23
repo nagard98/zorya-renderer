@@ -7,6 +7,7 @@ add_subdirectory("external/DirectXTK")
 add_executable(derma WIN32 "src/derma.cpp"   "src/renderer/backend/rhi/BufferObject.cpp" "src/renderer/frontend/Camera.cpp"  "src/renderer/frontend/Shaders.cpp" "src/renderer/backend/BufferCache.cpp"  "src/renderer/backend/rhi/RenderHardwareInterface.cpp"  "src/renderer/backend/rhi/RHIState.cpp"   "src/renderer/frontend/RendererFrontend.cpp" "src/renderer/backend/RendererBackend.cpp"  "src/renderer/backend/ResourceCache.cpp" "src/renderer/frontend/Model.cpp"  "src/editor/SceneHierarchy.cpp" "src/renderer/frontend/Lights.cpp"  "src/editor/Editor.cpp"  "src/editor/EntityOutline.cpp"  "src/renderer/frontend/SceneGraph.cpp"  "src/editor/Logger.cpp"  "src/renderer/frontend/Transform.cpp"  "src/renderer/backend/rhi/RenderDeviceDX11.cpp"   "src/renderer/frontend/Material.cpp" "src/renderer/frontend/Shader.cpp")
 
 target_include_directories(derma PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(derma PRIVATE "${PROJECT_SOURCE_DIR}/external/imgui-filebrowser")
 target_link_libraries(derma PRIVATE DirectXTK imgui assimp::assimp)
 
 set_property (TARGET derma
