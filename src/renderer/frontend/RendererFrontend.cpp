@@ -511,13 +511,17 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
         //Vertices--------------------
         bool foundFreeFragment = false;
 
+        FragmentInfo* foundFragment = nullptr;
+
         for (FragmentInfo& freedSceneVertexFragmentInfo : freedStaticSceneVertexDataFragments) {
             if (mesh->mNumVertices <= freedSceneVertexFragmentInfo.length) {
                 submeshHandle.numVertices = mesh->mNumVertices;
                 submeshHandle.baseVertex = freedSceneVertexFragmentInfo.index;
 
+                foundFragment = &freedSceneVertexFragmentInfo;
+
                 //Fixing up remaining fragment after new reservation
-                std::uint32_t remainingFragmentLength = mesh->mNumVertices - freedSceneVertexFragmentInfo.length;
+                std::uint32_t remainingFragmentLength = freedSceneVertexFragmentInfo.length - mesh->mNumVertices;
                 if (remainingFragmentLength == 0) {
                     std::swap(freedSceneVertexFragmentInfo, freedStaticSceneVertexDataFragments.back());
                     freedStaticSceneVertexDataFragments.pop_back();
@@ -578,7 +582,7 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
                 submeshHandle.baseIndex = freedSceneIndexFragmentInfo.index;
 
                 //Fixing up remaining fragment after new reservation
-                std::uint32_t remainingFragmentLength = (numFaces * 3) - freedSceneIndexFragmentInfo.length;
+                std::uint32_t remainingFragmentLength = freedSceneIndexFragmentInfo.length - (numFaces * 3);
                 if (remainingFragmentLength == 0) {
                     std::swap(freedSceneIndexFragmentInfo, freedStaticSceneIndexDataFragments.back());
                     freedStaticSceneIndexDataFragments.pop_back();

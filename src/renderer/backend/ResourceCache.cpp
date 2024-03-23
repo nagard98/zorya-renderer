@@ -31,6 +31,7 @@ void ResourceCache::ReleaseAllResources()
 		if (mat.albedoMap.resourceView) mat.albedoMap.resourceView->Release();
 		if (mat.smoothnessMap.resourceView) mat.metalnessMap.resourceView->Release();
 		if (mat.smoothnessMap.resourceView) mat.smoothnessMap.resourceView->Release();
+		mat.model.freeShader();
 	}
 }
 
