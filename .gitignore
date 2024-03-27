@@ -15,3 +15,5 @@ src/shaders/assets
 src/shaders/headers/*.h
 *_old*
 src/reflection/*_auto_generated.h
+*.cso
+StructLayoutSettings.json

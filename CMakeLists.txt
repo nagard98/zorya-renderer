@@ -71,18 +71,18 @@ foreach(FILE ${HLSL_SHADER_FILES})
     get_filename_component(FILE_WE ${FILE} NAME_WE)
     get_source_file_property(shadertype ${FILE} ShaderType)
     get_source_file_property(shadermodel ${FILE} ShaderModel)
-    get_source_file_property(shaderoptions ${FILE} ShaderOptions)
+    #get_source_file_property(shaderoptions ${FILE} ShaderOptions)
 
-    foreach(shaderopt ${shaderoptions})
-        add_custom_command(OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/headers/${FILE_WE}_${shaderopt}.h"
-                         COMMAND fxc.exe /nologo /E${shadertype} /Vn g_${FILE_WE} /I "${PROJECT_SOURCE_DIR}/src" /D ${shaderopt} /T${shadertype}_${shadermodel} $<IF:$<CONFIG:DEBUG>,/Od,/O1> /Zi /Fh "./src/shaders/headers/${FILE_WE}_${shaderopt}.h" /Fd "${CMAKE_BINARY_DIR}/shaders/${FILE_WE}_${shaderopt}.pdb" ${FILE}
+    #foreach(shaderopt ${shaderoptions})
+        add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/shaders/${FILE_WE}.cso"
+                         COMMAND fxc.exe /nologo /E${shadertype} /Vn g_${FILE_WE} /I "${PROJECT_SOURCE_DIR}/src" /T${shadertype}_${shadermodel} $<IF:$<CONFIG:DEBUG>,/Od,/O1> /Zi /Fo "${CMAKE_BINARY_DIR}/shaders/${FILE_WE}.cso" ${FILE}
                          MAIN_DEPENDENCY ${FILE}
                          COMMENT "Compiling HLSL ${FILE}..."
                          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                          VERBATIM)
 
-        add_custom_target(shaders_${FILE_WE}_${shaderopt} DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/headers/${FILE_WE}_${shaderopt}.h")
-        add_dependencies(derma shaders_${FILE_WE}_${shaderopt})
-    endforeach(shaderopt)
+        add_custom_target(shaders_${FILE_WE} DEPENDS "${CMAKE_BINARY_DIR}/shaders/${FILE_WE}.cso")
+        add_dependencies(derma shaders_${FILE_WE})
+    #endforeach(shaderopt)
 
 endforeach(FILE)

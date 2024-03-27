@@ -53,6 +53,7 @@ struct PixelShader {
 	void freeShader();
 
 	HRESULT bindTexture2D(const char* bindingName, const ShaderTexture2D& texture);
+	HRESULT bindConstantBuffer(const char* bindingName, ID3D11Buffer* const constantBuffer);
 
 	static ID3D11PixelShader* registeredPixelShaders[(std::uint8_t)PShaderID::NUM_SHADERS];
 	static ShaderBytecode pixelShaderBytecodeBuffers[(std::uint8_t)PShaderID::NUM_SHADERS];
@@ -68,6 +69,8 @@ struct VertexShader {
 	static VertexShader create(VShaderID vertexShaderId, D3D11_INPUT_ELEMENT_DESC* verteLayoutDesc, int numInputElements);
 
 	void freeShader();
+
+	HRESULT bindConstantBuffer(const char* bindingName, ID3D11Buffer* const constantBuffer);
 
 	static ID3D11VertexShader* registeredVertexShaders[(std::uint8_t)VShaderID::NUM_SHADERS];
 	static ShaderBytecode vertexShaderBytecodeBuffers[(std::uint8_t)VShaderID::NUM_SHADERS];
