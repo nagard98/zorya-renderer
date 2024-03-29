@@ -27,7 +27,9 @@ struct DirectionalLight
     PROPERTY(asd)
     float farPlaneDist;
 
-    float2 pad;
+    PROPERTY(asd)
+    float ambient;
+    float pad;
 };
 
 struct PointLight
@@ -78,7 +80,7 @@ struct LightHandle_t {
     std::uint8_t index;
 };
 
-struct LightCB {
+struct SceneLights {
     DirectionalLight dLight;
 
     int numPLights;

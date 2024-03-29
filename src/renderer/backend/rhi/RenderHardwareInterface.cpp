@@ -299,8 +299,25 @@ HRESULT RenderHardwareInterface::Init(HWND windowHandle, RHIState initialState)
     //---------------------------
 
 
+    D3D11_RENDER_TARGET_BLEND_DESC rtfBlendDesc{};
+    rtfBlendDesc.BlendEnable = true;
+    rtfBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;
+    rtfBlendDesc.SrcBlend = D3D11_BLEND_BLEND_FACTOR;
+    rtfBlendDesc.DestBlend = D3D11_BLEND_INV_BLEND_FACTOR;
+    rtfBlendDesc.SrcBlendAlpha = D3D11_BLEND_SRC_ALPHA;
+    rtfBlendDesc.DestBlendAlpha = D3D11_BLEND_ZERO;
+    rtfBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    rtfBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-    return S_OK;
+    D3D11_BLEND_DESC jimenezGaussBlendDesc{};
+    jimenezGaussBlendDesc.IndependentBlendEnable = false;
+    jimenezGaussBlendDesc.AlphaToCoverageEnable = false;
+    jimenezGaussBlendDesc.RenderTarget[0] = rtfBlendDesc;
+
+    hRes = device.device->CreateBlendState(&jimenezGaussBlendDesc, &blendVariants[1].pStateObject);
+    RETURN_IF_FAILED(hRes);
+
+    return hRes;
 }
 
 void RenderHardwareInterface::SetState(RHIState newState)
@@ -464,6 +481,11 @@ HRESULT RenderHardwareInterface::ResizeWindow(std::uint32_t width, std::uint32_t
     }
 
     return hr;
+}
+
+ID3D11BlendState* RenderHardwareInterface::getBlendState(int index)
+{
+    return blendVariants[index].pStateObject;
 }
 
 void RenderHardwareInterface::ReleaseAllResources()

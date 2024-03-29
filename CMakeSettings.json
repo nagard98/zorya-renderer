@@ -19,6 +19,11 @@
           "name": "ASSIMP_WARNINGS_AS_ERRORS",
           "value": "False",
           "type": "BOOL"
+        },
+        {
+          "name": "CMAKE_EXPORT_COMPILE_COMMANDS",
+          "value": "True",
+          "type": "BOOL"
         }
       ],
       "cmakeExecutable": "C:/Program Files/CMake/bin/cmake.exe",

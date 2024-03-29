@@ -289,4 +289,12 @@ void DX11RenderDevice::releaseAllResources()
 	}
 
 	tex2dCount = 0;
+
+	for (size_t i = 0; i < constBuffCount; i++)
+	{
+		ConstantBuffer& resource = constantBuffers.at(i);
+		if (resource.buffer) resource.buffer->Release();
+	}
+
+	constBuffCount = 0;
 }

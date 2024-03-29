@@ -12,11 +12,11 @@ public:
 
 	Camera(const dx::XMVECTOR camPos, const dx::XMVECTOR camDir, const dx::XMVECTOR camUp, float fov, float aspectRatio, float nearZ, float farZ){
 		_camDir = camDir;
-		_camUp = camUp;
+		_camUp = _referenceUp = camUp;
 		_camPos = camPos;
 		_camRight = dx::XMVector3Cross(_camUp, _camDir);
 
-		rotateAroundCamAxis(0.0f, 0.0f, 0.0f);
+		//rotate(0.0f, 0.0f, 0.0f);
 
 		_fov = fov;
 		_aspectRatio = aspectRatio;
@@ -36,13 +36,14 @@ public:
 
 	dx::XMMATRIX getRotationMatrix() const;
 
-	void rotateAroundCamAxis(float aroundX, float aroundY, float aroundZ);
+	void rotate(float aroundX, float aroundY, float aroundZ);
+	void rotateAroundFocusPoint(float aroundX, float aroundY);
 	void translateAlongCamAxis(float x, float y, float z);
 
 private:
 
 	dx::XMMATRIX _projMatrix;
-	dx::XMVECTOR _camDir, _camUp, _camRight, _camPos;
+	dx::XMVECTOR _camDir, _camUp, _camRight, _camPos, _referenceUp;
 	dx::XMMATRIX _rotMat;
 	//dx::XMMATRIX _viewMatrix;
 

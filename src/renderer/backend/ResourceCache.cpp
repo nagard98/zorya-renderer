@@ -38,7 +38,9 @@ void ResourceCache::ReleaseAllResources()
 MaterialCacheHandle_t ResourceCache::AllocMaterial(const ReflectionBase* matDesc, MaterialCacheHandle_t& matCacheHnd)
 {
 	Material* m;
+	auto& standardMaterialDesc = static_cast<ReflectionContainer<StandardMaterialDesc>*>(const_cast<ReflectionBase*>(matDesc))->reflectedStruct;
 	int matIndex = matCacheHnd.index;
+
 	if ((matCacheHnd.isCached & IS_FIRST_MAT_ALLOC) == IS_FIRST_MAT_ALLOC) {
 		if (freeMaterialCacheIndices.size() > 0) {
 			matIndex = freeMaterialCacheIndices.back();
@@ -48,15 +50,16 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const ReflectionBase* matDesc
 			materialCache.push_back(Material{});
 			matIndex = materialCache.size() - 1;
 		}
+
+		m = &materialCache.at(matIndex);
+		m->model = PixelShader::create(standardMaterialDesc.shaderType);
+	}
+	else {
+		m = &materialCache.at(matIndex);
 	}
 
-	auto& standardMaterialDesc = static_cast<ReflectionContainer<StandardMaterialDesc>*>(const_cast<ReflectionBase*>(matDesc))->reflectedStruct;
-
-	m = &materialCache.at(matIndex);	
 	//m->model.shader = shaders.pixelShaders.at((std::uint8_t)standardMaterialDesc.shaderType);
-	
 	//ShaderBytecode shaderBytecode = shaders.pixelShaderBytecodeBuffers[(std::uint8_t)standardMaterialDesc.shaderType];
-	m->model = PixelShader::create(standardMaterialDesc.shaderType);
 
 	//m->matPrms.hasAlbedoMap = false;
 	//m->matPrms.hasMetalnessMap = false;
@@ -82,27 +85,44 @@ MaterialCacheHandle_t ResourceCache::AllocMaterial(const ReflectionBase* matDesc
 		m->matPrms.hasMetalnessMap = m->metalnessMap.resourceView != nullptr;
 
 		m->matPrms.baseColor = standardMaterialDesc.baseColor;
-		m->matPrms.subsurfaceAlbedo = standardMaterialDesc.subsurfaceAlbedo;
-		m->matPrms.meanFreePathColor = standardMaterialDesc.meanFreePathColor;
-		m->matPrms.meanFreePathDist = standardMaterialDesc.meanFreePathDistance; //from cm to m
-		m->matPrms.scale = fmax(0.0f, standardMaterialDesc.scale);
+		m->matPrms.sssModelId = (int)standardMaterialDesc.selectedSSSModel;
 
-		srand((int)standardMaterialDesc.scale);
+		switch (standardMaterialDesc.selectedSSSModel) {
+		case SSS_MODEL::GOLUBEV: 
+		{
+			m->sssPrms.subsurfaceAlbedo = standardMaterialDesc.sssModel.subsurfaceAlbedo;
+			m->sssPrms.meanFreePathColor = standardMaterialDesc.sssModel.meanFreePathColor;
+			m->sssPrms.meanFreePathDist = standardMaterialDesc.sssModel.meanFreePathDistance; //from cm to m
+			m->sssPrms.scale = fmax(0.0f, standardMaterialDesc.sssModel.scale);
+			m->sssPrms.numSamples = max(1, standardMaterialDesc.sssModel.numSamples);
 
-		std::random_device rd;
-		std::mt19937 gen(6.0f);
-		std::uniform_real_distribution<> dis(0, 1.0);//uniform distribution between 0 and 1
-		for (int i = 0; i < 64; i++) {
-			m->matPrms.samples[i] = dis(gen);
-			OutputDebugString((std::to_string(m->matPrms.samples[i]).append(", ")).c_str());
+			srand(42);
+
+			std::random_device rd;
+			std::mt19937 gen(6.0f);
+			std::uniform_real_distribution<> dis(0, 1.0);//uniform distribution between 0 and 1
+			for (int i = 0; i < m->sssPrms.numSamples; i++) {
+				m->sssPrms.samples[i] = dis(gen);
+				OutputDebugString((std::to_string(m->sssPrms.samples[i]).append(", ")).c_str());
+			}
+
+			std::sort(m->sssPrms.samples, m->sssPrms.samples + (m->sssPrms.numSamples - 1)); //(int)(max(0.0f, m->sssPrms.scale * 4.0f)));
+			//std::sort(m->sssPrms.samples + (int)(max(0.0f, m->sssPrms.scale * 4.0f)), m->sssPrms.samples + (int)(max(0.0f, m->sssPrms.scale * 4.0f)) + (int)(std::trunc(max(0.0f, standardMaterialDesc.sssModel.subsurfaceAlbedo.y) * 255.0f) * 4.0f));
+
+			//for (int i = 0; i < 64; i++) {
+			//	m->matPrms.samples[i] = (float)(rand() % 10000) / 10000.0f;
+			//}
+
+			break;
 		}
-
-		std::sort(m->matPrms.samples, m->matPrms.samples + (int)(m->matPrms.scale * 4.0f));
-		std::sort(m->matPrms.samples + (int)(m->matPrms.scale * 4.0f), m->matPrms.samples + (int)(m->matPrms.scale * 4.0f) + (int)(std::trunc(standardMaterialDesc.subsurfaceAlbedo.y * 255.0f)*4.0f));
-
-		//for (int i = 0; i < 64; i++) {
-		//	m->matPrms.samples[i] = (float)(rand() % 10000) / 10000.0f;
-		//}
+		default:
+		{
+			m->sssPrms.scale = fmax(0.0f, standardMaterialDesc.sssModel.scale);
+			m->sssPrms.meanFreePathDist = standardMaterialDesc.sssModel.meanFreePathDistance; //from cm to m
+			break;
+		}
+			
+		}
 
 		if ((standardMaterialDesc.unionTags & METALNESS_IS_MAP) == 0) {
 			m->matPrms.metalness = standardMaterialDesc.metalnessValue;
@@ -124,6 +144,8 @@ void ResourceCache::DeallocMaterial(MaterialCacheHandle_t& matCacheHnd)
 {
 	//TODO: what about deallocating the gpu resources (e.g. texture, ...)
 	freeMaterialCacheIndices.push_back(matCacheHnd.index);
+	Material& mat = materialCache.at(matCacheHnd.index);
+	mat.model.freeShader();
 }
 
 void ResourceCache::UpdateMaterialSmoothness(const MaterialCacheHandle_t matHnd, float smoothness)

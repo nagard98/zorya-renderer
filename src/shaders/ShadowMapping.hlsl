@@ -77,9 +77,10 @@ float4 posFromDepth(float2 quadTexCoord, float sampledDepth, uniform float4x4 in
 PS_OUT ps(float4 posFragQuad : SV_POSITION) : SV_Target
 {
     float2 uvCoord = float2(posFragQuad.x / SCREEN_WIDTH, posFragQuad.y / SCREEN_HEIGHT);
-    float4 diffuseCol = diffuse.Sample(texSampler, uvCoord);
-    float4 ambCol = ambient.Sample(texSampler, uvCoord);
-    float4 specCol = specular.Sample(texSampler, uvCoord);
+    
+    float4 diffuseCol = pow(diffuse.Sample(texSampler, uvCoord), (1.0f / gamma));
+    float4 ambCol = pow(ambient.Sample(texSampler, uvCoord), (1.0f / gamma));
+    float4 specCol = pow(specular.Sample(texSampler, uvCoord), (1.0f / gamma));
     float sampledDepth = gbuffer_depth.Sample(texSampler, uvCoord);
     float3 normal = gbuffer_normal.Sample(texSampler, uvCoord).xyz * 2.0f - 1.0f;
     
@@ -112,8 +113,8 @@ PS_OUT ps(float4 posFragQuad : SV_POSITION) : SV_Target
     }
     
     PS_OUT ps_out;
-    ps_out.diffuseShadowed = float4(diffuseCol.rgb * (totalArrivingLight * rcp(totalNumLights)) + ambCol.rgb, 1.0f);
-    ps_out.specularShadowed = float4(specCol.rgb * (totalArrivingLight * rcp(totalNumLights)), 1.0f);
+    ps_out.diffuseShadowed = pow(float4(diffuseCol.rgb * (totalArrivingLight * rcp(totalNumLights)) + ambCol.rgb, 1.0f), gamma);
+    ps_out.specularShadowed = pow(float4(specCol.rgb * (totalArrivingLight * rcp(totalNumLights)), 1.0f), gamma);
     
     return ps_out;
 }

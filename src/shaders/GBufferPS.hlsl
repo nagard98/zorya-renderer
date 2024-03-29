@@ -26,20 +26,18 @@ struct PS_OUTPUT
 
 cbuffer matPrms : register(b1)
 {
-    float4 samples[16];
     float4 baseColor;
-	float4 subsurfaceAlbedo;
-	float4 meanFreePathColor;
+
     bool hasAlbedoMap;
     bool hasMetalnessMap;
     bool hasNormalMap;
     bool hasSmoothnessMap;
     
     float cb_roughness;
-    float cb_metallic;
-	float meanFreePathDist;
-	float scale;
+    float cb_metallic;   
     
+    int sssModelId;
+    int pad;
 }
 
 #define MAX_SHININESS 64

@@ -79,8 +79,24 @@ public:
 private:
 	void RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& dirShadowCB, OmniDirShadowCB& cbOmniDirShad);
 
-	ID3D11Buffer* matPrmsCB;
-	ID3D11Buffer* lightsCB;
+	struct ApplicationConstantBuff {
+
+	};
+
+	struct FrameConstantBuff {
+		SceneLights sceneLights;
+		SubsurfaceScatteringParams sssParams;
+	};
+
+	struct ObjectConstantBuff {
+		MaterialParams materialParams;
+	};
+
+	ConstantBufferHandle<FrameConstantBuff> hndFrameCB;
+	ConstantBufferHandle<ObjectConstantBuff> hndObjectCB;
+
+	//ID3D11Buffer* matPrmsCB;
+
 	ID3D11Buffer* objectCB;
 	ID3D11Buffer* viewCB;
 	ID3D11Buffer* projCB;

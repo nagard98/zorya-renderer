@@ -379,10 +379,12 @@ RenderableEntity RendererFrontend::LoadNodeMeshes(const aiScene* scene, unsigned
 
         if (materialParams.shaderType == PShaderID::UNDEFINED) {
 
-            materialParams.meanFreePathDistance = 0.01f;
-            materialParams.meanFreePathColor = dx::XMFLOAT4(3.68f, 1.37f, 0.68f, 1.0f);
-            materialParams.subsurfaceAlbedo = dx::XMFLOAT4(0.436f, 0.015688f, 0.131f,1.0f);
-            materialParams.scale = 5.0f;
+            materialParams.sssModel.meanFreePathDistance = 0.01f;
+            materialParams.sssModel.meanFreePathColor = dx::XMFLOAT4(3.68f, 1.37f, 0.68f, 1.0f);
+            materialParams.sssModel.subsurfaceAlbedo = dx::XMFLOAT4(0.436f, 0.015688f, 0.131f,1.0f);
+            materialParams.sssModel.scale = 1.0f;
+            materialParams.sssModel.numSamples = 4;
+            materialParams.selectedSSSModel = SSS_MODEL::NONE;
 
             wchar_t tmpString[128];
 

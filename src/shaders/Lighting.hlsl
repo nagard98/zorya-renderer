@@ -49,6 +49,22 @@ cbuffer light : register(b0)
     SpotLight spotLights[16];
     float4 posSpotLightViewSpace[16];
     float4 dirSpotLightViewSpace[16];
+    
+    //int sssModelId;
+    //int pad3[3];
+    
+    float4 samples[16];
+	float4 subsurfaceAlbedo;
+	float4 meanFreePathColor;
+    
+	float meanFreePathDist;
+	float scale;
+    
+    float2 dir;
+    int numSamples;
+    int3 pad2;
+    
+    float4 kernel[7];
 };
 
 cbuffer omniDirShadowMatrixes : register(b2)
@@ -83,7 +99,7 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
     float2 uvCoord = float2(fragPos.x / SCREEN_WIDTH, fragPos.y / SCREEN_HEIGHT);
     
     float sampledDepth = gbuffer_depth.Sample(texSampler, uvCoord).r;
-    float3 albedo = float3(1.0f, 1.0f, 1.0f); //use white as base albedo //pow(gbuffer_albedo.Sample(texSampler, uvCoord).rgb, (1.0f / gamma));
+    float3 albedo = pow(gbuffer_albedo.Sample(texSampler, uvCoord).rgb, (1.0f / gamma));
     float3 normal = gbuffer_normal.Sample(texSampler, uvCoord).xyz * 2.0f - 1.0f;
     float3 smoothNormal = smooth_normals.Sample(texSampler, uvCoord).xyz * 2.0f - 1.0f;
     float3 roughMetThick = gbuffer_roughness.Sample(texSampler, uvCoord).rgb;
@@ -131,7 +147,7 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
             radExitance.transmitted += tmpRadExitance.transmitted;
         }
     
-        radExitance.diffuse = saturate(radExitance.diffuse * albedo/* + 0.03f * albedo*/);
+        radExitance.diffuse = saturate(radExitance.diffuse * albedo);
         radExitance.transmitted = radExitance.transmitted * albedo;
     }
 
@@ -140,7 +156,7 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
     ps_out.specular = float4(pow(radExitance.specular, gamma), 1.0f);
     ps_out.transmitted = float4(pow(radExitance.transmitted, gamma), 1.0f);
     
-    ps_out.ambient = float4(pow((albedo * 0.0f/*0.03f*/), gamma), 1.0f);
+    ps_out.ambient = float4(pow((albedo * 0.05f), gamma), 1.0f);
     return ps_out;
 }
 

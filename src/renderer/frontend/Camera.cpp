@@ -1,16 +1,52 @@
 #include "Camera.h"
 
 
-void Camera::rotateAroundCamAxis(float aroundX, float aroundY, float aroundZ) {
-	dx::XMMATRIX rotFrontAxis = dx::XMMatrixRotationAxis(_camDir, aroundZ);
-	dx::XMMATRIX rotUpAxis = dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f,1.0f,0.0f,0.0f), aroundY);
-	dx::XMMATRIX rotRightAxis = dx::XMMatrixRotationAxis(_camRight, aroundX);
-	_rotMat = dx::XMMatrixMultiply(rotFrontAxis, dx::XMMatrixMultiply(rotUpAxis, rotRightAxis));
+void Camera::rotate(float aroundX, float aroundY, float aroundZ)
+{
+	//dx::XMMATRIX rotFrontAxis = dx::XMMatrixRotationAxis(_camDir, aroundZ);
+	dx::XMMATRIX rotUpAxis = dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), aroundY);
+	dx::XMMATRIX rotRightAxis = dx::XMMatrixRotationAxis(dx::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), aroundX);
 
-	_camUp = dx::XMVector4Transform(_camUp, _rotMat);
-	_camDir = dx::XMVector4Transform(_camDir, _rotMat);
-	_camRight = dx::XMVector4Transform(_camRight, _rotMat);
+	_rotMat = dx::XMMatrixMultiply(rotUpAxis, rotRightAxis);// dx::XMMatrixMultiply((dx::XMMatrixIdentity())/*rotFrontAxis*/,
+
+	_camUp = dx::XMVector4Transform(_camUp, rotRightAxis);
+	_camRight = dx::XMVector4Transform(_camRight, rotUpAxis);
+	_camDir = dx::XMVector3Cross(_camRight, _camUp);
+	//_camDir = dx::XMVector4Transform(_camDir, _rotMat);
+	//_camPos = dx::XMVector4Transform(_camPos, _rotMat);
+}
+
+void rotatefps() {
+	//dx::XMMATRIX rotUpAxis = dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), aroundY);
+	//dx::XMMATRIX rotRightAxis = dx::XMMatrixRotationAxis(_camRight, aroundX);
+
+	//_rotMat = dx::XMMatrixMultiply(rotUpAxis, rotRightAxis);
+
+	//_camDir = dx::XMVector4Transform(_camDir, _rotMat);
+}
+
+//TODO: use correct name; here i move also the camera posisition because we are rotating around origin and not camera position
+void Camera::rotateAroundFocusPoint(float aroundX, float aroundY) {
+	
+	dx::XMMATRIX rotUpAxis = dx::XMMatrixRotationAxis(_camUp, aroundY);
+	dx::XMMATRIX rotRightAxis = dx::XMMatrixRotationAxis(_camRight, aroundX);
+	
+	_rotMat = dx::XMMatrixMultiply(rotUpAxis, rotRightAxis);
+
+	//_referenceUp = dx::XMVector4Transform(_referenceUp, rotRightAxis);
+	////_camRight = dx::XMVector4Transform(_camRight, rotUpAxis);
+	//_camDir = dx::XMVector4Transform(_camDir, _rotMat);
+	////_camDir = dx::XMVector3Cross(_camRight, _camUp);
+
+
 	_camPos = dx::XMVector4Transform(_camPos, _rotMat);
+	_camDir = dx::XMVector4Normalize(dx::XMVectorNegate(_camPos));
+
+
+	_camRight = dx::XMVector3Cross(dx::XMVectorSet(0.0f,1.0f,0.0f,0.0f), _camDir);
+	//_camRight = dx::XMVector4Normalize(_camRight);
+	//_camUp = dx::XMVector4Normalize(_camUp);
+
 }
 
 void Camera::translateAlongCamAxis(float x, float y, float z)

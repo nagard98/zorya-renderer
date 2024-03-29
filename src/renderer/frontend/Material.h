@@ -11,6 +11,41 @@
 
 namespace dx = DirectX;
 
+enum class SSS_MODEL : std::uint32_t {
+	NONE,
+	JIMENEZ_GAUSS,
+	JIMENEZ_SEPARABLE,
+	GOLUBEV
+};
+
+struct JimenezSSSModel{
+	PROPERTY()
+	dx::XMFLOAT4 subsurfaceAlbedo;
+
+	PROPERTY()
+	dx::XMFLOAT4 meanFreePathColor;
+
+	PROPERTY()
+	float meanFreePathDistance;
+
+	PROPERTY()
+	float scale;
+
+	PROPERTY()
+	std::uint32_t numSamples;
+};
+
+struct MultiOption {
+	PROPERTY()
+	std::uint8_t selectedOption;
+
+	union {
+		PROPERTY()
+		JimenezSSSModel sssModel;
+	};
+};
+
+
 using MaterialDesc = ReflectionBase;
 
 typedef std::uint8_t MatUpdateFlags_;
@@ -30,25 +65,12 @@ struct StandardMaterialDesc {
 	MatDescFlags_ unionTags;
 
 	PROPERTY()
-	wchar_t albedoPath[128];
-
-	PROPERTY()
 	dx::XMFLOAT4 baseColor;
 
 	PROPERTY()
-	dx::XMFLOAT4 subsurfaceAlbedo;
-
-	PROPERTY()
-	dx::XMFLOAT4 meanFreePathColor;
-
-	PROPERTY()
-	float meanFreePathDistance;
-
-	PROPERTY()
-	float scale;
+	wchar_t albedoPath[128];
 
 	union {
-		
 		float smoothnessValue;
 		PROPERTY()
 		wchar_t smoothnessMap[128];
@@ -62,6 +84,13 @@ struct StandardMaterialDesc {
 
 	PROPERTY()
 	wchar_t normalPath[128];
+
+	SSS_MODEL selectedSSSModel;
+	union {
+		JimenezSSSModel sssModel;
+	};
+
+
 };
 
 
@@ -69,13 +98,22 @@ struct Texture2D {
 	ID3D11Texture2D* resource;
 };
 
+struct SubsurfaceScatteringParams {
+	float samples[64];
+	dx::XMFLOAT4 subsurfaceAlbedo;
+	dx::XMFLOAT4 meanFreePathColor;
+	float meanFreePathDist;
+	float scale;
+	dx::XMFLOAT2 dir;
+	std::uint32_t numSamples;
+	std::uint32_t pad[3];
+
+	dx::XMFLOAT4 jimenezSamplesSSS[15];
+	//dx::XMFLOAT4 kernel[16];
+};
 
 struct MaterialParams {
-	float samples[64];
 	dx::XMFLOAT4 baseColor;
-	dx::XMFLOAT4 subsurfaceAlbedo;
-
-	dx::XMFLOAT4 meanFreePathColor;
 
 	std::uint32_t hasAlbedoMap;
 	std::uint32_t hasMetalnessMap;
@@ -83,16 +121,10 @@ struct MaterialParams {
 	std::uint32_t hasSmoothnessMap;
 
 	float roughness;
-
 	float metalness;
-	float meanFreePathDist;
-	float scale;
 
-	
-	dx::XMFLOAT4 kernel[16];
-	dx::XMFLOAT2 dir;
-	std::uint8_t pad[8];
-	//std::uint8_t pad[4];
+	std::uint32_t sssModelId;
+	std::uint8_t pad[4];
 };
 
 
@@ -104,6 +136,7 @@ struct Material {
 	ShaderTexture2D normalMap;
 	ShaderTexture2D smoothnessMap;
 
+	SubsurfaceScatteringParams sssPrms;
 	MaterialParams matPrms;
 };
 

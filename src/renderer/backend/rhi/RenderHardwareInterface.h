@@ -42,6 +42,8 @@ public:
 
 	HRESULT ResizeWindow(std::uint32_t width, std::uint32_t height);
 
+	ID3D11BlendState* getBlendState(int index);
+
 	void ReleaseAllResources();
 
 	//wrl::ComPtr<ID3D11Device> device;

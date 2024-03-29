@@ -7,6 +7,8 @@
 #include <wrl/client.h>
 #include <vector>
 
+#include <renderer/backend/ConstantBuffer.h>
+
 namespace wrl = Microsoft::WRL;
 
 #define RETURN_IF_FAILED(hResult) { if(FAILED(hResult)) return hResult; }
@@ -64,6 +66,32 @@ public:
 	DX11RenderDevice();
 	~DX11RenderDevice();
 
+	template <typename T>
+	ZRYResult createConstantBuffer(ConstantBufferHandle<T>* hndConstantBuffer, const char* name) {
+		D3D11_BUFFER_DESC buffDesc{};
+		buffDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		buffDesc.ByteWidth = sizeof(T);
+
+		ConstantBuffer& constBuffer = constantBuffers.emplace_back(ConstantBuffer{nullptr, name});
+
+		HRESULT hr = device->CreateBuffer(&buffDesc, nullptr, &constBuffer.buffer);
+		if (!FAILED(hr)) {
+			hndConstantBuffer->index = constBuffCount;
+			constBuffCount += 1;
+		}
+
+		return ZRYResult{ hr };
+	}
+
+	//TODO: move up to rhi
+	template <typename T>
+	ZRYResult updateConstantBuffer(ConstantBufferHandle<T> hndConstantBuffer, const T& newBufferContent) {
+		ConstantBuffer& constantBuffer = constantBuffers.at(hndConstantBuffer.index);
+		rhi.context->UpdateSubresource(constantBuffer.buffer, 0, nullptr, &newBufferContent, 0, 0);
+
+		return ZRYResult{ S_OK };
+	}
+
 	ZRYResult createTex2D(RenderTextureHandle* texHandle, ZRYBindFlags bindFlags, ZRYFormat format, float width, float height, int numTex = 1, RenderSRVHandle* srvHandle = nullptr, RenderRTVHandle* rtvHandle = nullptr, bool generateMips = false, int mipLevels = 0, int arraySize = 1, int sampleCount = 1, int sampleQuality = 0);
 	ZRYResult createSRVTex2D(RenderSRVHandle* srvHandle, const RenderTextureHandle* texHandle, ZRYFormat format, int numSRVs = 1, int mipLevels = 1, int mostDetailedMip = 0);
 	ZRYResult createRTVTex2D(RenderRTVHandle* rtvHandle, const RenderTextureHandle* texHandle, ZRYFormat format, int numRTVs = 1, int mipSlice = 0);
@@ -84,6 +112,9 @@ public:
 	//TODO: move to private when you add all the functionality in this abstraction layer
 	ID3D11Device* device;
 
+	//TODO: move to private; just temporary public before implementing constant buffer binding API
+	std::vector<ConstantBuffer> constantBuffers;
+
 private:
 	
 	std::vector<ID3D11Texture2D*> tex2DResources;
@@ -91,7 +122,8 @@ private:
 	std::vector<ID3D11ShaderResourceView*> srvResources;
 	std::vector<ID3D11DepthStencilView*> dsvResources;
 
-	int tex2dCount, rtvCount, srvCount, dsvCount;
+
+	int tex2dCount, rtvCount, srvCount, dsvCount, constBuffCount;
 
 };
 

@@ -17,7 +17,11 @@ namespace zorya {
 		XMFLOAT2,
 		XMFLOAT3,
 		XMFLOAT4,
-		WCHAR
+		WCHAR,
+		MULTI_OPTION,
+		JIMENEZ_GAUSS,
+		JIMENEZ_SEP,
+		GOLUBEV
 	};
 
 	const char* const VAR_REFL_TYPE_STRING[] = {
@@ -31,7 +35,11 @@ namespace zorya {
 		"XMFLOAT2",
 		"XMFLOAT3",
 		"XMFLOAT4",
-		"WCHAR"
+		"WCHAR",
+		"MULTI_OPTION",
+		"JIMENEZ_GAUSS",
+		"JIMENEZ_SEP",
+		"GOLUBEV"
 	};
 }
 

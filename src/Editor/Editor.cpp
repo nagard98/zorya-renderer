@@ -209,7 +209,7 @@ namespace zorya {
 				ImVec2 delta = ImVec2(0.0, 0.0);
 				if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
 					delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-					editorCam.rotateAroundCamAxis(delta.y / 100.0f, delta.x / 100.0f, 0.0f);
+					editorCam.rotateAroundFocusPoint(delta.y / 100.0f, delta.x / 100.0f);
 					ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
 				}
 

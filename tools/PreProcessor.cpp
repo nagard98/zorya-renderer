@@ -113,6 +113,10 @@ zorya::VAR_REFL_TYPE getVarType(Token* token) {
 	if (strncmp(tp, "XMFLOAT3", len) == 0 || strncmp(tp, "float3", len) == 0) return zorya::VAR_REFL_TYPE::XMFLOAT3;
 	if (strncmp(tp, "XMFLOAT4", len) == 0 || strncmp(tp, "float4", len) == 0) return zorya::VAR_REFL_TYPE::XMFLOAT4;
 	if (strncmp(tp, "wchar_t", len) == 0) return zorya::VAR_REFL_TYPE::WCHAR;
+	if (strncmp(tp, "MultiOption", len) == 0) return zorya::VAR_REFL_TYPE::MULTI_OPTION;
+	if (strncmp(tp, "JimenezSSSModel", len) == 0) return zorya::VAR_REFL_TYPE::JIMENEZ_GAUSS;
+	if (strncmp(tp, "MultiOption", len) == 0) return zorya::VAR_REFL_TYPE::JIMENEZ_SEP;
+	if (strncmp(tp, "MultiOption", len) == 0) return zorya::VAR_REFL_TYPE::GOLUBEV;
 	return zorya::VAR_REFL_TYPE::NOT_SUPPORTED;
 }
 
