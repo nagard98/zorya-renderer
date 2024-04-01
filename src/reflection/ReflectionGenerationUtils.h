@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <utility>
+#include <tuple>
 
 namespace zorya {
 	enum VAR_REFL_TYPE {
@@ -18,10 +19,7 @@ namespace zorya {
 		XMFLOAT3,
 		XMFLOAT4,
 		WCHAR,
-		MULTI_OPTION,
-		JIMENEZ_GAUSS,
-		JIMENEZ_SEP,
-		GOLUBEV
+		STRUCT
 	};
 
 	const char* const VAR_REFL_TYPE_STRING[] = {
@@ -36,29 +34,58 @@ namespace zorya {
 		"XMFLOAT3",
 		"XMFLOAT4",
 		"WCHAR",
-		"MULTI_OPTION",
-		"JIMENEZ_GAUSS",
-		"JIMENEZ_SEP",
-		"GOLUBEV"
+		"STRUCT"
+	};
+
+	const char* const REFL_TYPE_STRINGIFIED[] = {
+		"void",
+		"int",
+		"float",
+		"int",
+		"int",
+		"int",
+		"int",
+		"dx::XMFLOAT2",
+		"dx::XMFLOAT3",
+		"dx::XMFLOAT4",
+		"wchar_t",
+		"STRUCT"
 	};
 }
 
-struct MemberIntermediateMeta {
-	char* name;
-	char* metaStructBaseName;
-	char* actualStructIdentifier;
-	zorya::VAR_REFL_TYPE type;
+template <typename T>
+struct ReflectionType {
+	constexpr static T* castTo(void* valueToCast) {
+		return static_cast<T*>(valueToCast);
+	}
 };
 
-struct MemberMeta {
-	const char* name;
-	size_t offset;
-	zorya::VAR_REFL_TYPE type;
+struct MemberIntermediateMeta {
+	char* name;
+	char* typeAsString;
+	char* metaStructBaseName;
+	char* actualStructIdentifier;
+	zorya::VAR_REFL_TYPE typeEnum;
 };
 
 template <typename T>
-std::uint8_t foreachfield(T* _struct, std::uint8_t(*lambda)(const char* structAddr, const MemberMeta& memMeta));
+struct MemberMeta {
+	const char* name;
+	const size_t offset;
+	const zorya::VAR_REFL_TYPE typeEnum;
+	const ReflectionType<T> type;
+};
 
+template <typename T>
+constexpr auto getMeta() {
+	return std::make_tuple();
+};
+
+
+//template <typename T>
+//std::uint8_t foreachfield(T* _struct, std::uint8_t(*lambda)(const char* structAddr, const MemberMeta& memMeta));
+
+/*
 
 #define BUILD_FOREACHFIELD(structName, metaStructName) \
 template <>	\
@@ -90,6 +117,8 @@ std::uint8_t foreachfield(structName* _struct, L&& lambda) { \
 	} \
 	return structFlags;	\
 } \
+
+*/
 
 #endif // !REFLECTION_GEN_UTILS_H_
 

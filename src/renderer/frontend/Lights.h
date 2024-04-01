@@ -6,7 +6,7 @@
 #include <DirectXMath.h>
 #include <cstdint>
 
-#include "reflection/Reflection.h"
+#include "reflection/ReflectionAnnotation.h"
 
 namespace dx = DirectX;
 

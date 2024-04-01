@@ -7,7 +7,7 @@
 #include <d3d11.h>
 
 #include "Shader.h"
-#include "reflection/Reflection.h"
+#include "reflection/ReflectionAnnotation.h"
 
 namespace dx = DirectX;
 
@@ -36,17 +36,13 @@ struct JimenezSSSModel{
 };
 
 struct MultiOption {
-	PROPERTY()
 	std::uint8_t selectedOption;
 
 	union {
-		PROPERTY()
 		JimenezSSSModel sssModel;
 	};
 };
 
-
-using MaterialDesc = ReflectionBase;
 
 typedef std::uint8_t MatUpdateFlags_;
 
@@ -86,9 +82,9 @@ struct StandardMaterialDesc {
 	wchar_t normalPath[128];
 
 	SSS_MODEL selectedSSSModel;
-	union {
-		JimenezSSSModel sssModel;
-	};
+
+	PROPERTY()
+	JimenezSSSModel sssModel;
 
 
 };

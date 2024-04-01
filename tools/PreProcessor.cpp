@@ -100,9 +100,15 @@ void getToken(Tokenizer* tokenizer, Token* currentToken) {
 
 }
 
-zorya::VAR_REFL_TYPE getVarType(Token* token) {
+zorya::VAR_REFL_TYPE getVarType(Token* token, MemberIntermediateMeta* memberMeta) {
 	char* tp = token->text;
 	size_t len = token->textLength;
+
+	if (memberMeta->typeAsString != nullptr) free(memberMeta->typeAsString);
+
+	memberMeta->typeAsString = (char*)malloc(len + 1);
+	strncpy_s(memberMeta->typeAsString, len + 1, tp, len);
+
 	if (strncmp(tp, "int", len) == 0) return  zorya::VAR_REFL_TYPE::INT;
 	if (strncmp(tp, "float", len) == 0) return zorya::VAR_REFL_TYPE::FLOAT;
 	if (strncmp(tp, "uint8_t", len) == 0) return zorya::VAR_REFL_TYPE::UINT8;
@@ -113,10 +119,6 @@ zorya::VAR_REFL_TYPE getVarType(Token* token) {
 	if (strncmp(tp, "XMFLOAT3", len) == 0 || strncmp(tp, "float3", len) == 0) return zorya::VAR_REFL_TYPE::XMFLOAT3;
 	if (strncmp(tp, "XMFLOAT4", len) == 0 || strncmp(tp, "float4", len) == 0) return zorya::VAR_REFL_TYPE::XMFLOAT4;
 	if (strncmp(tp, "wchar_t", len) == 0) return zorya::VAR_REFL_TYPE::WCHAR;
-	if (strncmp(tp, "MultiOption", len) == 0) return zorya::VAR_REFL_TYPE::MULTI_OPTION;
-	if (strncmp(tp, "JimenezSSSModel", len) == 0) return zorya::VAR_REFL_TYPE::JIMENEZ_GAUSS;
-	if (strncmp(tp, "MultiOption", len) == 0) return zorya::VAR_REFL_TYPE::JIMENEZ_SEP;
-	if (strncmp(tp, "MultiOption", len) == 0) return zorya::VAR_REFL_TYPE::GOLUBEV;
 	return zorya::VAR_REFL_TYPE::NOT_SUPPORTED;
 }
 
@@ -125,12 +127,13 @@ void parseVarDef(Tokenizer* tokenizer, Token* currentToken, MemberIntermediateMe
 	zorya::VAR_REFL_TYPE varType;
 
 	getToken(tokenizer, currentToken);
+	memberMeta->typeAsString = nullptr;
 
 	//Determines variable type
 	for (;;) {
-		varType = getVarType(currentToken);
+		varType = getVarType(currentToken, memberMeta);
 
-		if (varType != zorya::VAR_REFL_TYPE::NOT_SUPPORTED || (currentToken->type == zorya::TKTP::SEMICOLON)) {
+		if (*(tokenizer->at) == ' ') {
 			break;
 		}else{
 			getToken(tokenizer, currentToken);
@@ -143,10 +146,11 @@ void parseVarDef(Tokenizer* tokenizer, Token* currentToken, MemberIntermediateMe
 	}
 
 	//Gets variable name and creates member meta
-	if (varType == zorya::VAR_REFL_TYPE::NOT_SUPPORTED) {
-		memberMeta->type = varType;
-		return;
-	} else {
+	//if (varType == zorya::VAR_REFL_TYPE::NOT_SUPPORTED) {
+	//	memberMeta->typeEnum = varType;
+	//	return;
+	//} else {
+
 		Token varNameToken;
 		getToken(tokenizer, &varNameToken);
 		getToken(tokenizer, currentToken);
@@ -189,21 +193,24 @@ void parseVarDef(Tokenizer* tokenizer, Token* currentToken, MemberIntermediateMe
 				}
 			}
 
-			memberMeta->type = varType;
+			memberMeta->typeEnum = varType;
 			return;
 		}
 		else {
-			memberMeta->type = zorya::VAR_REFL_TYPE::NOT_SUPPORTED;
+			memberMeta->typeEnum = zorya::VAR_REFL_TYPE::NOT_SUPPORTED;
 			return;
 		}
-	}
+	//}
 }
 
 void parseReflectionParams(Tokenizer * tokenizer, Token* currentToken, MemberIntermediateMeta* memberMeta) {
 	getToken(tokenizer, currentToken);
 
-	if (!(currentToken->type == zorya::TKTP::OPEN_PARENTHESIS) || currentToken->type == zorya::TKTP::END_OF_FILE) return;
+	if (!(currentToken->type == zorya::TKTP::OPEN_PARENTHESIS) || currentToken->type == zorya::TKTP::END_OF_FILE) {
+		return;
+	}
 	else {
+		//Parse meta parameters defined inside PROPERTY(...)
 		for (;;) {
 			getToken(tokenizer, currentToken);
 
@@ -211,6 +218,7 @@ void parseReflectionParams(Tokenizer * tokenizer, Token* currentToken, MemberInt
 				break;
 		}
 
+		//Parse the variable associated to PROPERTY(...)
 		parseVarDef(tokenizer, currentToken, memberMeta);
 	}
 
@@ -232,7 +240,7 @@ bool parse(Tokenizer* tokenizer, MemberIntermediateMeta* memberMeta, int* member
 			}
 			else {
 				parseReflectionParams(tokenizer, &currentToken, &memberMeta[*memberCount]);
-				if (memberMeta[*memberCount].type != zorya::VAR_REFL_TYPE::NOT_SUPPORTED) *memberCount += 1;
+				/*if (memberMeta[*memberCount].typeEnum != zorya::VAR_REFL_TYPE::NOT_SUPPORTED) */*memberCount += 1;
 			}
 		}
 		else if (currentToken.type == zorya::TKTP::IDENTIFIER && (strncmp(currentToken.text, "struct", currentToken.textLength) == 0)) {
@@ -275,22 +283,27 @@ void generateMetaFile(char* parsedFileName, char* relativeFilePath, MemberInterm
 		fprintf(file, "#pragma once\n\n");
 
 		fprintf(file, "#include \"ReflectionGenerationUtils.h\"\n");
-		fprintf(file, "#include \"%s\"\n\n", relativeFilePath);
+		fprintf(file, "#include \"%s\"\n", relativeFilePath);
+		fprintf(file, "#include <tuple>\n");
+		fprintf(file, "#include \"DirectXMath.h\"\n\n");
+
+		fprintf(file, "using namespace DirectX;\n\n");
 
 		for (int i = 0; i < memberCount; i++)
 		{
 			char* currentMemberStructBaseName = memberMeta[i].metaStructBaseName;
-			fprintf(file, "const MemberMeta %s_meta[] = {\n", currentMemberStructBaseName);
+			fprintf(file, "template <>\nconstexpr auto getMeta<%s>() {\n\treturn std::make_tuple(\n", currentMemberStructBaseName);
 			
 			while (i < memberCount && strcmp(currentMemberStructBaseName, memberMeta[i].metaStructBaseName) == 0) {
-				fprintf(file, "\t{ \"%s\", offsetof(%s, %s), zorya::VAR_REFL_TYPE::%s }, \n", memberMeta[i].name, memberMeta[i].actualStructIdentifier, memberMeta[i].name, zorya::VAR_REFL_TYPE_STRING[memberMeta[i].type]);
-				if (i+1 < memberCount && strcmp(currentMemberStructBaseName, memberMeta[i + 1].metaStructBaseName) == 0) i += 1;
+				fprintf(file, "\t\tMemberMeta<%s>{ \"%s\", offsetof(%s, %s), zorya::VAR_REFL_TYPE::%s }", memberMeta[i].typeAsString, memberMeta[i].name, memberMeta[i].actualStructIdentifier, memberMeta[i].name, zorya::VAR_REFL_TYPE_STRING[memberMeta[i].typeEnum]);
+				if (i + 1 < memberCount && strcmp(currentMemberStructBaseName, memberMeta[i + 1].metaStructBaseName) == 0) {
+					i += 1;
+					fprintf(file, ",\n");
+				}
 				else break;
 			}
 
-			fprintf(file, "};\n\n");
-
-			fprintf(file, "BUILD_FOREACHFIELD3(%s, %s_meta)\n\n", memberMeta[i].actualStructIdentifier, currentMemberStructBaseName);
+			fprintf(file, "\t);\n};\n\n");
 		}
 
 		fclose(file);
@@ -329,6 +342,7 @@ int parseAndGenerateMetaFile(char* fileName, char* filePath, char* generatedFile
 			for (int i = 0; i < memberCount; i++) {
 				free((memberMeta + i)->actualStructIdentifier);
 				free((memberMeta + i)->metaStructBaseName);
+				free((memberMeta + i)->typeAsString);
 				free((memberMeta + i)->name);
 			}
 		}

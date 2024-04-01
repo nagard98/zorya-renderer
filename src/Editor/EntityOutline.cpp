@@ -6,7 +6,7 @@
 #include "renderer/frontend/Material.h"
 
 #include "reflection/Reflection.h"
-#include "reflection/Reflection_auto_generated.h"
+//#include "reflection/Reflection_auto_generated.h"
 
 #include "DirectXMath.h"
 #include <cassert>
@@ -30,80 +30,89 @@ char EntityOutline::tmpCharBuff[128];
 ImGuiID EntityOutline::idDialogOpen = 0;
 
 
-bool RenderEProperty(const char* structAddress, const MemberMeta& memMeta);
+template<typename T>
+bool RenderEProperty(T* fieldAddr, const char* name) {
+	bool modified = false;
 
+	ImGui::SeparatorText(name); 
+	{
+		foreachfield([&](auto& reflField, auto& fieldMeta) {
+			bool isEdited = RenderEProperty(fieldMeta.type.castTo((void*)GET_FIELD_ADDRESS(reflField, fieldMeta.offset)), fieldMeta.name);
+			if (isEdited) {
+				modified = UPDATE_MAT_PRMS;
+			}
+			}, *fieldAddr);
+	}
 
-template<zorya::VAR_REFL_TYPE T>
-bool RenderEPropertyImpl(const char* structAddress, const MemberMeta& memMeta) {
-	Logger::AddLog(Logger::Channel::WARNING, "type %s not supported in editor\n", zorya::VAR_REFL_TYPE_STRING[memMeta.type]);
-	return false;
+	//Logger::AddLog(Logger::Channel::WARNING, "type %s not supported in editor\n", zorya::VAR_REFL_TYPE_STRING[memMeta.typeEnum]);
+	return modified;
 }
 
 template<>
-bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::FLOAT>(const char* structAddress, const MemberMeta& memMeta) {
-	ImGui::DragFloat(memMeta.name, (float*)(structAddress + memMeta.offset), 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+bool RenderEProperty(float* fieldAddr, const char* name) {
+	ImGui::DragFloat(name, fieldAddr, 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 	return ImGui::IsItemEdited();
 }
 
 template<>
-bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::INT>(const char* structAddress, const MemberMeta& memMeta) {
-	ImGui::DragInt(memMeta.name, (int*)(structAddress + memMeta.offset), 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+bool RenderEProperty(int* fieldAddr, const char* name) {
+	ImGui::DragInt(name, fieldAddr, 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
 	return ImGui::IsItemEdited();
 }
 
 template<>
-bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT8>(const char* structAddress, const MemberMeta& memMeta) {
-	ImGui::DragInt(memMeta.name, (int*)(structAddress + memMeta.offset), 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+bool RenderEProperty(uint8_t* fieldAddr, const char* name) {
+	ImGui::DragInt(name, (int*)fieldAddr, 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
 	return ImGui::IsItemEdited();
 }
 
 template<>
-bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT16>(const char* structAddress, const MemberMeta& memMeta) {
-	ImGui::DragInt(memMeta.name, (int*)(structAddress + memMeta.offset), 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+bool RenderEProperty(uint16_t* fieldAddr, const char* name) {
+	ImGui::DragInt(name, (int*)fieldAddr, 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
 	return ImGui::IsItemEdited();
 }
 
 template<>
-bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT32>(const char* structAddress, const MemberMeta& memMeta) {
-	ImGui::DragInt(memMeta.name, (int*)(structAddress + memMeta.offset), 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+bool RenderEProperty(uint32_t* fieldAddr, const char* name) {
+	ImGui::DragInt(name, (int*)fieldAddr, 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
 	return ImGui::IsItemEdited();
 }
 
 template<>
-bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT64>(const char* structAddress, const MemberMeta& memMeta) {
-	ImGui::DragInt(memMeta.name, (int*)(structAddress + memMeta.offset), 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+bool RenderEProperty(uint64_t* fieldAddr, const char* name) {
+	ImGui::DragInt(name, (int*)fieldAddr, 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
 	return ImGui::IsItemEdited();
 }
 
 template<>
-bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT2>(const char* structAddress, const MemberMeta& memMeta) {
-	ImGui::DragFloat2(memMeta.name, (float*)(structAddress + memMeta.offset), 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+bool RenderEProperty(dx::XMFLOAT2* fieldAddr, const char* name) {
+	ImGui::DragFloat2(name, &fieldAddr->x, 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 	return ImGui::IsItemEdited();
 }
 
 template<>
-bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT3>(const char* structAddress, const MemberMeta& memMeta) {
-	ImGui::DragFloat3(memMeta.name, (float*)(structAddress + memMeta.offset), 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+bool RenderEProperty(dx::XMFLOAT3* fieldAddr, const char* name) {
+	ImGui::DragFloat3(name, &fieldAddr->x, 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 	return ImGui::IsItemEdited();
 }
 
 template<>
-bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT4>(const char* structAddress, const MemberMeta& memMeta) {
-	ImGui::DragFloat4(memMeta.name, (float*)(structAddress + memMeta.offset), 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+bool RenderEProperty(dx::XMFLOAT4* fieldAddr, const char* name) {
+	ImGui::DragFloat4(name, &fieldAddr->x, 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
 	return ImGui::IsItemEdited();
 }
 
 template<>
-bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::WCHAR>(const char* structAddress, const MemberMeta& memMeta) {
+bool RenderEProperty(wchar_t* fieldAddr, const char* name) {
 	ImGui::Spacing();
 	size_t numConvertedChars = 0;
 
-	wcstombs_s(&numConvertedChars, EntityOutline::tmpCharBuff, 128, (wchar_t*)(structAddress + memMeta.offset), 128);
-	ImGui::InputText(memMeta.name, EntityOutline::tmpCharBuff, 128);
-	mbstowcs_s(&numConvertedChars, (wchar_t*)(structAddress + memMeta.offset), 128, EntityOutline::tmpCharBuff, 128);
+	wcstombs_s(&numConvertedChars, EntityOutline::tmpCharBuff, 128, fieldAddr, 128);
+	ImGui::InputText(name, EntityOutline::tmpCharBuff, 128);
+	mbstowcs_s(&numConvertedChars, fieldAddr, 128, EntityOutline::tmpCharBuff, 128);
 	bool isEditingComplete = ImGui::IsItemDeactivatedAfterEdit();
 
-	ImGui::PushID((void*)(structAddress + memMeta.offset));
+	ImGui::PushID((void*)fieldAddr);
 	ImGuiID idCurrentDialog = ImGui::GetItemID();
 
 	if (ImGui::Button("Import")) {
@@ -113,7 +122,7 @@ bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::WCHAR>(const char* structAddress,
 
 	if (EntityOutline::idDialogOpen == idCurrentDialog && zorya::fileBrowser.HasSelected()) {
 		std::wstring importFilepath = zorya::fileBrowser.GetSelected().wstring();
-		wcsncpy_s((wchar_t*)(structAddress + memMeta.offset), 128, importFilepath.c_str(), wcsnlen_s(importFilepath.c_str(), MAX_PATH));
+		wcsncpy_s(fieldAddr, 128, importFilepath.c_str(), wcsnlen_s(importFilepath.c_str(), MAX_PATH));
 		zorya::fileBrowser.ClearSelected();
 		isEditingComplete = true;
 	}
@@ -125,43 +134,14 @@ bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::WCHAR>(const char* structAddress,
 	return isEditingComplete;
 }
 
-template<>
-bool RenderEPropertyImpl<zorya::VAR_REFL_TYPE::JIMENEZ_GAUSS>(const char* structAddress, const MemberMeta& memMeta) {
-	return foreachfield((JimenezSSSModel*)(structAddress + memMeta.offset), +[](const char* structAddr, const MemberMeta& memMet) -> std::uint8_t {
-		bool isEdited = RenderEProperty(structAddr, std::forward<const MemberMeta>(memMet));
-		return isEdited;
-		});
-}
 
-
-bool RenderEProperty(const char* structAddress, const MemberMeta& memMeta) {
-	switch (memMeta.type) {
-	case zorya::VAR_REFL_TYPE::FLOAT:
-		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::FLOAT>(structAddress, std::forward<const MemberMeta>(memMeta));
-	case zorya::VAR_REFL_TYPE::INT:
-		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::INT>(structAddress, std::forward<const MemberMeta>(memMeta));
-	case zorya::VAR_REFL_TYPE::UINT8:
-		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT8>(structAddress, std::forward<const MemberMeta>(memMeta));
-	case zorya::VAR_REFL_TYPE::UINT16:
-		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT16>(structAddress, std::forward<const MemberMeta>(memMeta));
-	case zorya::VAR_REFL_TYPE::UINT32:
-		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT32>(structAddress, std::forward<const MemberMeta>(memMeta));
-	case zorya::VAR_REFL_TYPE::UINT64:
-		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::UINT64>(structAddress, std::forward<const MemberMeta>(memMeta));
-	case zorya::VAR_REFL_TYPE::XMFLOAT2:
-		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT2>(structAddress, std::forward<const MemberMeta>(memMeta));
-	case zorya::VAR_REFL_TYPE::XMFLOAT3:
-		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT3>(structAddress, std::forward<const MemberMeta>(memMeta));
-	case zorya::VAR_REFL_TYPE::XMFLOAT4:
-		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::XMFLOAT4>(structAddress, std::forward<const MemberMeta>(memMeta));
-	case zorya::VAR_REFL_TYPE::WCHAR:
-		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::WCHAR>(structAddress, std::forward<const MemberMeta>(memMeta));
-	case zorya::VAR_REFL_TYPE::JIMENEZ_GAUSS:
-		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::JIMENEZ_GAUSS>(structAddress, std::forward<const MemberMeta>(memMeta));
-	default:
-		return RenderEPropertyImpl<zorya::VAR_REFL_TYPE::NOT_SUPPORTED>(structAddress, std::forward<const MemberMeta>(memMeta));
+template <typename T>
+struct RenderProperty {
+	static void render(T& stru) {
+		OutputDebugString("rendering struct\n");
 	}
-}
+};
+
 
 void EntityOutline::RenderETransform(RenderableEntity& entity) {
 	constexpr float oePi = 180.0f * dx::XM_1DIVPI;
@@ -182,6 +162,7 @@ void EntityOutline::RenderETransform(RenderableEntity& entity) {
 	entity.localWorldTransf.rot.z *= invOePi;
 }
 
+
 void EntityOutline::RenderEProperties(RenderableEntity& entity, LightInfo& lightInfo)
 {
 	RenderETransform(entity);
@@ -191,24 +172,21 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, LightInfo& light
 		switch (lightInfo.tag) {
 
 		case LightType::DIRECTIONAL:
-			foreachfield(&lightInfo.dirLight, +[](const char* structAddr, const MemberMeta& memMeta) -> std::uint8_t {
-				bool isEdited = RenderEProperty(structAddr, std::forward<const MemberMeta>(memMeta));
-				return isEdited;
-				});
+			foreachfield([](auto& structAddr, auto& fieldMeta) {
+				RenderEProperty(fieldMeta.type.castTo((void*)GET_FIELD_ADDRESS(structAddr, fieldMeta.offset)), fieldMeta.name);
+				}, lightInfo.dirLight);
 			break;
 		
 		case LightType::SPOT:
-			foreachfield(&lightInfo.spotLight, +[](const char* structAddr, const MemberMeta& memMeta) -> std::uint8_t {
-				bool isEdited = RenderEProperty(structAddr, std::forward<const MemberMeta>(memMeta));
-				return isEdited;
-				});
+			foreachfield([](auto& structAddr, auto& fieldMeta){
+				RenderEProperty(fieldMeta.type.castTo((void*)GET_FIELD_ADDRESS(structAddr, fieldMeta.offset)), fieldMeta.name);
+				}, lightInfo.spotLight);
 			break;
 
 		case LightType::POINT:
-			foreachfield(&lightInfo.pointLight, +[](const char* structAddr, const MemberMeta& memMeta) -> std::uint8_t {
-				bool isEdited = RenderEProperty(structAddr, std::forward<const MemberMeta>(memMeta));
-				return isEdited;
-				});
+			foreachfield([](auto& structAddr, auto& fieldMeta) {
+				RenderEProperty(fieldMeta.type.castTo((void*)GET_FIELD_ADDRESS(structAddr, fieldMeta.offset)), fieldMeta.name);
+				}, lightInfo.pointLight);
 			break;
 
 		}
@@ -240,6 +218,8 @@ bool importDialog(wchar_t* path, const char* id) {
 	return isEditingComplete;
 }
 
+
+
 void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smInfo, ReflectionBase* matDesc)
 {
 	RenderETransform(entity);
@@ -247,23 +227,19 @@ void EntityOutline::RenderEProperties(RenderableEntity& entity, SubmeshInfo* smI
 	//TODO: better check if entity has mesh; probably move check to callee of this function
 	if (smInfo != nullptr) {
 		assert(matDesc != nullptr);
+		//auto& matDesc2 = static_cast<ReflectionContainer<StandardMaterialDesc>*>(const_cast<ReflectionBase*>(matDesc))->reflectedStruct;
 		auto& matDesc2 = static_cast<ReflectionContainer<StandardMaterialDesc>*>(const_cast<ReflectionBase*>(matDesc))->reflectedStruct;
 
 		ImGui::SeparatorText("Material");
 		{
 			size_t numConvertedChars = 0;
 
-			//smInfo->matCacheHnd.isCached = matDesc->foreachreflectedfield(+[](const char* structAddr, const MemberMeta& memMeta) -> std::uint8_t {
-			//	bool isEdited = RenderEProperty(structAddr, std::forward<const MemberMeta>(memMeta));
-
+			//foreachfield([&](auto& structAddr, auto& fieldMeta) {
+			//	bool isEdited = RenderEProperty(fieldMeta.type.castTo((void*)GET_FIELD_ADDRESS(structAddr, fieldMeta.offset)), fieldMeta.name);
 			//	if (isEdited) {
-			//		if(memMeta.type == zorya::VAR_REFL_TYPE::WCHAR) return (UPDATE_MAT_MAPS | UPDATE_MAT_PRMS);
-			//		else return UPDATE_MAT_PRMS;
+			//		smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
 			//	}
-			//	else {
-			//		return 0;
-			//	}
-			//	});
+			//}, matDesc2);
 
 
 			zorya::fileBrowser.Display();
