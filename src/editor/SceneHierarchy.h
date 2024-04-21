@@ -8,19 +8,26 @@
 #include "renderer/frontend/RendererFrontend.h"
 #include "renderer/frontend/SceneGraph.h"
 
-class SceneHierarchy {
+namespace zorya
+{
+	class Scene_Hierarchy
+	{
 
-public:
-	SceneHierarchy();
-	~SceneHierarchy();
+	public:
+		Scene_Hierarchy();
+		~Scene_Hierarchy();
 
-	void RenderSHierarchy(RendererFrontend& sceneManager, std::uint32_t& selectedEntity);
-	void RenderSHNode(Node<RenderableEntity>* entity);
+		void render_scene_hierarchy(Renderer_Frontend& scene_manager, uint32_t& selected_entity);
+		void render_scene_hierarchy_node(Node<Renderable_Entity>* entity);
 
-	std::uint32_t selectedItem;
-	Node<RenderableEntity>* nodeToRemove;
-	ImGuiTreeNodeFlags baseFlags;
+		uint32_t m_selected_item;
+		Node<Renderable_Entity>* m_node_to_remove;
+		ImGuiTreeNodeFlags m_base_flags;
 
-};
+	};
+
+}
+
+
 
 #endif

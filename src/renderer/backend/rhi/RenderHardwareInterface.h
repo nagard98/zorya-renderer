@@ -12,68 +12,73 @@
 #include "renderer/frontend/Material.h"
 #include "renderer/frontend/Shader.h"
 
-namespace wrl = Microsoft::WRL;
-
 #define MULTISAMPLE_COUNT 1
 
-#define RETURN_IF_FAILED(hResult) { if(FAILED(hResult)) return hResult; }
+#define RETURN_IF_FAILED(h_result) { if(FAILED(h_result)) return h_result; }
 
-typedef std::uint8_t RHI_RESULT;
-#define RHI_OK std::uint8_t(0)
-#define RHI_ERR std::uint8_t(1)
+#define RHI_OK uint8_t(0)
+#define RHI_ERR uint8_t(1)
 
-template <typename T, typename I>
-struct StateVariantPtr {
-	RHIState variant = -1;
-	T* pStateObject;
-};
-
-class RenderHardwareInterface 
+namespace zorya
 {
+	namespace wrl = Microsoft::WRL;
 
-public:
-	RenderHardwareInterface();
-	~RenderHardwareInterface();
+	typedef uint8_t RHI_RESULT;
 
-	HRESULT Init(HWND windowHandle, RHIState initialState = RHI_DEFAULT_STATE());
+	template <typename T, typename I>
+	struct State_Variant_Ptr
+	{
+		RHI_State variant = -1;
+		T* p_state_object;
+	};
 
-	void SetState(RHIState newState);
-	RHI_RESULT LoadTexture(const wchar_t *path, ShaderTexture2D &shaderTexture, bool convertToLinear = true, size_t maxSize = 0);
+	class Render_Hardware_Interface
+	{
 
-	HRESULT ResizeWindow(std::uint32_t width, std::uint32_t height);
+	public:
+		Render_Hardware_Interface();
+		~Render_Hardware_Interface();
 
-	ID3D11BlendState* getBlendState(int index);
+		HRESULT init(HWND window_handle, RHI_State initial_state = RHI_DEFAULT_STATE());
 
-	void ReleaseAllResources();
+		void set_state(RHI_State new_state);
+		RHI_RESULT load_texture(const wchar_t* path, Shader_Texture2D& shader_texture, bool convert_to_linear = true, size_t max_size = 0);
 
-	//wrl::ComPtr<ID3D11Device> device;
-	DX11RenderDevice device;
+		HRESULT resize_window(uint32_t width, uint32_t height);
 
-	ID3D11DeviceContext* context;
-	IDXGISwapChain* swapChain;
-	
-	ID3D11RenderTargetView* backBufferRTV;
+		ID3D11BlendState* get_blend_state(int index);
 
-	ID3D11Texture2D* backBufferDepthTex;
-	ID3D11DepthStencilView* backBufferDepthDSV;
-	ID3D11ShaderResourceView* backBufferDepthSRV;
+		void release_all_resources();
 
-	D3D_FEATURE_LEVEL featureLevel; //feature level found for device
-	D3D11_VIEWPORT viewport;
+		//wrl::ComPtr<ID3D11Device> device;
+		DX11_Render_Device m_device;
 
-private:
-	RHIState state;
+		ID3D11DeviceContext* m_context;
+		IDXGISwapChain* m_swap_chain;
 
-	std::array<StateVariantPtr<ID3D11RasterizerState, std::uint8_t>, MAX_STATE_VARIANTS> rastVariants;
-	std::array<StateVariantPtr<ID3D11DepthStencilState, std::uint32_t>, MAX_STATE_VARIANTS> depthStenVariants;
-	std::array<StateVariantPtr<ID3D11BlendState, std::uint32_t>, MAX_STATE_VARIANTS> blendVariants;
-	std::array<StateVariantPtr<ID3D11SamplerState, std::uint16_t>, MAX_STATE_VARIANTS> samplerVariants;
+		ID3D11RenderTargetView* m_back_buffer_rtv;
 
-	D3D11_RASTERIZER_DESC tmpRastDesc;
-	D3D11_DEPTH_STENCIL_DESC tmpDepthStenDesc;
-	
-};
+		ID3D11Texture2D* m_back_buffer_depth_tex;
+		ID3D11DepthStencilView* m_back_buffer_depth_dsv;
+		ID3D11ShaderResourceView* m_back_buffer_depth_srv;
 
-extern RenderHardwareInterface rhi;
+		D3D_FEATURE_LEVEL m_feature_level; //feature level found for device
+		D3D11_VIEWPORT m_viewport;
 
+	private:
+		RHI_State state;
+
+		std::array<State_Variant_Ptr<ID3D11RasterizerState, uint8_t>, MAX_STATE_VARIANTS> m_rast_state_variants;
+		std::array<State_Variant_Ptr<ID3D11DepthStencilState, uint32_t>, MAX_STATE_VARIANTS> m_depth_stencil_state_variants;
+		std::array<State_Variant_Ptr<ID3D11BlendState, uint32_t>, MAX_STATE_VARIANTS> m_blend_state_variants;
+		std::array<State_Variant_Ptr<ID3D11SamplerState, uint16_t>, MAX_STATE_VARIANTS> m_sampler_state_variants;
+
+		D3D11_RASTERIZER_DESC m_tmp_rast_desc;
+		D3D11_DEPTH_STENCIL_DESC m_tmp_depth_sten_desc;
+
+	};
+
+	extern Render_Hardware_Interface rhi;
+
+}
 #endif

@@ -4,14 +4,19 @@
 #include <d3d11_1.h>
 #include <cstdint>
 
-struct ConstantBuffer {
-	ID3D11Buffer* buffer;
-	const char* constantBufferName;
-};
+namespace zorya
+{
+	struct Constant_Buffer
+	{
+		ID3D11Buffer* buffer;
+		const char* constant_buffer_name;
+	};
 
-template <typename T>
-struct ConstantBufferHandle {
-	std::uint64_t index;
-};
+	template <typename T>
+	struct constant_buffer_handle
+	{
+		uint64_t index;
+	};
 
+}
 #endif

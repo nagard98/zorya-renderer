@@ -5,75 +5,84 @@
 #include <d3dcompiler.h>
 #include <cstdint>
 
-enum class VShaderID : std::uint8_t {
-	STANDARD,
-	SKYBOX,
-	DEPTH,
-	FULL_QUAD,
-	NUM_SHADERS
-};
+namespace zorya
+{
+	enum class VShader_ID : uint8_t
+	{
+		STANDARD,
+		SKYBOX,
+		DEPTH,
+		FULL_QUAD,
+		NUM_SHADERS
+	};
 
-enum class PShaderID : std::uint8_t {
-	UNDEFINED,
-	STANDARD,
-	SKYBOX,
-	SKIN,
-	SSSSS,
-	LIGHTING,
-	SHADOW_MAP,
-	PRESENT,
-	NUM_SHADERS
-};
-
-
-static D3D11_INPUT_ELEMENT_DESC vertexLayoutDesc[4] = {
-	{"position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	{ "texcoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	{ "normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	{ "tangent", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
-};
+	enum class PShader_ID : uint8_t
+	{
+		UNDEFINED,
+		STANDARD,
+		SKYBOX,
+		SKIN,
+		SSSSS,
+		LIGHTING,
+		SHADOW_MAP,
+		PRESENT,
+		NUM_SHADERS
+	};
 
 
-struct ShaderBytecode {
-	const BYTE* bytecode;
-	size_t sizeInBytes;
-};
-
-struct ShaderTexture2D {
-	ID3D11ShaderResourceView* resourceView;
-};
-
-struct PixelShader {
-	ID3D11PixelShader* shader;
-	ID3D11ShaderReflection* shaderReflection;
-
-	static PixelShader create(const BYTE* shaderByteCode, size_t byteCodeSize);
-	static PixelShader create(PShaderID pixelShaderId);
-
-	void freeShader();
-
-	HRESULT bindTexture2D(const char* bindingName, const ShaderTexture2D& texture);
-	HRESULT bindConstantBuffer(const char* bindingName, ID3D11Buffer* const constantBuffer);
-
-	static ID3D11PixelShader* registeredPixelShaders[(std::uint8_t)PShaderID::NUM_SHADERS];
-	static ShaderBytecode pixelShaderBytecodeBuffers[(std::uint8_t)PShaderID::NUM_SHADERS];
-};
+	static D3D11_INPUT_ELEMENT_DESC s_vertex_layout_desc[4] = {
+		{"position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{ "texcoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "tangent", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	};
 
 
-struct VertexShader {
-	ID3D11VertexShader* shader;
-	ID3D11InputLayout* vertexInputLayout;
-	ID3D11ShaderReflection* shaderReflection;
+	struct Shader_Bytecode
+	{
+		const BYTE* bytecode;
+		size_t size_in_bytes;
+	};
 
-	static VertexShader create(const BYTE* shaderByteCode, size_t byteCodeSize, D3D11_INPUT_ELEMENT_DESC* verteLayoutDesc, int numInputElements);
-	static VertexShader create(VShaderID vertexShaderId, D3D11_INPUT_ELEMENT_DESC* verteLayoutDesc, int numInputElements);
+	struct Shader_Texture2D
+	{
+		ID3D11ShaderResourceView* resource_view;
+	};
 
-	void freeShader();
+	struct Pixel_Shader
+	{
+		ID3D11PixelShader* m_shader;
+		ID3D11ShaderReflection* m_shader_reflection;
 
-	HRESULT bindConstantBuffer(const char* bindingName, ID3D11Buffer* const constantBuffer);
+		static Pixel_Shader create(const BYTE* shader_bytecode, size_t bytecode_size);
+		static Pixel_Shader create(PShader_ID pixel_shader_id);
 
-	static ID3D11VertexShader* registeredVertexShaders[(std::uint8_t)VShaderID::NUM_SHADERS];
-	static ShaderBytecode vertexShaderBytecodeBuffers[(std::uint8_t)VShaderID::NUM_SHADERS];
-};
+		void free_shader();
+
+		HRESULT bind_texture_2d(const char* binding_name, const Shader_Texture2D& texture);
+		HRESULT bind_constant_buffer(const char* binding_name, ID3D11Buffer* const constant_buffer);
+
+		static ID3D11PixelShader* s_registered_pixel_shaders[(uint8_t)PShader_ID::NUM_SHADERS];
+		static Shader_Bytecode s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::NUM_SHADERS];
+	};
+
+
+	struct Vertex_Shader
+	{
+		ID3D11VertexShader* m_shader;
+		ID3D11InputLayout* m_vertex_input_layout;
+		ID3D11ShaderReflection* m_shader_reflection;
+
+		static Vertex_Shader create(const BYTE* shader_bytecode, size_t bytecode_size, D3D11_INPUT_ELEMENT_DESC* vertex_layout_desc, int num_input_elements);
+		static Vertex_Shader create(VShader_ID vertex_shader_id, D3D11_INPUT_ELEMENT_DESC* vertex_layout_desc, int num_input_elements);
+
+		void free_shader();
+
+		HRESULT bind_constant_buffer(const char* binding_name, ID3D11Buffer* const constant_buffer);
+
+		static ID3D11VertexShader* s_registered_vertex_shaders[(uint8_t)VShader_ID::NUM_SHADERS];
+		static Shader_Bytecode s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::NUM_SHADERS];
+	};
+}
 
 #endif

@@ -25,128 +25,136 @@
 //Shaders shaders;
 
 
-Shaders::~Shaders()
+namespace zorya
 {
-}
+	Shaders::~Shaders()
+	{}
 
-HRESULT Shaders::Init() {
-    vertexShaders.resize((std::uint8_t)VShaderID::NUM_SHADERS);
-    pixelShaders.resize((std::uint8_t)PShaderID::NUM_SHADERS);
+	HRESULT Shaders::init()
+	{
+		m_vertex_shaders.resize((std::uint8_t)VShader_ID::NUM_SHADERS);
+		m_pixel_shaders.resize((std::uint8_t)PShader_ID::NUM_SHADERS);
 
-    vertexLayout = nullptr;
-    simpleVertexLayout = nullptr;
+		m_vertex_layout = nullptr;
+		m_simple_vertex_layout = nullptr;
 
-    HRESULT hr = LoadDefaultShaders();
-    //BuildDefaultShaders();
+		HRESULT hr = load_default_shaders();
+		//BuildDefaultShaders();
 
-    return hr;
-}
+		return hr;
+	}
 
-HRESULT Shaders::BuildDefaultShaders() {
-    ID3DBlob* shaderBlob = nullptr;
-    HRESULT hRes;
+	HRESULT Shaders::build_default_shaders()
+	{
+		ID3DBlob* shader_blob = nullptr;
+		HRESULT h_res;
 
-    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/GBufferVS.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::STANDARD), rhi.device.device);
-    RETURN_IF_FAILED(hRes);
-    hRes = rhi.device.device->CreateInputLayout(vertexLayoutDesc, 4, shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), &vertexLayout);
-    RETURN_IF_FAILED(hRes);
+		h_res = load_shader<ID3D11VertexShader>(L"./shaders/GBufferVS.hlsl", "vs", &shader_blob, &m_vertex_shaders.at((std::uint8_t)VShader_ID::STANDARD), rhi.m_device.m_device);
+		RETURN_IF_FAILED(h_res);
+		h_res = rhi.m_device.m_device->CreateInputLayout(s_vertex_layout_desc, 4, shader_blob->GetBufferPointer(), shader_blob->GetBufferSize(), &m_vertex_layout);
+		RETURN_IF_FAILED(h_res);
 
-    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/DepthVS.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::DEPTH), rhi.device.device);
-    RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/SkyboxVS.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::SKYBOX), rhi.device.device);
-    RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11VertexShader>(L"./shaders/FullcreenQuad.hlsl", "vs", &shaderBlob, &vertexShaders.at((std::uint8_t)VShaderID::FULL_QUAD), rhi.device.device);
-    RETURN_IF_FAILED(hRes);
-
-    
-    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/GBufferPS.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::STANDARD), rhi.device.device);
-    RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/SkyboxPS.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::SKYBOX), rhi.device.device);
-    RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/SSSSS.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::SSSSS), rhi.device.device);
-    RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/Lighting.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::LIGHTING), rhi.device.device);
-    RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/ShadowMapping.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::SHADOW_MAP), rhi.device.device);
-    RETURN_IF_FAILED(hRes);
-    hRes = LoadShader<ID3D11PixelShader>(L"./shaders/Present.hlsl", "ps", &shaderBlob, &pixelShaders.at((std::uint8_t)PShaderID::PRESENT), rhi.device.device);
-    RETURN_IF_FAILED(hRes);
-
-    if (shaderBlob != nullptr) shaderBlob->Release();
-
-    return hRes;
-}
-
-HRESULT Shaders::LoadDefaultShaders()
-{
-    HRESULT hRes;
-
-    hRes = rhi.device.device->CreateVertexShader(g_GBufferVS, sizeof(g_GBufferVS), nullptr, &vertexShaders.at((std::uint8_t)VShaderID::STANDARD));
-    RETURN_IF_FAILED(hRes);
-    hRes = rhi.device.device->CreateInputLayout(vertexLayoutDesc, 4, g_GBufferVS, sizeof(g_GBufferVS), &vertexLayout);
-    RETURN_IF_FAILED(hRes);
-
-    hRes = rhi.device.device->CreateVertexShader(g_DepthVS, sizeof(g_DepthVS), nullptr, &vertexShaders.at((std::uint8_t)VShaderID::DEPTH));
-    RETURN_IF_FAILED(hRes);
-    hRes = rhi.device.device->CreateVertexShader(g_SkyboxVS, sizeof(g_SkyboxVS), nullptr, &vertexShaders.at((std::uint8_t)VShaderID::SKYBOX));
-    RETURN_IF_FAILED(hRes);
-    hRes = rhi.device.device->CreateVertexShader(g_FullscreenQuad, sizeof(g_FullscreenQuad), nullptr, &vertexShaders.at((std::uint8_t)VShaderID::FULL_QUAD));
-    RETURN_IF_FAILED(hRes);
-
-    hRes = rhi.device.device->CreatePixelShader(g_GBufferPS, sizeof(g_GBufferPS), nullptr, &pixelShaders.at((std::uint8_t)PShaderID::STANDARD));
-    RETURN_IF_FAILED(hRes);
-    hRes = rhi.device.device->CreatePixelShader(g_SkyboxPS, sizeof(g_SkyboxPS), nullptr, &pixelShaders.at((std::uint8_t)PShaderID::SKYBOX));
-    RETURN_IF_FAILED(hRes);
-    hRes = rhi.device.device->CreatePixelShader(g_SSSSS, sizeof(g_SSSSS), nullptr, &pixelShaders.at((std::uint8_t)PShaderID::SSSSS));
-    RETURN_IF_FAILED(hRes);
-    hRes = rhi.device.device->CreatePixelShader(g_Lighting, sizeof(g_Lighting), nullptr, &pixelShaders.at((std::uint8_t)PShaderID::LIGHTING));
-    RETURN_IF_FAILED(hRes);
-    hRes = rhi.device.device->CreatePixelShader(g_ShadowMapping, sizeof(g_ShadowMapping), nullptr, &pixelShaders.at((std::uint8_t)PShaderID::SHADOW_MAP));
-    RETURN_IF_FAILED(hRes);
-    hRes = rhi.device.device->CreatePixelShader(g_Present, sizeof(g_Present), nullptr, &pixelShaders.at((std::uint8_t)PShaderID::PRESENT));
-    RETURN_IF_FAILED(hRes);
+		h_res = load_shader<ID3D11VertexShader>(L"./shaders/DepthVS.hlsl", "vs", &shader_blob, &m_vertex_shaders.at((std::uint8_t)VShader_ID::DEPTH), rhi.m_device.m_device);
+		RETURN_IF_FAILED(h_res);
+		h_res = load_shader<ID3D11VertexShader>(L"./shaders/SkyboxVS.hlsl", "vs", &shader_blob, &m_vertex_shaders.at((std::uint8_t)VShader_ID::SKYBOX), rhi.m_device.m_device);
+		RETURN_IF_FAILED(h_res);
+		h_res = load_shader<ID3D11VertexShader>(L"./shaders/FullcreenQuad.hlsl", "vs", &shader_blob, &m_vertex_shaders.at((std::uint8_t)VShader_ID::FULL_QUAD), rhi.m_device.m_device);
+		RETURN_IF_FAILED(h_res);
 
 
-    //ID3D11ShaderReflection* shaderReflection = nullptr;
-    //hRes = D3DReflect(g_SSSSS, sizeof(g_SSSSS), IID_ID3D11ShaderReflection, (void**)&shaderReflection);
-    //RETURN_IF_FAILED(hRes);
-    //D3D11_SHADER_DESC shaderDesc;
-    //shaderReflection->GetDesc(&shaderDesc);
+		h_res = load_shader<ID3D11PixelShader>(L"./shaders/GBufferPS.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::STANDARD), rhi.m_device.m_device);
+		RETURN_IF_FAILED(h_res);
+		h_res = load_shader<ID3D11PixelShader>(L"./shaders/SkyboxPS.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SKYBOX), rhi.m_device.m_device);
+		RETURN_IF_FAILED(h_res);
+		h_res = load_shader<ID3D11PixelShader>(L"./shaders/SSSSS.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SSSSS), rhi.m_device.m_device);
+		RETURN_IF_FAILED(h_res);
+		h_res = load_shader<ID3D11PixelShader>(L"./shaders/Lighting.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::LIGHTING), rhi.m_device.m_device);
+		RETURN_IF_FAILED(h_res);
+		h_res = load_shader<ID3D11PixelShader>(L"./shaders/ShadowMapping.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SHADOW_MAP), rhi.m_device.m_device);
+		RETURN_IF_FAILED(h_res);
+		h_res = load_shader<ID3D11PixelShader>(L"./shaders/Present.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::PRESENT), rhi.m_device.m_device);
+		RETURN_IF_FAILED(h_res);
 
-    return hRes;
-}
+		if (shader_blob != nullptr) shader_blob->Release();
 
-void Shaders::ReleaseAllResources()
-{
-    for (ID3D11PixelShader* ps : pixelShaders) {
-        if (ps) ps->Release();
-    }
+		return h_res;
+	}
 
-    for (ID3D11VertexShader* vs : vertexShaders) {
-        if (vs) vs->Release();
-    }
+	HRESULT Shaders::load_default_shaders()
+	{
+		HRESULT h_res;
 
-    if (vertexLayout) vertexLayout->Release();
-}
+		h_res = rhi.m_device.m_device->CreateVertexShader(g_GBufferVS, sizeof(g_GBufferVS), nullptr, &m_vertex_shaders.at((std::uint8_t)VShader_ID::STANDARD));
+		RETURN_IF_FAILED(h_res);
+		h_res = rhi.m_device.m_device->CreateInputLayout(s_vertex_layout_desc, 4, g_GBufferVS, sizeof(g_GBufferVS), &m_vertex_layout);
+		RETURN_IF_FAILED(h_res);
 
-template<>
-HRESULT CreateShader<ID3D11VertexShader>(ID3DBlob* pShaderBlob, ID3D11VertexShader** pShader, ID3D11Device* g_d3dDevice)
-{
-    return g_d3dDevice->CreateVertexShader(pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize(), nullptr, pShader);
-};
+		h_res = rhi.m_device.m_device->CreateVertexShader(g_DepthVS, sizeof(g_DepthVS), nullptr, &m_vertex_shaders.at((std::uint8_t)VShader_ID::DEPTH));
+		RETURN_IF_FAILED(h_res);
+		h_res = rhi.m_device.m_device->CreateVertexShader(g_SkyboxVS, sizeof(g_SkyboxVS), nullptr, &m_vertex_shaders.at((std::uint8_t)VShader_ID::SKYBOX));
+		RETURN_IF_FAILED(h_res);
+		h_res = rhi.m_device.m_device->CreateVertexShader(g_FullscreenQuad, sizeof(g_FullscreenQuad), nullptr, &m_vertex_shaders.at((std::uint8_t)VShader_ID::FULL_QUAD));
+		RETURN_IF_FAILED(h_res);
 
-template<>
-HRESULT CreateShader<ID3D11PixelShader>(ID3DBlob* pShaderBlob, ID3D11PixelShader** pShader, ID3D11Device* g_d3dDevice)
-{
-    return g_d3dDevice->CreatePixelShader(pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize(), nullptr, pShader);
-};
+		h_res = rhi.m_device.m_device->CreatePixelShader(g_GBufferPS, sizeof(g_GBufferPS), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::STANDARD));
+		RETURN_IF_FAILED(h_res);
+		h_res = rhi.m_device.m_device->CreatePixelShader(g_SkyboxPS, sizeof(g_SkyboxPS), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SKYBOX));
+		RETURN_IF_FAILED(h_res);
+		h_res = rhi.m_device.m_device->CreatePixelShader(g_SSSSS, sizeof(g_SSSSS), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SSSSS));
+		RETURN_IF_FAILED(h_res);
+		h_res = rhi.m_device.m_device->CreatePixelShader(g_Lighting, sizeof(g_Lighting), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::LIGHTING));
+		RETURN_IF_FAILED(h_res);
+		h_res = rhi.m_device.m_device->CreatePixelShader(g_ShadowMapping, sizeof(g_ShadowMapping), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SHADOW_MAP));
+		RETURN_IF_FAILED(h_res);
+		h_res = rhi.m_device.m_device->CreatePixelShader(g_Present, sizeof(g_Present), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::PRESENT));
+		RETURN_IF_FAILED(h_res);
 
-template<>
-std::string GetLatestProfile<ID3D11VertexShader>() {
-    return "vs_5_0";
-}
 
-template<>
-std::string GetLatestProfile<ID3D11PixelShader>() {
-    return "ps_5_0";
+		//ID3D11ShaderReflection* shaderReflection = nullptr;
+		//hRes = D3DReflect(g_SSSSS, sizeof(g_SSSSS), IID_ID3D11ShaderReflection, (void**)&shaderReflection);
+		//RETURN_IF_FAILED(hRes);
+		//D3D11_SHADER_DESC shaderDesc;
+		//shaderReflection->GetDesc(&shaderDesc);
+
+		return h_res;
+	}
+
+	void Shaders::release_all_resources()
+	{
+		for (ID3D11PixelShader* ps : m_pixel_shaders)
+		{
+			if (ps) ps->Release();
+		}
+
+		for (ID3D11VertexShader* vs : m_vertex_shaders)
+		{
+			if (vs) vs->Release();
+		}
+
+		if (m_vertex_layout) m_vertex_layout->Release();
+	}
+
+	template<>
+	HRESULT create_shader<ID3D11VertexShader>(ID3DBlob* p_shader_blob, ID3D11VertexShader** p_shader, ID3D11Device* d3d_device)
+	{
+		return d3d_device->CreateVertexShader(p_shader_blob->GetBufferPointer(), p_shader_blob->GetBufferSize(), nullptr, p_shader);
+	};
+
+	template<>
+	HRESULT create_shader<ID3D11PixelShader>(ID3DBlob* p_shader_blob, ID3D11PixelShader** p_shader, ID3D11Device* d3d_device)
+	{
+		return d3d_device->CreatePixelShader(p_shader_blob->GetBufferPointer(), p_shader_blob->GetBufferSize(), nullptr, p_shader);
+	};
+
+	template<>
+	std::string get_latest_profile<ID3D11VertexShader>()
+	{
+		return "vs_5_0";
+	}
+
+	template<>
+	std::string get_latest_profile<ID3D11PixelShader>()
+	{
+		return "ps_5_0";
+	}
 }

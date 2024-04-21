@@ -9,66 +9,77 @@
 
 #include <vector>
 
-SceneHierarchy::SceneHierarchy()
+namespace zorya
 {
-	selectedItem = -1;
-    nodeToRemove = nullptr;
-    baseFlags = ImGuiTreeNodeFlags_OpenOnArrow;
-}
+	Scene_Hierarchy::Scene_Hierarchy()
+	{
+		m_selected_item = -1;
+		m_node_to_remove = nullptr;
+		m_base_flags = ImGuiTreeNodeFlags_OpenOnArrow;
+	}
 
-SceneHierarchy::~SceneHierarchy()
-{
-}
+	Scene_Hierarchy::~Scene_Hierarchy()
+	{}
 
-void SceneHierarchy::RenderSHierarchy(RendererFrontend& sceneManager, std::uint32_t& selectedEntity)
-{
-    SceneGraph<RenderableEntity>& entities = sceneManager.sceneGraph;
+	void Scene_Hierarchy::render_scene_hierarchy(Renderer_Frontend& scene_manager, uint32_t& selected_entity)
+	{
+		Scene_Graph<Renderable_Entity>& entities = scene_manager.m_scene_graph;
 
-    for (Node<RenderableEntity>* entity : entities.rootNode->children) {
-        RenderSHNode(entity);
-    }
+		for (Node<Renderable_Entity>* entity : entities.root_node->children)
+		{
+			render_scene_hierarchy_node(entity);
+		}
 
-    if (nodeToRemove != nullptr) {
-        sceneManager.removeEntity(nodeToRemove->value);
-        nodeToRemove = nullptr;
-        selectedItem = -1;
-    }
+		if (m_node_to_remove != nullptr)
+		{
+			scene_manager.remove_entity(m_node_to_remove->value);
+			m_node_to_remove = nullptr;
+			m_selected_item = -1;
+		}
 
-    selectedEntity = selectedItem;
+		selected_entity = m_selected_item;
 
-}
+	}
 
-void SceneHierarchy::RenderSHNode(Node<RenderableEntity>* entity)
-{
-    ImGuiTreeNodeFlags nodeFlags = baseFlags;
-    if (entity->children.size() == 0) {
-        nodeFlags |= ImGuiTreeNodeFlags_Leaf;
-    }
-    if (entity->value.ID == selectedItem) {
-        nodeFlags |= ImGuiTreeNodeFlags_Selected;
-    }
+	void Scene_Hierarchy::render_scene_hierarchy_node(Node<Renderable_Entity>* entity)
+	{
+		ImGuiTreeNodeFlags node_flags = m_base_flags;
+		if (entity->children.size() == 0)
+		{
+			node_flags |= ImGuiTreeNodeFlags_Leaf;
+		}
+		if (entity->value.ID == m_selected_item)
+		{
+			node_flags |= ImGuiTreeNodeFlags_Selected;
+		}
 
-    ImGui::PushID(entity->value.ID);
-    bool isNodeOpen = ImGui::TreeNodeEx(entity->value.entityName.c_str(), nodeFlags);
-    if (ImGui::IsItemClicked()) {
-        selectedItem = entity->value.ID;
-    }
+		ImGui::PushID(entity->value.ID);
+		bool is_node_open = ImGui::TreeNodeEx(entity->value.entity_name.c_str(), node_flags);
+		if (ImGui::IsItemClicked())
+		{
+			m_selected_item = entity->value.ID;
+		}
 
-    if (ImGui::BeginPopupContextItem()) {
-        if (ImGui::Selectable("Remove")) {
-            nodeToRemove = entity;
-        }
-        ImGui::EndPopup();
-    }
+		if (ImGui::BeginPopupContextItem())
+		{
+			if (ImGui::Selectable("Remove"))
+			{
+				m_node_to_remove = entity;
+			}
+			ImGui::EndPopup();
+		}
 
-    ImGui::PopID();
+		ImGui::PopID();
 
-    if (isNodeOpen) {
-        for (Node<RenderableEntity>* childEnt : entity->children) {
-            RenderSHNode(childEnt);
-        }
-        ImGui::TreePop();
-    }
+		if (is_node_open)
+		{
+			for (Node<Renderable_Entity>* child_entity : entity->children)
+			{
+				render_scene_hierarchy_node(child_entity);
+			}
+			ImGui::TreePop();
+		}
+	}
 }
 
 

@@ -12,148 +12,163 @@
 #include <cstdint>
 #include <d3d11_1.h>
 
-struct CUBEMAP {
-	enum : int {
-		FACE_POSITIVE_X = 0,
-		FACE_NEGATIVE_X = 1,
-		FACE_POSITIVE_Y = 2,
-		FACE_NEGATIVE_Y = 3,
-		FACE_POSITIVE_Z = 4,
-		FACE_NEGATIVE_Z = 5,
-	};
-};
-
-struct GBuffer {
-	enum :int {
-		ALBEDO,
-		NORMAL,
-		ROUGH_MET,
-		SIZE
-	};
-};
-
-enum ConstanBuffer {
-	CB_Application,
-	CB_Frame,
-	CB_Object,
-	CB_Light,
-	NumConstantBuffers
-};
-
-struct ObjCB {
-	dx::XMMATRIX worldMatrix;
-};
-
-struct ViewCB {
-	dx::XMMATRIX viewMatrix;
-};
-
-struct ProjCB {
-	dx::XMMATRIX projMatrix;
-};
-
-
-class RendererBackend {
-
-public:
-	RendererBackend();
-	~RendererBackend();
-
-	//TODO: change return type to custom wrapper
-	HRESULT Init(bool reset = false);
-	void RenderView(const ViewDesc& viewDesc);
-
-	void ReleaseAllResources();
-
-	ID3DUserDefinedAnnotation* annot;
-	D3D11_VIEWPORT sceneViewport;
-
-	ID3D11Texture2D* finalRenderTargetTex;
-	ID3D11RenderTargetView* finalRenderTargetView;
-	ID3D11ShaderResourceView* finalRenderTargetSRV;
-
-	ID3D11Texture2D* depthTex;
-	ID3D11DepthStencilView* depthDSV;
-	ID3D11ShaderResourceView* depthSRV;
-
-private:
-	void RenderShadowMaps(const ViewDesc& viewDesc, DirShadowCB& dirShadowCB, OmniDirShadowCB& cbOmniDirShad);
-
-	struct ApplicationConstantBuff {
-
+namespace zorya
+{
+	struct Cubemap
+	{
+		enum : int
+		{
+			FACE_POSITIVE_X = 0,
+			FACE_NEGATIVE_X = 1,
+			FACE_POSITIVE_Y = 2,
+			FACE_NEGATIVE_Y = 3,
+			FACE_POSITIVE_Z = 4,
+			FACE_NEGATIVE_Z = 5,
+		};
 	};
 
-	struct FrameConstantBuff {
-		SceneLights sceneLights;
-		SubsurfaceScatteringParams sssParams;
+	struct G_Buffer
+	{
+		enum :int
+		{
+			ALBEDO,
+			NORMAL,
+			ROUGH_MET,
+			SIZE
+		};
 	};
 
-	struct ObjectConstantBuff {
-		MaterialParams materialParams;
+	enum Constan_Buffer_Type
+	{
+		CB_Application,
+		CB_Frame,
+		CB_Object,
+		CB_Light,
+		NumConstantBuffers
 	};
 
-	ConstantBufferHandle<FrameConstantBuff> hndFrameCB;
-	ConstantBufferHandle<ObjectConstantBuff> hndObjectCB;
+	struct Obj_CB
+	{
+		dx::XMMATRIX world_matrix;
+	};
 
-	//ID3D11Buffer* matPrmsCB;
+	struct View_CB
+	{
+		dx::XMMATRIX view_matrix;
+	};
 
-	ID3D11Buffer* objectCB;
-	ID3D11Buffer* viewCB;
-	ID3D11Buffer* projCB;
-	ID3D11Buffer* dirShadCB;
-	ID3D11Buffer* omniDirShadCB;
+	struct Proj_CB
+	{
+		dx::XMMATRIX proj_matrix;
+	};
 
-	ID3D11Buffer* invMatCB;
 
-	D3D11_VIEWPORT sm_viewport;
+	class Renderer_Backend
+	{
 
-	//TODO:Thickness map here is temporary; move to material
-	ShaderTexture2D thicknessMapSRV;
+	public:
+		Renderer_Backend();
+		~Renderer_Backend();
 
-	ID3D11Texture2D* GBuffer[GBuffer::SIZE];
-	ID3D11RenderTargetView* GBufferRTV[GBuffer::SIZE];
-	ID3D11ShaderResourceView* GBufferSRV[GBuffer::SIZE];
+		//TODO: change return type to custom wrapper
+		HRESULT init(bool reset = false);
+		void render_view(const View_Desc& view_desc);
 
-	ID3D11Texture2D* ambientMap;
-	ID3D11RenderTargetView* ambientRTV;
-	ID3D11ShaderResourceView* ambientSRV;
+		void release_all_resources();
 
-	ID3D11Texture2D* shadowMap;
-	ID3D11ShaderResourceView* shadowMapSRV;
-	ID3D11DepthStencilView* shadowMapDSV;
+		ID3DUserDefinedAnnotation* m_annot;
+		D3D11_VIEWPORT m_scene_viewport;
 
-	ID3D11Texture2D* spotShadowMap;
-	ID3D11ShaderResourceView* spotShadowMapSRV;
-	ID3D11DepthStencilView* spotShadowMapDSV;
+		ID3D11Texture2D* m_final_render_target_tex;
+		ID3D11RenderTargetView* m_final_render_target_view;
+		ID3D11ShaderResourceView* m_final_render_target_srv;
 
-	ID3D11Texture2D* shadowCubeMap;
-	ID3D11ShaderResourceView* shadowCubeMapSRV;
-	ID3D11DepthStencilView* shadowCubeMapDSV[6 * 2];
+		ID3D11Texture2D* m_depth_tex;
+		ID3D11DepthStencilView* m_depth_dsv;
+		ID3D11ShaderResourceView* m_depth_srv;
 
-	ID3D11Texture2D* skinMaps[5];
-	ID3D11RenderTargetView* skinRT[5];
-	ID3D11ShaderResourceView* skinSRV[5];
+	private:
+		void render_shadow_maps(const View_Desc& view_desc, Dir_Shadow_CB& dir_shadow_cb, Omni_Dir_Shadow_CB& cb_omni_dir_shad);
 
-	ID3D11ShaderResourceView* cubemapView; //skybox view
+		struct Application_Constant_Buff
+		{
 
-	VertexShader shadowMapVertexShader;
-	PixelShader shadowMapPixelShader;
+		};
 
-	VertexShader GBufferVertexShader;
-	VertexShader fullscreenQuadShader;
+		struct Frame_Constant_Buff
+		{
+			Scene_Lights m_scene_lights;
+			Subsurface_Scattering_Params sss_params;
+		};
 
-	PixelShader lightingShader;
+		struct Object_Constant_Buff
+		{
+			Material_Params material_params;
+		};
 
-	VertexShader skyboxVertexShader;
-	PixelShader skyboxPixelShader;
+		constant_buffer_handle<Frame_Constant_Buff> m_hnd_frame_cb;
+		constant_buffer_handle<Object_Constant_Buff> m_hnd_object_cb;
 
-	PixelShader sssssPixelShader;
+		//ID3D11Buffer* matPrmsCB;
 
-	//TODO: what did I intend to do with this?
-	//std::hash<std::uint16_t> submeshHash;
-};
+		ID3D11Buffer* m_object_cb;
+		ID3D11Buffer* m_view_cb;
+		ID3D11Buffer* m_proj_cb;
+		ID3D11Buffer* m_dir_shad_cb;
+		ID3D11Buffer* m_omni_dir_shad_cb;
 
-extern RendererBackend rb;
+		ID3D11Buffer* m_inv_mat_cb;
 
+		D3D11_VIEWPORT m_shadow_map_viewport;
+
+		//TODO:Thickness map here is temporary; move to material
+		Shader_Texture2D m_thickness_map_srv;
+
+		ID3D11Texture2D* m_gbuffer[G_Buffer::SIZE];
+		ID3D11RenderTargetView* m_gbuffer_rtv[G_Buffer::SIZE];
+		ID3D11ShaderResourceView* m_gbuffer_srv[G_Buffer::SIZE];
+
+		ID3D11Texture2D* m_ambient_map;
+		ID3D11RenderTargetView* m_ambient_rtv;
+		ID3D11ShaderResourceView* m_ambient_srv;
+
+		ID3D11Texture2D* m_shadow_map;
+		ID3D11ShaderResourceView* m_shadow_map_srv;
+		ID3D11DepthStencilView* m_shadow_map_dsv;
+
+		ID3D11Texture2D* m_spot_shadow_map;
+		ID3D11ShaderResourceView* m_spot_shadow_map_srv;
+		ID3D11DepthStencilView* m_spot_shadow_map_desv;
+
+		ID3D11Texture2D* m_shadow_cube_map;
+		ID3D11ShaderResourceView* m_shadow_cube_map_srv;
+		ID3D11DepthStencilView* m_shadow_cube_map_dsv[6 * 2];
+
+		ID3D11Texture2D* m_skin_maps[5];
+		ID3D11RenderTargetView* m_skin_rt[5];
+		ID3D11ShaderResourceView* m_skin_srv[5];
+
+		ID3D11ShaderResourceView* m_cubemap_view; //skybox view
+
+		Vertex_Shader m_shadow_map_vertex_shader;
+		Pixel_Shader m_shadow_map_pixel_shader;
+
+		Vertex_Shader m_gbuffer_vertex_shader;
+		Vertex_Shader m_fullscreen_quad_shader;
+
+		Pixel_Shader m_lighting_shader;
+
+		Vertex_Shader m_skybox_vertex_shader;
+		Pixel_Shader m_skybox_pixel_shader;
+
+		Pixel_Shader m_sssss_pixel_shader;
+
+		//TODO: what did I intend to do with this?
+		//std::hash<std::uint16_t> submeshHash;
+	};
+
+	extern Renderer_Backend rb;
+
+}
 #endif // !RENDERER_BACKEND_H_
 

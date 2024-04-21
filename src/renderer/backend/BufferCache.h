@@ -9,48 +9,51 @@
 
 #include "renderer/frontend/Model.h"
 
-constexpr int MIN_VERTEX_CACHE_SIZE = 4096;
-constexpr int MIN_INDEX_CACHE_SIZE = 4096;
-
-//TODO: use bitwise operation to reduce size, instead of separate variables
-struct BufferCacheHandle_t {
-	std::uint32_t value;
-	std::uint8_t isCached;
-
-};
-
-struct Vertex;
-
-struct GeomCache 
+namespace zorya
 {
-	std::vector<VertexBuffer> vertexBuffers;
-	std::vector<IndexBuffer> indexBuffers;
-	std::uint16_t topVertexBuffer;
-	std::uint16_t topIndexBuffer;
-};
+	constexpr int MIN_VERTEX_CACHE_SIZE = 4096;
+	constexpr int MIN_INDEX_CACHE_SIZE = 4096;
 
-class BufferCache 
-{
-public:
-	BufferCache();
-	~BufferCache();
+	//TODO: use bitwise operation to reduce size, instead of separate variables
+	struct Buffer_Cache_Handle_t
+	{
+		uint32_t value;
+		uint8_t is_cached;
+	};
 
-	void ReleaseAllResources();
+	struct Vertex;
 
-	BufferCacheHandle_t AllocStaticGeom(const SubmeshHandle_t sHnd,
-		const std::uint16_t* itInd,
-		const Vertex* itVer);
+	struct Geom_Cache
+	{
+		std::vector<Vertex_Buffer> vertex_buffers;
+		std::vector<Index_Buffer> index_buffers;
+		uint16_t top_vertex_buffer;
+		uint16_t top_index_buffer;
+	};
 
-	void DeallocStaticGeom(BufferCacheHandle_t bufferHnd);
+	class Buffer_Cache
+	{
+	public:
+		Buffer_Cache();
+		~Buffer_Cache();
 
-	bool isCached(const SubmeshHandle_t sHnd);
+		void release_all_resources();
 
-	VertexBuffer GetVertexBuffer(BufferCacheHandle_t bufHnd);
-	IndexBuffer GetIndexBuffer(BufferCacheHandle_t bufHnd);
+		Buffer_Cache_Handle_t alloc_static_geom(const Submesh_Handle_t hnd_submesh,
+			const uint16_t* itInd,
+			const Vertex* itVer);
 
-	GeomCache staticCache;	
-};
+		void dealloc_static_geom(Buffer_Cache_Handle_t hnd_buffer_cache);
 
-extern BufferCache bufferCache;
+		bool is_cached(const Submesh_Handle_t hnd_submesh);
+
+		Vertex_Buffer get_vertex_buffer(Buffer_Cache_Handle_t hnd_buffer_cache);
+		Index_Buffer get_index_buffer(Buffer_Cache_Handle_t hnd_buffer_cache);
+
+		Geom_Cache m_static_cache;
+	};
+
+	extern Buffer_Cache buffer_cache;
+}
 
 #endif

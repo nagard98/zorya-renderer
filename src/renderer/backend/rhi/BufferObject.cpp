@@ -1,36 +1,37 @@
 #include "BufferObject.h"
 #include <cassert>
 
-VertexBuffer::VertexBuffer()
+namespace zorya
 {
-	buffer = nullptr;
-	size = 0;
-}
+	Vertex_Buffer::Vertex_Buffer()
+	{
+		buffer = nullptr;
+		size = 0;
+	}
 
-VertexBuffer::~VertexBuffer()
-{
-}
+	Vertex_Buffer::~Vertex_Buffer()
+	{}
 
-void VertexBuffer::Init(ID3D11Buffer* vBuf, int bufSize)
-{
-	assert(vBuf != nullptr);
-	buffer.Attach(vBuf);
-	size = bufSize;
-}
+	void Vertex_Buffer::init(ID3D11Buffer* vertex_buffer, int buffer_size)
+	{
+		assert(vertex_buffer != nullptr);
+		buffer.Attach(vertex_buffer);
+		size = buffer_size;
+	}
 
-IndexBuffer::IndexBuffer()
-{
-	buffer = nullptr;
-	size = 0;
-}
+	Index_Buffer::Index_Buffer()
+	{
+		buffer = nullptr;
+		size = 0;
+	}
 
-IndexBuffer::~IndexBuffer()
-{
-}
+	Index_Buffer::~Index_Buffer()
+	{}
 
-void IndexBuffer::Init(ID3D11Buffer* iBuf, int bufSize)
-{
-	assert(iBuf != nullptr);
-	buffer.Attach(iBuf);
-	size = bufSize;
+	void Index_Buffer::init(ID3D11Buffer* index_buffer, int buffer_size)
+	{
+		assert(index_buffer != nullptr);
+		buffer.Attach(index_buffer);
+		size = buffer_size;
+	}
 }

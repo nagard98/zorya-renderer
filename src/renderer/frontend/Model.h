@@ -11,45 +11,52 @@
 
 //#include <BufferCache.h>
 
-namespace wrl = Microsoft::WRL;
-namespace dx = DirectX;
-
-
-struct ModelHandle_t {
-    std::uint16_t baseMesh;
-    std::uint16_t numMeshes;
-};
-
-struct SubmeshHandle_t {
-    std::uint16_t matDescIdx;
-    std::uint32_t baseVertex;
-    std::uint32_t baseIndex;
-    std::uint32_t numVertices;
-    std::uint32_t numIndexes;
-};
-
-struct SimpleVertex
+namespace zorya
 {
-    SimpleVertex(float x, float y, float z) : position(x, y, z) {}
+	namespace wrl = Microsoft::WRL;
+	namespace dx = DirectX;
 
-    dx::XMFLOAT3 position;
-};
 
-struct Vertex
-{
-    Vertex(float x, float y, float z,
-        float u, float v, float nx, float ny, float nz, float tx, float ty, float tz)
-        : position(x, y, z), texCoord(u, v), normal(nx, ny, nz), tangent(tx, ty, tz) {}
+	struct Model_Handle_t
+	{
+		uint16_t base_mesh;
+		uint16_t num_meshes;
+	};
 
-    dx::XMFLOAT3 position;
-    dx::XMFLOAT2 texCoord;
-    dx::XMFLOAT3 normal;
-    dx::XMFLOAT3 tangent;
-};
+	struct Submesh_Handle_t
+	{
+		uint16_t material_desc_id;
+		uint32_t base_vertex;
+		uint32_t base_index;
+		uint32_t num_vertices;
+		uint32_t num_indices;
+	};
 
-extern std::vector<Vertex> cubeVertices;
-extern std::vector<std::uint16_t> cubeIndices;
+	struct Simple_Vertex
+	{
+		Simple_Vertex(float x, float y, float z) : position(x, y, z) {}
 
-extern std::vector<SimpleVertex> quadVertices;
+		dx::XMFLOAT3 position;
+	};
+
+	struct Vertex
+	{
+		Vertex(float x, float y, float z,
+			float u, float v, float nx, float ny, float nz, float tx, float ty, float tz)
+			: position(x, y, z), tex_coord(u, v), normal(nx, ny, nz), tangent(tx, ty, tz)
+		{}
+
+		dx::XMFLOAT3 position;
+		dx::XMFLOAT2 tex_coord;
+		dx::XMFLOAT3 normal;
+		dx::XMFLOAT3 tangent;
+	};
+
+	extern std::vector<Vertex> cube_vertices;
+	extern std::vector<uint16_t> cube_indices;
+
+	extern std::vector<Simple_Vertex> quad_vertices;
+
+}
 
 #endif // !MODEL_H_

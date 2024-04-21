@@ -1,78 +1,87 @@
 #include "Camera.h"
 
-
-void Camera::rotate(float aroundX, float aroundY, float aroundZ)
+namespace zorya
 {
-	//dx::XMMATRIX rotFrontAxis = dx::XMMatrixRotationAxis(_camDir, aroundZ);
-	dx::XMMATRIX rotUpAxis = dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), aroundY);
-	dx::XMMATRIX rotRightAxis = dx::XMMatrixRotationAxis(dx::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), aroundX);
+	void Camera::rotate(float around_x, float around_y, float around_z)
+	{
+		//dx::XMMATRIX rotFrontAxis = dx::XMMatrixRotationAxis(_camDir, aroundZ);
+		dx::XMMATRIX rot_around_up_axis = dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), around_y);
+		dx::XMMATRIX rot_around_right_axis = dx::XMMatrixRotationAxis(dx::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), around_x);
 
-	_rotMat = dx::XMMatrixMultiply(rotUpAxis, rotRightAxis);// dx::XMMatrixMultiply((dx::XMMatrixIdentity())/*rotFrontAxis*/,
+		m_rotation_mat = dx::XMMatrixMultiply(rot_around_up_axis, rot_around_right_axis);// dx::XMMatrixMultiply((dx::XMMatrixIdentity())/*rotFrontAxis*/,
 
-	_camUp = dx::XMVector4Transform(_camUp, rotRightAxis);
-	_camRight = dx::XMVector4Transform(_camRight, rotUpAxis);
-	_camDir = dx::XMVector3Cross(_camRight, _camUp);
-	//_camDir = dx::XMVector4Transform(_camDir, _rotMat);
-	//_camPos = dx::XMVector4Transform(_camPos, _rotMat);
-}
+		m_cam_up = dx::XMVector4Transform(m_cam_up, rot_around_right_axis);
+		m_cam_right = dx::XMVector4Transform(m_cam_right, rot_around_up_axis);
+		m_cam_dir = dx::XMVector3Cross(m_cam_right, m_cam_up);
+		//_camDir = dx::XMVector4Transform(_camDir, _rotMat);
+		//_camPos = dx::XMVector4Transform(_camPos, _rotMat);
+	}
 
-void rotatefps() {
-	//dx::XMMATRIX rotUpAxis = dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), aroundY);
-	//dx::XMMATRIX rotRightAxis = dx::XMMatrixRotationAxis(_camRight, aroundX);
+	void rotate_first_person()
+	{
+		//dx::XMMATRIX rotUpAxis = dx::XMMatrixRotationAxis(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), aroundY);
+		//dx::XMMATRIX rotRightAxis = dx::XMMatrixRotationAxis(_camRight, aroundX);
 
-	//_rotMat = dx::XMMatrixMultiply(rotUpAxis, rotRightAxis);
+		//_rotMat = dx::XMMatrixMultiply(rotUpAxis, rotRightAxis);
 
-	//_camDir = dx::XMVector4Transform(_camDir, _rotMat);
-}
+		//_camDir = dx::XMVector4Transform(_camDir, _rotMat);
+	}
 
-//TODO: use correct name; here i move also the camera posisition because we are rotating around origin and not camera position
-void Camera::rotateAroundFocusPoint(float aroundX, float aroundY) {
-	
-	dx::XMMATRIX rotUpAxis = dx::XMMatrixRotationAxis(_camUp, aroundY);
-	dx::XMMATRIX rotRightAxis = dx::XMMatrixRotationAxis(_camRight, aroundX);
-	
-	_rotMat = dx::XMMatrixMultiply(rotUpAxis, rotRightAxis);
+	//TODO: use correct name; here i move also the camera posisition because we are rotating around origin and not camera position
+	void Camera::rotate_around_focus_point(float around_x, float around_y)
+	{
 
-	//_referenceUp = dx::XMVector4Transform(_referenceUp, rotRightAxis);
-	////_camRight = dx::XMVector4Transform(_camRight, rotUpAxis);
-	//_camDir = dx::XMVector4Transform(_camDir, _rotMat);
-	////_camDir = dx::XMVector3Cross(_camRight, _camUp);
+		dx::XMMATRIX rot_around_up_axis = dx::XMMatrixRotationAxis(m_cam_up, around_y);
+		dx::XMMATRIX rot_around_right_axis = dx::XMMatrixRotationAxis(m_cam_right, around_x);
 
+		m_rotation_mat = dx::XMMatrixMultiply(rot_around_up_axis, rot_around_right_axis);
 
-	_camPos = dx::XMVector4Transform(_camPos, _rotMat);
-	_camDir = dx::XMVector4Normalize(dx::XMVectorNegate(_camPos));
+		//_referenceUp = dx::XMVector4Transform(_referenceUp, rotRightAxis);
+		////_camRight = dx::XMVector4Transform(_camRight, rotUpAxis);
+		//_camDir = dx::XMVector4Transform(_camDir, _rotMat);
+		////_camDir = dx::XMVector3Cross(_camRight, _camUp);
 
 
-	_camRight = dx::XMVector3Cross(dx::XMVectorSet(0.0f,1.0f,0.0f,0.0f), _camDir);
-	//_camRight = dx::XMVector4Normalize(_camRight);
-	//_camUp = dx::XMVector4Normalize(_camUp);
+		m_cam_pos = dx::XMVector4Transform(m_cam_pos, m_rotation_mat);
+		m_cam_dir = dx::XMVector4Normalize(dx::XMVectorNegate(m_cam_pos));
 
-}
 
-void Camera::translateAlongCamAxis(float x, float y, float z)
-{
-	dx::XMVECTOR transVec = dx::XMVectorMultiply(_camRight, dx::XMVectorSet(x, x, x, 0.0f));
-	transVec = dx::XMVectorAdd(transVec, dx::XMVectorMultiply(_camDir, dx::XMVectorSet(z, z, z, 0.0f)));
-	transVec = dx::XMVectorAdd(transVec, dx::XMVectorMultiply(_camUp, dx::XMVectorSet(y, y, y, 0.0f)));
-	_camPos = dx::XMVectorAdd(_camPos, transVec);
-}
+		m_cam_right = dx::XMVector3Cross(dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), m_cam_dir);
+		//_camRight = dx::XMVector4Normalize(_camRight);
+		//_camUp = dx::XMVector4Normalize(_camUp);
 
-dx::XMMATRIX Camera::getViewMatrix() const{
-	return dx::XMMatrixLookToLH(_camPos, _camDir, _camUp);
-}
+	}
 
-dx::XMMATRIX Camera::getProjMatrix() const {
-	return _projMatrix;
-}
+	void Camera::translate_along_cam_axis(float x, float y, float z)
+	{
+		dx::XMVECTOR translation = dx::XMVectorMultiply(m_cam_right, dx::XMVectorSet(x, x, x, 0.0f));
+		translation = dx::XMVectorAdd(translation, dx::XMVectorMultiply(m_cam_dir, dx::XMVectorSet(z, z, z, 0.0f)));
+		translation = dx::XMVectorAdd(translation, dx::XMVectorMultiply(m_cam_up, dx::XMVectorSet(y, y, y, 0.0f)));
+		m_cam_pos = dx::XMVectorAdd(m_cam_pos, translation);
+	}
 
-dx::XMMATRIX Camera::getViewMatrixTransposed() const {
-	return dx::XMMatrixTranspose(getViewMatrix());
-}
+	dx::XMMATRIX Camera::get_view_matrix() const
+	{
+		return dx::XMMatrixLookToLH(m_cam_pos, m_cam_dir, m_cam_up);
+	}
 
-dx::XMMATRIX Camera::getProjMatrixTransposed() const {
-	return dx::XMMatrixTranspose(_projMatrix);
-}
+	dx::XMMATRIX Camera::get_proj_matrix() const
+	{
+		return m_proj_matrix;
+	}
 
-dx::XMMATRIX Camera::getRotationMatrix() const {
-	return dx::XMMatrixLookToLH(dx::XMVectorSet(0.0f,0.0f,0.0f,1.0f), _camDir, _camUp);
+	dx::XMMATRIX Camera::get_view_matrix_transposed() const
+	{
+		return dx::XMMatrixTranspose(get_view_matrix());
+	}
+
+	dx::XMMATRIX Camera::get_proj_matrix_transposed() const
+	{
+		return dx::XMMatrixTranspose(m_proj_matrix);
+	}
+
+	dx::XMMATRIX Camera::get_rotation_matrix() const
+	{
+		return dx::XMMatrixLookToLH(dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), m_cam_dir, m_cam_up);
+	}
 }

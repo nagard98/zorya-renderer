@@ -6,8 +6,11 @@
 #include <utility>
 #include <tuple>
 
-namespace zorya {
-	enum VAR_REFL_TYPE {
+namespace zorya
+{
+
+	enum class VAR_REFL_TYPE
+	{
 		NOT_SUPPORTED,
 		INT,
 		FLOAT,
@@ -21,6 +24,7 @@ namespace zorya {
 		WCHAR,
 		STRUCT
 	};
+
 
 	const char* const VAR_REFL_TYPE_STRING[] = {
 		"NOT_SUPPORTED",
@@ -51,74 +55,43 @@ namespace zorya {
 		"wchar_t",
 		"STRUCT"
 	};
+
 }
 
 template <typename T>
-struct ReflectionType {
-	constexpr static T* castTo(void* valueToCast) {
-		return static_cast<T*>(valueToCast);
+struct Reflection_Type
+{
+	constexpr static T* cast_to(void* value_to_cast)
+	{
+		return static_cast<T*>(value_to_cast);
 	}
+
 };
 
-struct MemberIntermediateMeta {
+struct Member_Intermediate_Meta
+{
 	char* name;
-	char* typeAsString;
-	char* metaStructBaseName;
-	char* actualStructIdentifier;
-	zorya::VAR_REFL_TYPE typeEnum;
+	char* type_as_string;
+	char* meta_struct_basename;
+	char* actual_struct_identifier;
+	zorya::VAR_REFL_TYPE type_enum;
 };
 
 template <typename T>
-struct MemberMeta {
+struct Member_Meta
+{
 	const char* name;
 	const size_t offset;
-	const zorya::VAR_REFL_TYPE typeEnum;
-	const ReflectionType<T> type;
+	const zorya::VAR_REFL_TYPE type_enum;
+	const Reflection_Type<T> type;
 };
 
 template <typename T>
-constexpr auto getMeta() {
+constexpr auto get_meta()
+{
 	return std::make_tuple();
 };
 
-
-//template <typename T>
-//std::uint8_t foreachfield(T* _struct, std::uint8_t(*lambda)(const char* structAddr, const MemberMeta& memMeta));
-
-/*
-
-#define BUILD_FOREACHFIELD(structName, metaStructName) \
-template <>	\
-std::uint8_t foreachfield<structName>(structName* _struct, std::uint8_t (*lambda)(const char* structAddr, const MemberMeta& memMeta));
-
-
-#define BUILD_FOREACHFIELD3(structName, metaStructName) \
-template <> \
-std::uint8_t foreachfield<structName>(structName* _struct, std::uint8_t (*lambda)(const char* structAddr, const MemberMeta& memMeta)) { \
-	const char* structAddr = (char*)_struct;	\
-	std::uint8_t structFlags = 0; \
-	for (const MemberMeta& memMeta : metaStructName) { \
-		std::uint8_t memberFlag = lambda(structAddr, std::forward<const MemberMeta>(memMeta)); \
-		structFlags |= memberFlag;	\
-	} \
-	return structFlags;	\
-} \
-
-
-#define BUILD_FOREACHFIELD2(structName, metaStructName) \
-template <typename L> \
-std::uint8_t foreachfield(structName* _struct, L&& lambda) { \
-	const char* structAddr = (char*)_struct;	\
-	std::uint8_t structFlags = 0; \
-	for (const MemberMeta& memMeta : metaStructName) { \
-		lambda(structAddr, std::forward<const MemberMeta>(memMeta)); \
-		std::uint8_t memberFlag = 0; \
-		structFlags |= memberFlag;	\
-	} \
-	return structFlags;	\
-} \
-
-*/
 
 #endif // !REFLECTION_GEN_UTILS_H_
 

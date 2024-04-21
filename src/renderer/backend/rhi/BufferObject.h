@@ -4,35 +4,37 @@
 #include <d3d11_1.h>
 #include <wrl/client.h>
 
-
-namespace wrl = Microsoft::WRL;
-
-class VertexBuffer 
+namespace zorya
 {
+	namespace wrl = Microsoft::WRL;
 
-public:
-	VertexBuffer();
-	~VertexBuffer();
+	class Vertex_Buffer
+	{
 
-	void Init(ID3D11Buffer* vBuf, int bufSize);
+	public:
+		Vertex_Buffer();
+		~Vertex_Buffer();
 
-	wrl::ComPtr<ID3D11Buffer> buffer;
-	int size;
+		void init(ID3D11Buffer* vertex_buffer, int buffer_size);
 
-};
+		wrl::ComPtr<ID3D11Buffer> buffer;
+		int size;
 
-class IndexBuffer 
-{
+	};
 
-public:
-	IndexBuffer();
-	~IndexBuffer();
+	class Index_Buffer
+	{
 
-	void Init(ID3D11Buffer* iBuf, int bufSize);
+	public:
+		Index_Buffer();
+		~Index_Buffer();
 
-	wrl::ComPtr<ID3D11Buffer> buffer;
-	int size;
+		void init(ID3D11Buffer* index_buffer, int buffer_size);
 
-};
+		wrl::ComPtr<ID3D11Buffer> buffer;
+		int size;
 
+	};
+
+}
 #endif

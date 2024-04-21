@@ -1,3 +1,4 @@
+
 #ifndef PREPROCESSOR_H_
 #define PREPROCESSOR_H_
 
@@ -25,7 +26,7 @@ namespace zorya {
 struct Token {
 	zorya::TKTP type;
 	char* text;
-	size_t textLength;
+	size_t text_length;
 };
 
 struct Tokenizer {

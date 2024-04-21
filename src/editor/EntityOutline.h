@@ -9,21 +9,27 @@
 #include "imgui.h"
 #include "imfilebrowser.h"
 
-class EntityOutline {
+namespace zorya
+{
+	class Entity_Outline
+	{
 
-public:
-	EntityOutline();
-	~EntityOutline();
+	public:
+		Entity_Outline();
+		~Entity_Outline();
 
-	void RenderEProperties(RenderableEntity& entity, SubmeshInfo* smInfo, ReflectionBase* matDesc);
-	void RenderEProperties(RenderableEntity& entity, LightInfo& lightInfo);
+		void render_entity_properties(Renderable_Entity& entity, Submesh_Info* submesh_info, Reflection_Base* material_desc);
+		void render_entity_properties(Renderable_Entity& entity, Light_Info& light_info);
 
-	void RenderETransform(RenderableEntity& entity);
+		void render_entity_transform(Renderable_Entity& entity);
 
-	//static ImGui::FileBrowser fileBrowserDialog;
-	static ImGuiID idDialogOpen;
+		//static ImGui::FileBrowser fileBrowserDialog;
+		static ImGuiID id_dialog_open;
 
-	static char tmpCharBuff[128];
-};
+		static char tmp_char_buff[128];
+	};
+
+}
+
 
 #endif // !ENTITY_PROPERTIES_H_

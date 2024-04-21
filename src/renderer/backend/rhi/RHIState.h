@@ -3,47 +3,52 @@
 
 #include <cstdint>
 
-typedef std::uint64_t RHIState;
+namespace zorya
+{
+	typedef uint64_t RHI_State;
 
+	extern constexpr RHI_State RHI_DEFAULT_STATE();
+	extern RHI_State rhi_state;
 
-constexpr int MAX_STATE_VARIANTS = 7;
+	constexpr int MAX_STATE_VARIANTS = 7;
 
-constexpr RHIState RASTER_STATE_MASK = 127;
+	constexpr RHI_State RASTER_STATE_MASK = 127;
 
-constexpr RHIState RASTER_CULL_MODE_MASK = 3 << 0;
-constexpr RHIState RASTER_CULL_FRONT = 0;
-constexpr RHIState RASTER_CULL_BACK = 1;
-constexpr RHIState RASTER_CULL_NONE = 2;
+	constexpr RHI_State RASTER_CULL_MODE_MASK = 3 << 0;
+	constexpr RHI_State RASTER_CULL_FRONT = 0;
+	constexpr RHI_State RASTER_CULL_BACK = 1;
+	constexpr RHI_State RASTER_CULL_NONE = 2;
 
-constexpr RHIState RASTER_FILL_MODE_MASK = 1 << 2;
-constexpr RHIState RASTER_FILL_MODE_NEG_MASK = ~(1 << 2);
-constexpr RHIState RASTER_FILL_MODE_SOLID = 0 << 2;
-constexpr RHIState RASTER_FILL_MODE_WIREFRAME = 1 << 2;
+	constexpr RHI_State RASTER_FILL_MODE_MASK = 1 << 2;
+	constexpr RHI_State RASTER_FILL_MODE_NEG_MASK = ~(1 << 2);
+	constexpr RHI_State RASTER_FILL_MODE_SOLID = 0 << 2;
+	constexpr RHI_State RASTER_FILL_MODE_WIREFRAME = 1 << 2;
 
-constexpr RHIState RASTER_ANTIALIAS_MASK = 1 << 3;
-constexpr RHIState RASTER_ANTIALIAS_NEG_MASK = ~(1 << 3);
+	constexpr RHI_State RASTER_ANTIALIAS_MASK = 1 << 3;
+	constexpr RHI_State RASTER_ANTIALIAS_NEG_MASK = ~(1 << 3);
 
-constexpr RHIState RASTER_FCW_MASK = 1 << 4;
-constexpr RHIState RASTER_FCW_NEG_MASK = ~(1 << 4);
+	constexpr RHI_State RASTER_FCW_MASK = 1 << 4;
+	constexpr RHI_State RASTER_FCW_NEG_MASK = ~(1 << 4);
 
-constexpr RHIState RASTER_MULTISAMPLE_MASK = 1 << 5;
-constexpr RHIState RASTER_MULTISAMPLE_NEG_MASK = ~(1 << 5);
+	constexpr RHI_State RASTER_MULTISAMPLE_MASK = 1 << 5;
+	constexpr RHI_State RASTER_MULTISAMPLE_NEG_MASK = ~(1 << 5);
 
-constexpr RHIState RASTER_SCISSOR_MASK = 1 << 6;
-constexpr RHIState RASTER_SCISSOR_NEG_MASK = ~(1 << 6);
+	constexpr RHI_State RASTER_SCISSOR_MASK = 1 << 6;
+	constexpr RHI_State RASTER_SCISSOR_NEG_MASK = ~(1 << 6);
 
-constexpr RHIState DEPTH_STENCIL_STATE_MASK = RHIState(0xffffff) << 9;
+	constexpr RHI_State DEPTH_STENCIL_STATE_MASK = RHI_State(0xffffff) << 9;
 
-constexpr RHIState DEPTH_ENABLE_MASK = 1 << 9;
-constexpr RHIState DEPTH_ENABLE_NEG_MASK = ~(1 << 9);
+	constexpr RHI_State DEPTH_ENABLE_MASK = 1 << 9;
+	constexpr RHI_State DEPTH_ENABLE_NEG_MASK = ~(1 << 9);
 
-constexpr RHIState DEPTH_WRITE_ENABLE_MASK = 1 << 10;
-constexpr RHIState DEPTH_WRITE_ENABLE_NEG_MASK = ~(1 << 10);
+	constexpr RHI_State DEPTH_WRITE_ENABLE_MASK = 1 << 10;
+	constexpr RHI_State DEPTH_WRITE_ENABLE_NEG_MASK = ~(1 << 10);
 
-constexpr RHIState DEPTH_COMP_MASK = 0xf << 11;
-constexpr RHIState DEPTH_COMP_LESS = 0 << 11;
-constexpr RHIState DEPTH_COMP_LESS_NEG = ~(1 << 11);
-constexpr RHIState DEPTH_COMP_LESS_EQ = 1 << 11;
+	constexpr RHI_State DEPTH_COMP_MASK = 0xf << 11;
+	constexpr RHI_State DEPTH_COMP_LESS = 0 << 11;
+	constexpr RHI_State DEPTH_COMP_LESS_NEG = ~(1 << 11);
+	constexpr RHI_State DEPTH_COMP_LESS_EQ = 1 << 11;
+}
 
 #define RHI_RS_SET_CULL_FRONT(state) state&=(~RASTER_CULL_BACK);
 #define RHI_RS_SET_CULL_FRONT_RET(state) state&(~RASTER_CULL_BACK);
@@ -97,9 +102,5 @@ constexpr RHIState DEPTH_COMP_LESS_EQ = 1 << 11;
 
 #define RHI_OM_DS_DISABLE_DEPTH_WRITE(state) state&=DEPTH_WRITE_ENABLE_NEG_MASK;
 #define RHI_OM_DS_DISABLE_DEPTH_WRITE_RET(state) state&DEPTH_WRITE_ENABLE_NEG_MASK;
-
-extern constexpr RHIState RHI_DEFAULT_STATE();
-extern RHIState rhiState;
-
 
 #endif

@@ -9,6 +9,6 @@ const LONG g_resolutionHeight = 720;
 const LPCSTR g_windowClassName = "DirectXWindowClass";
 const LPCSTR g_windowName = "Derma";
 
-const BOOL g_enableVSync = TRUE;
+const BOOL g_enable_vsync = TRUE;
 
 #endif

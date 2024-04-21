@@ -13,28 +13,29 @@
 #include <vector>
 #include <d3d11_1.h>
 
-namespace zorya {
+namespace zorya
+{
+	static ImGui::FileBrowser file_browser;
 
-	static ImGui::FileBrowser fileBrowser;
-
-	class Editor {
+	class Editor
+	{
 
 	public:
 		Editor();
-		void Init(const ImGuiID& dockspaceID);
+		void init(const ImGuiID& dockspace_ID);
 
-		void RenderEditor(RendererFrontend& rf, Camera& editorCam, const ID3D11ShaderResourceView* rtSRV);
+		void render_editor(Renderer_Frontend& rf, Camera& editorCam, const ID3D11ShaderResourceView* rtSRV);
 
 
-		bool fileBrowserOpen = false;
+		bool m_file_browser_open = false;
 
-		SceneHierarchy sceneHier;
-		EntityOutline entityProps;
-		bool firstLoop;
-		ImGuiID sceneId;
+		Scene_Hierarchy m_scene_hierarchy;
+		Entity_Outline m_entity_properties;
+		bool m_first_loop;
+		ImGuiID m_scene_id;
 
-		bool isSceneClicked;
-		char textBuff[128];
+		bool m_is_scene_clicked;
+		char m_text_buffer[128];
 	};
 
 }

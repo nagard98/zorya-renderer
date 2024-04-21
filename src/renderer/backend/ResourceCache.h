@@ -8,30 +8,35 @@
 
 #include "reflection/Reflection.h"
 
-struct MaterialCacheHandle_t {
-	std::uint16_t index;
-	MatUpdateFlags_ isCached;
-};
+namespace zorya
+{
+	struct Material_Cache_Handle_t
+	{
+		uint16_t index;
+		MatUpdateFlags_ is_cached;
+	};
 
-class ResourceCache {
-public:
-	ResourceCache();
-	~ResourceCache();
+	class Resource_Cache
+	{
+	public:
+		Resource_Cache();
+		~Resource_Cache();
 
-	void ReleaseAllResources();
+		void release_all_resources();
 
-	MaterialCacheHandle_t AllocMaterial(const ReflectionBase *matDesc, MaterialCacheHandle_t& updateOpts);
-	void DeallocMaterial(MaterialCacheHandle_t& matCacheHnd);
-	void UpdateMaterialSmoothness(const MaterialCacheHandle_t matHnd, float smoothness );
-	void UpdateMaterialAlbedoMap(const MaterialCacheHandle_t matHnd, const wchar_t* albedoMapPath);
+		Material_Cache_Handle_t alloc_material(const Reflection_Base* mat_desc, Material_Cache_Handle_t& update_opts);
+		void dealloc_material(Material_Cache_Handle_t& hnd_material_cache);
+		void update_material_smoothness(const Material_Cache_Handle_t hnd_material_cache, float smoothness);
+		void update_material_albedo_map(const Material_Cache_Handle_t hnd_material_cache, const wchar_t* albedo_map_path);
 
-	std::vector<Material> materialCache;
+		std::vector<Material> m_material_cache;
 
-private:
-	std::vector<int> freeMaterialCacheIndices;
+	private:
+		std::vector<int> m_free_material_cache_indices;
 
-};
+	};
 
-extern ResourceCache resourceCache;
+	extern Resource_Cache resource_cache;
 
+}
 #endif

@@ -6,295 +6,311 @@
 #include <vector>
 #include <cassert>
 
-namespace wrl = Microsoft::WRL;
-
-
-#define SOFT_LIMIT_RESOURCE_TYPE 256
-
-DX11RenderDevice::DX11RenderDevice() :
-	tex2DResources(SOFT_LIMIT_RESOURCE_TYPE),
-	rtvResources(SOFT_LIMIT_RESOURCE_TYPE),
-	srvResources(SOFT_LIMIT_RESOURCE_TYPE),
-	dsvResources(SOFT_LIMIT_RESOURCE_TYPE),
-	tex2dCount(0),
-	rtvCount(0),
-	srvCount(0),
-	dsvCount(0) {}
-
-DX11RenderDevice::~DX11RenderDevice()
+namespace zorya
 {
+	namespace wrl = Microsoft::WRL;
 
-}
+	#define SOFT_LIMIT_RESOURCE_TYPE 256
 
-ZRYResult DX11RenderDevice::createTex2D(RenderTextureHandle* texHandle, ZRYBindFlags bindFlags, ZRYFormat format, float width, float height, int numTex, RenderSRVHandle* srvHandle, RenderRTVHandle* rtvHandle, bool generateMips, int mipLevels, int arraySize, int sampleCount, int sampleQuality) {
-	assert(texHandle != nullptr);
+	DX11_Render_Device::DX11_Render_Device() :
+		m_tex_2d_resources(SOFT_LIMIT_RESOURCE_TYPE),
+		m_rtv_resources(SOFT_LIMIT_RESOURCE_TYPE),
+		m_srv_resources(SOFT_LIMIT_RESOURCE_TYPE),
+		m_dsv_resources(SOFT_LIMIT_RESOURCE_TYPE),
+		m_tex_2d_count(0),
+		m_rtv_count(0),
+		m_srv_count(0),
+		m_dsv_count(0)
+	{}
 
-	D3D11_TEXTURE2D_DESC texDesc;
-	ZeroMemory(&texDesc, sizeof(texDesc));
-	texDesc.Format = format.value;
-	texDesc.MipLevels = mipLevels;
-	texDesc.ArraySize = arraySize;
-	texDesc.BindFlags = bindFlags.value; //(srvHandle != nullptr ? D3D11_BIND_SHADER_RESOURCE : 0) | (rtvHandle != nullptr ? D3D11_BIND_RENDER_TARGET : 0);
+	DX11_Render_Device::~DX11_Render_Device()
+	{
 
-	texDesc.Width = width;
-	texDesc.Height = height;
-	texDesc.SampleDesc.Count = sampleCount;
-	texDesc.SampleDesc.Quality = sampleQuality;
+	}
 
-	//TODO:usage/access_flags/misc_flags
-	texDesc.Usage = D3D11_USAGE_DEFAULT;
-	texDesc.CPUAccessFlags = 0;
-	texDesc.MiscFlags = generateMips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0;
+	ZRY_Result DX11_Render_Device::create_tex_2d(Render_Texture_Handle* tex_handle, ZRY_Bind_Flags bind_flags, ZRY_Format format, float width, float height, int num_tex, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int array_size, int sample_count, int sample_quality)
+	{
+		assert(tex_handle != nullptr);
 
-	ZRYResult zr{ S_OK };
-	for (int i = 0; i < numTex; i++) {
-		zr.value = device->CreateTexture2D(&texDesc, nullptr, &tex2DResources.at(tex2dCount));
-		RETURN_IF_FAILED_ZRY(zr);
-		//TODO: better handle creation for resources
+		D3D11_TEXTURE2D_DESC tex_2d_desc;
+		ZeroMemory(&tex_2d_desc, sizeof(tex_2d_desc));
+		tex_2d_desc.Format = format.value;
+		tex_2d_desc.MipLevels = mip_levels;
+		tex_2d_desc.ArraySize = array_size;
+		tex_2d_desc.BindFlags = bind_flags.value; //(srv_handle != nullptr ? D3D11_BIND_SHADER_RESOURCE : 0) | (rtv_handle != nullptr ? D3D11_BIND_RENDER_TARGET : 0);
 
-		if (srvHandle != nullptr) {
-			zr.value = device->CreateShaderResourceView(tex2DResources.at(tex2dCount), nullptr, &srvResources.at(srvCount));
+		tex_2d_desc.Width = width;
+		tex_2d_desc.Height = height;
+		tex_2d_desc.SampleDesc.Count = sample_count;
+		tex_2d_desc.SampleDesc.Quality = sample_quality;
+
+		//TODO:usage/access_flags/misc_flags
+		tex_2d_desc.Usage = D3D11_USAGE_DEFAULT;
+		tex_2d_desc.CPUAccessFlags = 0;
+		tex_2d_desc.MiscFlags = generate_mips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0;
+
+		ZRY_Result zr{ S_OK };
+		for (int i = 0; i < num_tex; i++)
+		{
+			zr.value = m_device->CreateTexture2D(&tex_2d_desc, nullptr, &m_tex_2d_resources.at(m_tex_2d_count));
 			RETURN_IF_FAILED_ZRY(zr);
 			//TODO: better handle creation for resources
-			(srvHandle + i)->index = srvCount;
-			srvCount += 1;
+
+			if (srv_handle != nullptr)
+			{
+				zr.value = m_device->CreateShaderResourceView(m_tex_2d_resources.at(m_tex_2d_count), nullptr, &m_srv_resources.at(m_srv_count));
+				RETURN_IF_FAILED_ZRY(zr);
+				//TODO: better handle creation for resources
+				(srv_handle + i)->index = m_srv_count;
+				m_srv_count += 1;
+			}
+			if (rtv_handle != nullptr)
+			{
+				zr.value = m_device->CreateRenderTargetView(m_tex_2d_resources.at(m_tex_2d_count), nullptr, &m_rtv_resources.at(m_rtv_count));
+				RETURN_IF_FAILED_ZRY(zr);
+				//TODO: better handle creation for resources
+				(rtv_handle + i)->index = m_rtv_count;
+				m_rtv_count += 1;
+			}
+
+			(tex_handle + i)->index = m_tex_2d_count;
+			m_tex_2d_count += 1;
 		}
-		if (rtvHandle != nullptr) {
-			zr.value = device->CreateRenderTargetView(tex2DResources.at(tex2dCount), nullptr, &rtvResources.at(rtvCount));
+
+		return zr;
+	}
+
+	ZRY_Result DX11_Render_Device::create_srv_tex_2d(Render_SRV_Handle* srv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int num_SRVs, int mip_levels, int most_detailed_map)
+	{
+		assert(srv_handle != nullptr);
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+		ZeroMemory(&srv_desc, sizeof(srv_desc));
+
+		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srv_desc.Format = format.value;
+		srv_desc.Texture2D.MipLevels = mip_levels;
+		srv_desc.Texture2D.MostDetailedMip = most_detailed_map;
+
+		ZRY_Result zr{ S_OK };
+		for (int i = 0; i < num_SRVs; i++)
+		{
+			zr.value = m_device->CreateShaderResourceView(get_tex_2d_pointer(*(tex_handle + i)), &srv_desc, &m_srv_resources.at(m_srv_count));
+			RETURN_IF_FAILED_ZRY(zr);
+			(srv_handle + i)->index = m_srv_count;
+			m_srv_count += 1;
+		}
+
+		return zr;
+	}
+
+	ZRY_Result DX11_Render_Device::create_rtv_tex_2d(Render_RTV_Handle* rtv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int num_RTVs, int mip_slice)
+	{
+		assert(rtv_handle != nullptr);
+
+		D3D11_RENDER_TARGET_VIEW_DESC rtv_desc;
+		ZeroMemory(&rtv_desc, sizeof(rtv_desc));
+
+		rtv_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		rtv_desc.Format = format.value;
+		rtv_desc.Texture2D.MipSlice = mip_slice;
+
+		ZRY_Result zr{ S_OK };
+		for (int i = 0; i < num_RTVs; i++)
+		{
+			zr.value = m_device->CreateRenderTargetView(get_tex_2d_pointer(*(tex_handle + i)), &rtv_desc, &m_rtv_resources.at(m_rtv_count));
+			RETURN_IF_FAILED_ZRY(zr);
+			(rtv_handle + i)->index = m_rtv_count;
+			m_rtv_count += 1;
+		}
+
+		return zr;
+	}
+
+	ZRY_Result DX11_Render_Device::create_dsv_tex_2d(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int num_DSVs, int mip_slice)
+	{
+		assert(dsv_handle != nullptr);
+
+		D3D11_DEPTH_STENCIL_VIEW_DESC dsv_desc;
+		ZeroMemory(&dsv_desc, sizeof(dsv_desc));
+
+		dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+		dsv_desc.Format = format.value;
+		dsv_desc.Texture2D.MipSlice = mip_slice;
+
+		ZRY_Result zr{ S_OK };
+		for (int i = 0; i < num_DSVs; i++)
+		{
+			zr.value = m_device->CreateDepthStencilView(get_tex_2d_pointer(*(tex_handle + i)), &dsv_desc, &m_dsv_resources.at(m_dsv_count));
+			RETURN_IF_FAILED_ZRY(zr);
+			(dsv_handle + i)->index = m_dsv_count;
+			m_dsv_count += 1;
+		}
+
+		return zr;
+	}
+
+	ZRY_Result DX11_Render_Device::createTexCubemap(Render_Texture_Handle* tex_handle, ZRY_Bind_Flags bind_flags, ZRY_Format format, float width, float height, int num_tex, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int array_size, int sample_count, int sample_quality)
+	{
+		assert(tex_handle != nullptr);
+
+		D3D11_TEXTURE2D_DESC tex_2d_desc;
+		ZeroMemory(&tex_2d_desc, sizeof(tex_2d_desc));
+		tex_2d_desc.Format = format.value;
+		tex_2d_desc.MipLevels = mip_levels;
+		tex_2d_desc.ArraySize = array_size;
+		tex_2d_desc.BindFlags = bind_flags.value; //(srv_handle != nullptr ? D3D11_BIND_SHADER_RESOURCE : 0) | (rtv_handle != nullptr ? D3D11_BIND_RENDER_TARGET : 0);
+
+		tex_2d_desc.Width = width;
+		tex_2d_desc.Height = height;
+		tex_2d_desc.SampleDesc.Count = sample_count;
+		tex_2d_desc.SampleDesc.Quality = sample_quality;
+
+		//TODO:usage/access_flags/misc_flags
+		tex_2d_desc.Usage = D3D11_USAGE_DEFAULT;
+		tex_2d_desc.CPUAccessFlags = 0;
+		tex_2d_desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE | (generate_mips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0);
+
+		ZRY_Result zr{ S_OK };
+		for (int i = 0; i < num_tex; i++)
+		{
+			zr.value = m_device->CreateTexture2D(&tex_2d_desc, nullptr, &m_tex_2d_resources.at(m_tex_2d_count));
 			RETURN_IF_FAILED_ZRY(zr);
 			//TODO: better handle creation for resources
-			(rtvHandle + i)->index = rtvCount;
-			rtvCount += 1;
+
+			if (srv_handle != nullptr)
+			{
+				zr.value = m_device->CreateShaderResourceView(m_tex_2d_resources.at(m_tex_2d_count), nullptr, &m_srv_resources.at(m_srv_count));
+				RETURN_IF_FAILED_ZRY(zr);
+				//TODO: better handle creation for resources
+				(srv_handle + i)->index = m_srv_count;
+				m_srv_count += 1;
+			}
+			if (rtv_handle != nullptr)
+			{
+				zr.value = m_device->CreateRenderTargetView(m_tex_2d_resources.at(m_tex_2d_count), nullptr, &m_rtv_resources.at(m_rtv_count));
+				RETURN_IF_FAILED_ZRY(zr);
+				//TODO: better handle creation for resources
+				(rtv_handle + i)->index = m_rtv_count;
+				m_rtv_count += 1;
+			}
+
+			(tex_handle + i)->index = m_tex_2d_count;
+			m_tex_2d_count += 1;
 		}
 
-		(texHandle + i)->index = tex2dCount;
-		tex2dCount += 1;
+		return zr;
 	}
 
-	return zr;
-}
+	ZRY_Result DX11_Render_Device::createSRVTex2DArray(Render_SRV_Handle* srv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int num_SRVs, int array_size, int first_array_slice, int mip_levels, int most_detailed_map)
+	{
+		assert(srv_handle);
 
-ZRYResult DX11RenderDevice::createSRVTex2D(RenderSRVHandle* srvHandle, const RenderTextureHandle* texHandle, ZRYFormat format, int numSRVs, int mipLevels, int mostDetailedMip)
-{
-	assert(srvHandle != nullptr);
+		D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+		ZeroMemory(&srv_desc, sizeof(srv_desc));
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-	ZeroMemory(&srvDesc, sizeof(srvDesc));
+		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		srv_desc.Format = format.value;
+		srv_desc.Texture2DArray.MipLevels = mip_levels;
+		srv_desc.Texture2DArray.MostDetailedMip = most_detailed_map;
+		srv_desc.Texture2DArray.ArraySize = array_size;
+		srv_desc.Texture2DArray.FirstArraySlice = first_array_slice;
 
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Format = format.value;
-	srvDesc.Texture2D.MipLevels = mipLevels;
-	srvDesc.Texture2D.MostDetailedMip = mostDetailedMip;
-
-	ZRYResult zr{ S_OK };
-	for (int i = 0; i < numSRVs; i++) {
-		zr.value = device->CreateShaderResourceView(getTex2DPointer(*(texHandle + i)), &srvDesc, &srvResources.at(srvCount));
-		RETURN_IF_FAILED_ZRY(zr);
-		(srvHandle + i)->index = srvCount;
-		srvCount += 1;
-	}
-
-	return zr;
-}
-
-ZRYResult DX11RenderDevice::createRTVTex2D(RenderRTVHandle* rtvHandle, const RenderTextureHandle* texHandle, ZRYFormat format, int numRTVs, int mipSlice)
-{
-	assert(rtvHandle != nullptr);
-
-	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
-	ZeroMemory(&rtvDesc, sizeof(rtvDesc));
-
-	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-	rtvDesc.Format = format.value;
-	rtvDesc.Texture2D.MipSlice = mipSlice;
-
-	ZRYResult zr{ S_OK };
-	for (int i = 0; i < numRTVs; i++) {
-		zr.value = device->CreateRenderTargetView(getTex2DPointer(*(texHandle + i)), &rtvDesc, &rtvResources.at(rtvCount));
-		RETURN_IF_FAILED_ZRY(zr);
-		(rtvHandle + i)->index = rtvCount;
-		rtvCount += 1;
-	}
-
-	return zr;
-}
-
-ZRYResult DX11RenderDevice::createDSVTex2D(RenderDSVHandle* dsvHandle, const RenderTextureHandle* texHandle, ZRYFormat format, int numDSVs, int mipSlice)
-{
-	assert(dsvHandle != nullptr);
-
-	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
-
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	dsvDesc.Format = format.value;
-	dsvDesc.Texture2D.MipSlice = mipSlice;
-
-	ZRYResult zr{ S_OK };
-	for (int i = 0; i < numDSVs; i++) {
-		zr.value = device->CreateDepthStencilView(getTex2DPointer(*(texHandle + i)), &dsvDesc, &dsvResources.at(dsvCount));
-		RETURN_IF_FAILED_ZRY(zr);
-		(dsvHandle + i)->index = dsvCount;
-		dsvCount += 1;
-	}
-
-	return zr;
-}
-
-ZRYResult DX11RenderDevice::createTexCubemap(RenderTextureHandle* texHandle, ZRYBindFlags bindFlags, ZRYFormat format, float width, float height, int numTex, RenderSRVHandle* srvHandle, RenderRTVHandle* rtvHandle, bool generateMips, int mipLevels, int arraySize, int sampleCount, int sampleQuality)
-{
-	assert(texHandle != nullptr);
-
-	D3D11_TEXTURE2D_DESC texDesc;
-	ZeroMemory(&texDesc, sizeof(texDesc));
-	texDesc.Format = format.value;
-	texDesc.MipLevels = mipLevels;
-	texDesc.ArraySize = arraySize;
-	texDesc.BindFlags = bindFlags.value; //(srvHandle != nullptr ? D3D11_BIND_SHADER_RESOURCE : 0) | (rtvHandle != nullptr ? D3D11_BIND_RENDER_TARGET : 0);
-
-	texDesc.Width = width;
-	texDesc.Height = height;
-	texDesc.SampleDesc.Count = sampleCount;
-	texDesc.SampleDesc.Quality = sampleQuality;
-
-	//TODO:usage/access_flags/misc_flags
-	texDesc.Usage = D3D11_USAGE_DEFAULT;
-	texDesc.CPUAccessFlags = 0;
-	texDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE | (generateMips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0);
-
-	ZRYResult zr{ S_OK };
-	for (int i = 0; i < numTex; i++) {
-		zr.value = device->CreateTexture2D(&texDesc, nullptr, &tex2DResources.at(tex2dCount));
-		RETURN_IF_FAILED_ZRY(zr);
-		//TODO: better handle creation for resources
-
-		if (srvHandle != nullptr) {
-			zr.value = device->CreateShaderResourceView(tex2DResources.at(tex2dCount), nullptr, &srvResources.at(srvCount));
+		ZRY_Result zr{ S_OK };
+		for (int i = 0; i < num_SRVs; i++)
+		{
+			zr.value = m_device->CreateShaderResourceView(get_tex_2d_pointer(*(tex_handle + i)), &srv_desc, &m_srv_resources.at(m_srv_count));
 			RETURN_IF_FAILED_ZRY(zr);
-			//TODO: better handle creation for resources
-			(srvHandle + i)->index = srvCount;
-			srvCount += 1;
+			(srv_handle + i)->index = m_srv_count;
+			m_srv_count += 1;
 		}
-		if (rtvHandle != nullptr) {
-			zr.value = device->CreateRenderTargetView(tex2DResources.at(tex2dCount), nullptr, &rtvResources.at(rtvCount));
+
+		return zr;
+	}
+
+	ZRY_Result DX11_Render_Device::createDSVTex2DArray(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int array_size, int numDSVs, int mip_slice, int first_array_slice)
+	{
+		assert(dsv_handle != nullptr);
+
+		D3D11_DEPTH_STENCIL_VIEW_DESC dsv_desc;
+		ZeroMemory(&dsv_desc, sizeof(dsv_desc));
+
+		dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+		dsv_desc.Format = format.value;
+		dsv_desc.Texture2DArray.ArraySize = array_size;
+		dsv_desc.Texture2DArray.FirstArraySlice = first_array_slice;
+		dsv_desc.Texture2DArray.MipSlice = mip_slice;
+
+		ZRY_Result zr{ S_OK };
+		for (int i = 0; i < numDSVs; i++)
+		{
+			zr.value = m_device->CreateDepthStencilView(get_tex_2d_pointer(*(tex_handle + i)), &dsv_desc, &m_dsv_resources.at(m_dsv_count));
 			RETURN_IF_FAILED_ZRY(zr);
-			//TODO: better handle creation for resources
-			(rtvHandle + i)->index = rtvCount;
-			rtvCount += 1;
+			(dsv_handle + i)->index = m_dsv_count;
+			m_dsv_count += 1;
 		}
 
-		(texHandle + i)->index = tex2dCount;
-		tex2dCount += 1;
+		return zr;
 	}
 
-	return zr;
-}
-
-ZRYResult DX11RenderDevice::createSRVTex2DArray(RenderSRVHandle* srvHandle, const RenderTextureHandle* texHandle, ZRYFormat format, int numSRVs, int arraySize, int firstArraySlice, int mipLevels, int mostDetailedMip)
-{
-	assert(srvHandle);
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-	ZeroMemory(&srvDesc, sizeof(srvDesc));
-
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-	srvDesc.Format = format.value;
-	srvDesc.Texture2DArray.MipLevels = mipLevels;
-	srvDesc.Texture2DArray.MostDetailedMip = mostDetailedMip;
-	srvDesc.Texture2DArray.ArraySize = arraySize;
-	srvDesc.Texture2DArray.FirstArraySlice = firstArraySlice;
-
-	ZRYResult zr{ S_OK };
-	for (int i = 0; i < numSRVs; i++) {
-		zr.value = device->CreateShaderResourceView(getTex2DPointer(*(texHandle + i)), &srvDesc, &srvResources.at(srvCount));
-		RETURN_IF_FAILED_ZRY(zr);
-		(srvHandle + i)->index = srvCount;
-		srvCount += 1;
-	}
-
-	return zr;
-}
-
-ZRYResult DX11RenderDevice::createDSVTex2DArray(RenderDSVHandle* dsvHandle, const RenderTextureHandle* texHandle, ZRYFormat format, int arraySize, int numDSVs, int mipSlice, int firstArraySlice)
-{
-	assert(dsvHandle != nullptr);
-
-	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
-
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-	dsvDesc.Format = format.value;
-	dsvDesc.Texture2DArray.ArraySize = arraySize;
-	dsvDesc.Texture2DArray.FirstArraySlice = firstArraySlice;
-	dsvDesc.Texture2DArray.MipSlice = mipSlice;
-
-	ZRYResult zr{S_OK};
-	for (int i = 0; i < numDSVs; i++) {
-		zr.value = device->CreateDepthStencilView(getTex2DPointer(*(texHandle + i)), &dsvDesc, &dsvResources.at(dsvCount));
-		RETURN_IF_FAILED_ZRY(zr);
-		(dsvHandle + i)->index = dsvCount;
-		dsvCount += 1;
-	}
-
-	return zr;
-}
-
-ID3D11Texture2D* DX11RenderDevice::getTex2DPointer(const RenderTextureHandle rtHnd) const
-{
-	return tex2DResources.at(rtHnd.index);
-}
-
-ID3D11RenderTargetView* DX11RenderDevice::getRTVPointer(const RenderRTVHandle rtvHnd) const
-{
-	return rtvResources.at(rtvHnd.index);
-}
-
-ID3D11ShaderResourceView* DX11RenderDevice::getSRVPointer(const RenderSRVHandle srvHnd) const
-{
-	return srvResources.at(srvHnd.index);
-}
-
-ID3D11DepthStencilView* DX11RenderDevice::getDSVPointer(const RenderDSVHandle dsvHnd) const
-{
-	return dsvResources.at(dsvHnd.index);;
-}
-
-void DX11RenderDevice::releaseAllResources()
-{
-	for (size_t i = 0; i < srvCount; i++)
+	ID3D11Texture2D* DX11_Render_Device::get_tex_2d_pointer(const Render_Texture_Handle rt_hnd) const
 	{
-		ID3D11ShaderResourceView* resource = srvResources.at(i);
-		if (resource)resource->Release();
+		return m_tex_2d_resources.at(rt_hnd.index);
 	}
-	srvCount = 0;
 
-	for (size_t i = 0; i < rtvCount; i++)
+	ID3D11RenderTargetView* DX11_Render_Device::get_rtv_pointer(const Render_RTV_Handle rtv_hnd) const
 	{
-		ID3D11RenderTargetView* resource = rtvResources.at(i);
-		if (resource)resource->Release();
+		return m_rtv_resources.at(rtv_hnd.index);
 	}
-	rtvCount = 0;
 
-	for (size_t i = 0; i < dsvCount; i++)
+	ID3D11ShaderResourceView* DX11_Render_Device::get_srv_pointer(const Render_SRV_Handle srv_hnd) const
 	{
-		ID3D11DepthStencilView* resource = dsvResources.at(i);
-		if (resource)resource->Release();
+		return m_srv_resources.at(srv_hnd.index);
 	}
-	dsvCount = 0;
 
-	for (size_t i = 0; i < tex2dCount; i++)
+	ID3D11DepthStencilView* DX11_Render_Device::get_dsv_pointer(const Render_DSV_Handle dsv_hnd) const
 	{
-		ID3D11Texture2D* resource = tex2DResources.at(i);
-		if (resource)resource->Release();
+		return m_dsv_resources.at(dsv_hnd.index);;
 	}
 
-	tex2dCount = 0;
-
-	for (size_t i = 0; i < constBuffCount; i++)
+	void DX11_Render_Device::release_all_resources()
 	{
-		ConstantBuffer& resource = constantBuffers.at(i);
-		if (resource.buffer) resource.buffer->Release();
+		for (size_t i = 0; i < m_srv_count; i++)
+		{
+			ID3D11ShaderResourceView* resource = m_srv_resources.at(i);
+			if (resource)resource->Release();
+		}
+		m_srv_count = 0;
+
+		for (size_t i = 0; i < m_rtv_count; i++)
+		{
+			ID3D11RenderTargetView* resource = m_rtv_resources.at(i);
+			if (resource)resource->Release();
+		}
+		m_rtv_count = 0;
+
+		for (size_t i = 0; i < m_dsv_count; i++)
+		{
+			ID3D11DepthStencilView* resource = m_dsv_resources.at(i);
+			if (resource)resource->Release();
+		}
+		m_dsv_count = 0;
+
+		for (size_t i = 0; i < m_tex_2d_count; i++)
+		{
+			ID3D11Texture2D* resource = m_tex_2d_resources.at(i);
+			if (resource)resource->Release();
+		}
+
+		m_tex_2d_count = 0;
+
+		for (size_t i = 0; i < m_const_buff_count; i++)
+		{
+			Constant_Buffer& resource = m_constant_buffers.at(i);
+			if (resource.buffer) resource.buffer->Release();
+		}
+
+		m_const_buff_count = 0;
 	}
 
-	constBuffCount = 0;
 }

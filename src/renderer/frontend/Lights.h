@@ -8,108 +8,117 @@
 
 #include "reflection/ReflectionAnnotation.h"
 
-namespace dx = DirectX;
+namespace zorya
+{
+    namespace dx = DirectX;
 
-using float4 = dx::XMFLOAT4;
-using float3 = dx::XMFLOAT3;
-using float2 = dx::XMFLOAT2;
+    using float4 = dx::XMFLOAT4;
+    using float3 = dx::XMFLOAT3;
+    using float2 = dx::XMFLOAT2;
 
 #else
 
 #endif
 
-struct DirectionalLight
+struct Directional_Light
 {
     float4 dir;
 
     PROPERTY(asd)
-    float nearPlaneDist;
+        float near_plane_dist;
     PROPERTY(asd)
-    float farPlaneDist;
+        float far_plane_dist;
 
     PROPERTY(asd)
-    float ambient;
+        float ambient;
     float pad;
 };
 
-struct PointLight
+struct Point_Light
 {
-    float4 posWorldSpace;
+    float4 pos_world_space;
 
     PROPERTY(asd)
-    float constant;
+        float constant;
     PROPERTY(asd)
-    float lin;
+        float linear;
     PROPERTY(asd)
-    float quad;
+        float quadratic;
 
     PROPERTY(asd)
-    float nearPlaneDist;
+        float near_plane_dist;
     PROPERTY(asd)
-    float farPlaneDist;
+        float far_plane_dist;
 
     float3 pad;
 };
 
-struct SpotLight
+struct Spot_Light
 {
-    float4 posWorldSpace;
+    float4 pos_world_space;
     float4 direction;
 
     PROPERTY(asd)
-    float cosCutoffAngle;
+        float cos_cutoff_angle;
 
     PROPERTY(asd)
-    float nearPlaneDist;
+        float near_plane_dist;
     PROPERTY(asd)
-    float farPlaneDist;
+        float far_plane_dist;
 
     float pad;
 };
 
 #ifdef __cplusplus
 
-enum class LightType : std::uint8_t {
+enum class Light_Type : uint8_t
+{
     DIRECTIONAL,
     POINT,
     SPOT
 };
 
-struct LightHandle_t {
-    LightType tag;
-    std::uint8_t index;
+struct Light_Handle_t
+{
+    Light_Type tag;
+    uint8_t index;
 };
 
-struct SceneLights {
-    DirectionalLight dLight;
+struct Scene_Lights
+{
+    Directional_Light dir_light;
 
-    int numPLights;
-    int numSpotLights;
+    int num_point_lights;
+    int num_spot_ligthts;
     int pad[2];
 
-    PointLight pointLights[16];
-    dx::XMVECTOR posViewSpace[16];
+    Point_Light point_lights[16];
+    dx::XMVECTOR point_pos_view_space[16];
 
-    SpotLight spotLights[16];
-    dx::XMVECTOR posSpotViewSpace[16];
-    dx::XMVECTOR dirSpotViewSpace[16];
+    Spot_Light spot_lights[16];
+    dx::XMVECTOR spot_pos_view_space[16];
+    dx::XMVECTOR spot_dir_view_space[16];
 };
 
-struct DirShadowCB {
-    dx::XMMATRIX dirVMat;
-    dx::XMMATRIX dirPMat;
+struct Dir_Shadow_CB
+{
+    dx::XMMATRIX dir_light_shadow_view_mat;
+    dx::XMMATRIX dir_light_shadow_proj_mat;
 };
 
-struct OmniDirShadowCB {
-    dx::XMMATRIX dirLightViewMat;
-    dx::XMMATRIX dirLightProjMat;
+struct Omni_Dir_Shadow_CB
+{
+    dx::XMMATRIX dir_light_shadow_view_mat;
+    dx::XMMATRIX dir_light_shadow_proj_mat;
 
-    dx::XMMATRIX pointLightViewMat[16*6];
-    dx::XMMATRIX pointLightProjMat;
+    dx::XMMATRIX point_light_view_mat[16 * 6];
+    dx::XMMATRIX point_light_proj_mat;
 
-    dx::XMMATRIX spotLightViewMat[16];
-    dx::XMMATRIX spotLightProjMat[16];
+    dx::XMMATRIX spot_light_view_mat[16];
+    dx::XMMATRIX spot_light_proj_mat[16];
 };
+
+}
 
 #endif
 

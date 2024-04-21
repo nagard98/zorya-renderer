@@ -15,164 +15,179 @@
 
 #include <cstdio>
 
-//TODO: implement also shader unload from memory
-constexpr ShaderBytecode loadShaderBytecode(const char* filepath) {
-	FILE* file = nullptr;
-	BYTE* bytecode = nullptr;
-	size_t sizeInBytes = 0;
-
-	if (fopen_s(&file, filepath, "rb") == 0) {
-		fseek(file, 0, SEEK_END);
-		sizeInBytes = ftell(file);
-		fseek(file, 0, SEEK_SET);
-		
-		bytecode = (BYTE*)malloc(sizeInBytes);
-
-		fread_s(bytecode, sizeInBytes, sizeof(BYTE), sizeInBytes/sizeof(BYTE), file);
-		fclose(file);
-	}
-	
-	return ShaderBytecode{ bytecode, sizeInBytes };
-}
-
-ID3D11PixelShader* PixelShader::registeredPixelShaders[] = { nullptr };
-ShaderBytecode PixelShader::pixelShaderBytecodeBuffers[] = {
-	ShaderBytecode{},
-	loadShaderBytecode("./shaders/GBufferPS.cso"), //ShaderBytecode{ g_GBufferPS, sizeof(g_GBufferPS) },
-	loadShaderBytecode("./shaders/SkyboxPS.cso"), //ShaderBytecode{ g_SkyboxPS, sizeof(g_SkyboxPS) },
-	ShaderBytecode{},
-	loadShaderBytecode("./shaders/SSSSS.cso"), //ShaderBytecode{ g_SSSSS, sizeof(g_SSSSS) },
-	loadShaderBytecode("./shaders/Lighting.cso"), //ShaderBytecode{ g_Lighting, sizeof(g_Lighting) },
-	loadShaderBytecode("./shaders/ShadowMapping.cso"), //ShaderBytecode{ g_ShadowMapping, sizeof(g_ShadowMapping) },
-	loadShaderBytecode("./shaders/Present.cso"), //ShaderBytecode{ g_Present, sizeof(g_Present) }
-};
-
-PixelShader PixelShader::create(const BYTE* shaderByteCode, size_t byteCodeSize){
-	ID3D11PixelShader* _shader = nullptr;
-	HRESULT hRes = rhi.device.device->CreatePixelShader(shaderByteCode, byteCodeSize, nullptr, &_shader);
-
-	ID3D11ShaderReflection* _shaderReflection = nullptr;
-	hRes = D3DReflect(shaderByteCode, byteCodeSize, IID_ID3D11ShaderReflection, (void**)&_shaderReflection);
-
-	return PixelShader{ _shader, _shaderReflection };
-}
-
-PixelShader PixelShader::create(PShaderID pixelShaderId){
-	HRESULT hRes = S_OK;
-
-	ShaderBytecode shaderBytecode = pixelShaderBytecodeBuffers[(std::uint8_t)pixelShaderId];
-	ID3D11PixelShader* _shader = registeredPixelShaders[(std::uint8_t)pixelShaderId];
-
-	if (_shader == nullptr) {
-		hRes = rhi.device.device->CreatePixelShader(shaderBytecode.bytecode, shaderBytecode.sizeInBytes, nullptr, &_shader);
-		if (!FAILED(hRes)) registeredPixelShaders[(std::uint8_t)pixelShaderId] = _shader;
-	}
-	else {
-		_shader->AddRef();
-	}
-
-	ID3D11ShaderReflection* _shaderReflection = nullptr;
-	hRes = D3DReflect(shaderBytecode.bytecode, shaderBytecode.sizeInBytes, IID_ID3D11ShaderReflection, (void**)&_shaderReflection);
-
-	return PixelShader{ _shader, _shaderReflection };
-}
-
-void PixelShader::freeShader()
+namespace zorya
 {
-	if (shader)shader->Release();
-	if (shaderReflection) shaderReflection->Release();
-	//TODO: IMPORTANT! Add removal from registered shaders (in shader struct add its id, to know where to remove)
-}
+	//TODO: implement also shader unload from memory
+	constexpr Shader_Bytecode load_shader_bytecode(const char* filepath)
+	{
+		FILE* file = nullptr;
+		BYTE* bytecode = nullptr;
+		size_t size_in_bytes = 0;
 
-HRESULT PixelShader::bindTexture2D(const char* bindingName, const ShaderTexture2D& texture)
-{
-	D3D11_SHADER_INPUT_BIND_DESC bindDesc;
-	HRESULT hr = shaderReflection->GetResourceBindingDescByName(bindingName, &bindDesc);
-	RETURN_IF_FAILED(hr);
-	
-	rhi.context->PSSetShaderResources(bindDesc.BindPoint, 1, &texture.resourceView);
+		if (fopen_s(&file, filepath, "rb") == 0)
+		{
+			fseek(file, 0, SEEK_END);
+			size_in_bytes = ftell(file);
+			fseek(file, 0, SEEK_SET);
 
-	return S_OK;
-}
+			bytecode = (BYTE*)malloc(size_in_bytes);
 
-HRESULT PixelShader::bindConstantBuffer(const char* bindingName, ID3D11Buffer* const constantBuffer)
-{
-	D3D11_SHADER_INPUT_BIND_DESC bindDesc;
-	HRESULT hr  = shaderReflection->GetResourceBindingDescByName(bindingName, &bindDesc);
-	RETURN_IF_FAILED(hr);
+			fread_s(bytecode, size_in_bytes, sizeof(BYTE), size_in_bytes / sizeof(BYTE), file);
+			fclose(file);
+		}
 
-	rhi.context->PSSetConstantBuffers(bindDesc.BindPoint, 1, &constantBuffer);
-
-	return hr;
-}
-
-
-
-
-
-VertexShader VertexShader::create(const BYTE* shaderByteCode, size_t byteCodeSize, D3D11_INPUT_ELEMENT_DESC* verteLayoutDesc, int numInputElements) {
-	ID3D11VertexShader* _shader = nullptr;
-	HRESULT hRes = rhi.device.device->CreateVertexShader(shaderByteCode, byteCodeSize, nullptr, &_shader);
-
-	ID3D11InputLayout* _vertexInputLayout = nullptr;
-	if (verteLayoutDesc != nullptr) {
-		hRes = rhi.device.device->CreateInputLayout(verteLayoutDesc, numInputElements, shaderByteCode, byteCodeSize, &_vertexInputLayout);
+		return Shader_Bytecode{ bytecode, size_in_bytes };
 	}
 
-	ID3D11ShaderReflection* _shaderReflection = nullptr;
-	hRes = D3DReflect(shaderByteCode, byteCodeSize, IID_ID3D11ShaderReflection, (void**)&_shaderReflection);
+	ID3D11PixelShader* Pixel_Shader::s_registered_pixel_shaders[] = { nullptr };
+	Shader_Bytecode Pixel_Shader::s_pixel_shader_bytecode_buffers[] = {
+		Shader_Bytecode{},
+		load_shader_bytecode("./shaders/GBufferPS.cso"), //ShaderBytecode{ g_GBufferPS, sizeof(g_GBufferPS) },
+		load_shader_bytecode("./shaders/SkyboxPS.cso"), //ShaderBytecode{ g_SkyboxPS, sizeof(g_SkyboxPS) },
+		Shader_Bytecode{},
+		load_shader_bytecode("./shaders/SSSSS.cso"), //ShaderBytecode{ g_SSSSS, sizeof(g_SSSSS) },
+		load_shader_bytecode("./shaders/Lighting.cso"), //ShaderBytecode{ g_Lighting, sizeof(g_Lighting) },
+		load_shader_bytecode("./shaders/ShadowMapping.cso"), //ShaderBytecode{ g_ShadowMapping, sizeof(g_ShadowMapping) },
+		load_shader_bytecode("./shaders/Present.cso"), //ShaderBytecode{ g_Present, sizeof(g_Present) }
+	};
 
-	return VertexShader{ _shader, _vertexInputLayout, _shaderReflection };
-}
+	Pixel_Shader Pixel_Shader::create(const BYTE* shader_bytecode, size_t bytecode_size)
+	{
+		ID3D11PixelShader* shader = nullptr;
+		HRESULT h_res = rhi.m_device.m_device->CreatePixelShader(shader_bytecode, bytecode_size, nullptr, &shader);
 
-VertexShader VertexShader::create(VShaderID vertexShaderId, D3D11_INPUT_ELEMENT_DESC* verteLayoutDesc, int numInputElements) {
-	HRESULT hRes = S_OK;
+		ID3D11ShaderReflection* shader_reflection = nullptr;
+		h_res = D3DReflect(shader_bytecode, bytecode_size, IID_ID3D11ShaderReflection, (void**)&shader_reflection);
 
-	ShaderBytecode shaderBytecode = vertexShaderBytecodeBuffers[(std::uint8_t)vertexShaderId];
-	ID3D11VertexShader* _shader = registeredVertexShaders[(std::uint8_t)vertexShaderId];
-
-	if (_shader == nullptr) {
-		hRes = rhi.device.device->CreateVertexShader(shaderBytecode.bytecode, shaderBytecode.sizeInBytes, nullptr, &_shader);
-		if (!FAILED(hRes)) registeredVertexShaders[(std::uint8_t)vertexShaderId] = _shader;
-	}
-	else {
-		_shader->AddRef();
-	}
-
-	ID3D11InputLayout* _vertexInputLayout = nullptr;
-	if (verteLayoutDesc != nullptr) {
-		hRes = rhi.device.device->CreateInputLayout(verteLayoutDesc, numInputElements, shaderBytecode.bytecode, shaderBytecode.sizeInBytes, &_vertexInputLayout);
+		return Pixel_Shader{ shader, shader_reflection };
 	}
 
-	ID3D11ShaderReflection* _shaderReflection = nullptr;
-	hRes = D3DReflect(shaderBytecode.bytecode, shaderBytecode.sizeInBytes, IID_ID3D11ShaderReflection, (void**)&_shaderReflection);
+	Pixel_Shader Pixel_Shader::create(PShader_ID pixel_shader_id)
+	{
+		HRESULT h_res = S_OK;
 
-	return VertexShader{ _shader, _vertexInputLayout, _shaderReflection };
+		Shader_Bytecode shader_bytecode = s_pixel_shader_bytecode_buffers[(std::uint8_t)pixel_shader_id];
+		ID3D11PixelShader* shader = s_registered_pixel_shaders[(std::uint8_t)pixel_shader_id];
+
+		if (shader == nullptr)
+		{
+			h_res = rhi.m_device.m_device->CreatePixelShader(shader_bytecode.bytecode, shader_bytecode.size_in_bytes, nullptr, &shader);
+			if (!FAILED(h_res)) s_registered_pixel_shaders[(std::uint8_t)pixel_shader_id] = shader;
+		}
+		else
+		{
+			shader->AddRef();
+		}
+
+		ID3D11ShaderReflection* shader_reflection = nullptr;
+		h_res = D3DReflect(shader_bytecode.bytecode, shader_bytecode.size_in_bytes, IID_ID3D11ShaderReflection, (void**)&shader_reflection);
+
+		return Pixel_Shader{ shader, shader_reflection };
+	}
+
+	void Pixel_Shader::free_shader()
+	{
+		if (m_shader)m_shader->Release();
+		if (m_shader_reflection) m_shader_reflection->Release();
+		//TODO: IMPORTANT! Add removal from registered shaders (in shader struct add its id, to know where to remove)
+	}
+
+	HRESULT Pixel_Shader::bind_texture_2d(const char* binding_name, const Shader_Texture2D& texture)
+	{
+		D3D11_SHADER_INPUT_BIND_DESC bind_desc;
+		HRESULT hr = m_shader_reflection->GetResourceBindingDescByName(binding_name, &bind_desc);
+		RETURN_IF_FAILED(hr);
+
+		rhi.m_context->PSSetShaderResources(bind_desc.BindPoint, 1, &texture.resource_view);
+
+		return S_OK;
+	}
+
+	HRESULT Pixel_Shader::bind_constant_buffer(const char* binding_name, ID3D11Buffer* const constant_buffer)
+	{
+		D3D11_SHADER_INPUT_BIND_DESC bind_desc;
+		HRESULT hr = m_shader_reflection->GetResourceBindingDescByName(binding_name, &bind_desc);
+		RETURN_IF_FAILED(hr);
+
+		rhi.m_context->PSSetConstantBuffers(bind_desc.BindPoint, 1, &constant_buffer);
+
+		return hr;
+	}
+
+
+
+
+
+	Vertex_Shader Vertex_Shader::create(const BYTE* shader_bytecode, size_t bytecode_size, D3D11_INPUT_ELEMENT_DESC* vertex_layout_desc, int num_input_elements)
+	{
+		ID3D11VertexShader* shader = nullptr;
+		HRESULT hRes = rhi.m_device.m_device->CreateVertexShader(shader_bytecode, bytecode_size, nullptr, &shader);
+
+		ID3D11InputLayout* vertex_input_layout = nullptr;
+		if (vertex_layout_desc != nullptr)
+		{
+			hRes = rhi.m_device.m_device->CreateInputLayout(vertex_layout_desc, num_input_elements, shader_bytecode, bytecode_size, &vertex_input_layout);
+		}
+
+		ID3D11ShaderReflection* shader_reflection = nullptr;
+		hRes = D3DReflect(shader_bytecode, bytecode_size, IID_ID3D11ShaderReflection, (void**)&shader_reflection);
+
+		return Vertex_Shader{ shader, vertex_input_layout, shader_reflection };
+	}
+
+	Vertex_Shader Vertex_Shader::create(VShader_ID vertex_shader_id, D3D11_INPUT_ELEMENT_DESC* vertex_layout_desc, int num_input_elements)
+	{
+		HRESULT hRes = S_OK;
+
+		Shader_Bytecode shader_bytecode = s_vertex_shader_bytecode_buffers[(std::uint8_t)vertex_shader_id];
+		ID3D11VertexShader* shader = s_registered_vertex_shaders[(std::uint8_t)vertex_shader_id];
+
+		if (shader == nullptr)
+		{
+			hRes = rhi.m_device.m_device->CreateVertexShader(shader_bytecode.bytecode, shader_bytecode.size_in_bytes, nullptr, &shader);
+			if (!FAILED(hRes)) s_registered_vertex_shaders[(std::uint8_t)vertex_shader_id] = shader;
+		}
+		else
+		{
+			shader->AddRef();
+		}
+
+		ID3D11InputLayout* vertex_input_layout = nullptr;
+		if (vertex_layout_desc != nullptr)
+		{
+			hRes = rhi.m_device.m_device->CreateInputLayout(vertex_layout_desc, num_input_elements, shader_bytecode.bytecode, shader_bytecode.size_in_bytes, &vertex_input_layout);
+		}
+
+		ID3D11ShaderReflection* shader_reflection = nullptr;
+		hRes = D3DReflect(shader_bytecode.bytecode, shader_bytecode.size_in_bytes, IID_ID3D11ShaderReflection, (void**)&shader_reflection);
+
+		return Vertex_Shader{ shader, vertex_input_layout, shader_reflection };
+	}
+
+	void Vertex_Shader::free_shader()
+	{
+		if (m_shader)m_shader->Release();
+		if (m_shader_reflection) m_shader_reflection->Release();
+		if (m_vertex_input_layout) m_vertex_input_layout->Release();
+		//TODO: IMPORTANT! Add removal from registered shaders (in shader struct add its id, to know where to remove)
+	}
+
+	HRESULT Vertex_Shader::bind_constant_buffer(const char* binding_name, ID3D11Buffer* const constant_buffer)
+	{
+		D3D11_SHADER_INPUT_BIND_DESC bind_desc;
+		HRESULT hr = m_shader_reflection->GetResourceBindingDescByName(binding_name, &bind_desc);
+		RETURN_IF_FAILED(hr);
+
+		rhi.m_context->PSSetConstantBuffers(bind_desc.BindPoint, 1, &constant_buffer);
+
+		return hr;
+	}
+
+	ID3D11VertexShader* Vertex_Shader::s_registered_vertex_shaders[] = { nullptr };
+	Shader_Bytecode Vertex_Shader::s_vertex_shader_bytecode_buffers[] = {
+		load_shader_bytecode("./shaders/GBufferVS.cso"), //ShaderBytecode{ g_GBufferVS, sizeof(g_GBufferVS) },
+		load_shader_bytecode("./shaders/SkyboxVS.cso"), //ShaderBytecode{ g_SkyboxVS, sizeof(g_SkyboxVS) },
+		load_shader_bytecode("./shaders/DepthVS.cso"), //ShaderBytecode{ g_DepthVS, sizeof(g_DepthVS) },
+		load_shader_bytecode("./shaders/FullscreenQuad.cso"), //ShaderBytecode{ g_FullscreenQuad, sizeof(g_FullscreenQuad) }
+	};
 }
-
-void VertexShader::freeShader()
-{
-	if (shader)shader->Release();
-	if (shaderReflection) shaderReflection->Release();
-	if (vertexInputLayout)vertexInputLayout->Release();
-	//TODO: IMPORTANT! Add removal from registered shaders (in shader struct add its id, to know where to remove)
-}
-
-HRESULT VertexShader::bindConstantBuffer(const char* bindingName, ID3D11Buffer* const constantBuffer)
-{
-	D3D11_SHADER_INPUT_BIND_DESC bindDesc;
-	HRESULT hr = shaderReflection->GetResourceBindingDescByName(bindingName, &bindDesc);
-	RETURN_IF_FAILED(hr);
-
-	rhi.context->PSSetConstantBuffers(bindDesc.BindPoint, 1, &constantBuffer);
-
-	return hr;
-}
-
-ID3D11VertexShader* VertexShader::registeredVertexShaders[] = { nullptr };
-ShaderBytecode VertexShader::vertexShaderBytecodeBuffers[] = {
-	loadShaderBytecode("./shaders/GBufferVS.cso"), //ShaderBytecode{ g_GBufferVS, sizeof(g_GBufferVS) },
-	loadShaderBytecode("./shaders/SkyboxVS.cso"), //ShaderBytecode{ g_SkyboxVS, sizeof(g_SkyboxVS) },
-	loadShaderBytecode("./shaders/DepthVS.cso"), //ShaderBytecode{ g_DepthVS, sizeof(g_DepthVS) },
-	loadShaderBytecode("./shaders/FullscreenQuad.cso"), //ShaderBytecode{ g_FullscreenQuad, sizeof(g_FullscreenQuad) }
-};
