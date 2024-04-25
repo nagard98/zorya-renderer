@@ -37,16 +37,16 @@ struct ExitRadiance_t
 
 cbuffer light : register(b0)
 {
-    DirectionalLight dirLight;
+    Directional_Light dirLight;
     
     int numPLights;
     int numSpotLights;
     int2 pad;
     
-    PointLight pointLights[16];
-    float4 posPointLightViewSpace[16];
+    Point_Light Point_Lights[16];
+    float4 posPoint_LightViewSpace[16];
     
-    SpotLight spotLights[16];
+    Spot_Light spotLights[16];
     float4 posSpotLightViewSpace[16];
     float4 dirSpotLightViewSpace[16];
     
@@ -85,8 +85,8 @@ cbuffer camMat : register(b5)
     float4x4 invCamViewMat;
 }
 
-ExitRadiance_t computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal, float3 smoothNormal, float metalness, float roughness, float thickness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat);
-ExitRadiance_t computeColPointLight(PointLight pLight, float4 posLightViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float metalness, float roughness, float transmDist);
+ExitRadiance_t computeColDirLight(Directional_Light dLight, float3 viewDir, float3 normal, float3 smoothNormal, float metalness, float roughness, float thickness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat);
+ExitRadiance_t computeColPoint_Light(Point_Light pLight, float4 posLightViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float metalness, float roughness, float transmDist);
 ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float roughness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat);
 
 float3 T(float s);
@@ -140,7 +140,7 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
         for (int i = 0; i < numPLights; i++)
         {
             float transmDist = 10.0f;
-            ExitRadiance_t tmpRadExitance = computeColPointLight(pointLights[i], posPointLightViewSpace[i], float4(positionVS, 1.0f), normal, viewDir, metalness, linRoughness, transmDist);
+            ExitRadiance_t tmpRadExitance = computeColPoint_Light(Point_Lights[i], posPoint_LightViewSpace[i], float4(positionVS, 1.0f), normal, viewDir, metalness, linRoughness, transmDist);
         
             radExitance.diffuse += tmpRadExitance.diffuse;
             radExitance.specular += tmpRadExitance.specular;
@@ -156,11 +156,11 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
     ps_out.specular = float4(pow(radExitance.specular, gamma), 1.0f);
     ps_out.transmitted = float4(pow(radExitance.transmitted, gamma), 1.0f);
     
-    ps_out.ambient = float4(pow((albedo * 0.05f), gamma), 1.0f);
+    ps_out.ambient = float4(pow((albedo * 0.03f/* * max(0.0f, dot(normal.xyz, dirLight.dir.xyz))*/), gamma), 1.0f);
     return ps_out;
 }
 
-ExitRadiance_t computeColDirLight(DirectionalLight dLight, float3 viewDir, float3 normal, float3 smoothNormal, float metalness, float linRoughness, float thickness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat)
+ExitRadiance_t computeColDirLight(Directional_Light dLight, float3 viewDir, float3 normal, float3 smoothNormal, float metalness, float linRoughness, float thickness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat)
 {
     ExitRadiance_t exitRadiance;
     float3 lDir = -normalize(dLight.dir.xyz);
@@ -174,7 +174,7 @@ ExitRadiance_t computeColDirLight(DirectionalLight dLight, float3 viewDir, float
     float NdotH = saturate(dot(halfVec, normal));
     
     float correctedBias = max(0.002f, 0.005f * (1.0f - abs(dot(lDir, smoothNormal))));
-    float transmDist = computeTransmDist(posWS, dLight.nearPlaneDist, dLight.farPlaneDist, lightViewMat, lightProjMat, correctedBias, ShadowMap, smoothNormal);
+    float transmDist = computeTransmDist(posWS, dLight.near_plane_dist, dLight.far_plane_dist, lightViewMat, lightProjMat, correctedBias, ShadowMap, smoothNormal);
     float E = max(0.2f + dot(-smoothNormal, -dLight.dir.xyz), 0.0f);
     //TODO: instead of hardcoded scale, use model scale
     thickness = clamp(thickness, 0.0f, 0.5f) * 2.0f;
@@ -188,14 +188,14 @@ ExitRadiance_t computeColDirLight(DirectionalLight dLight, float3 viewDir, float
     return exitRadiance;
 }
 
-ExitRadiance_t computeColPointLight(PointLight pLight, float4 lightPosViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float metalness, float linRoughness, float transmDist)
+ExitRadiance_t computeColPoint_Light(Point_Light pLight, float4 lightPosViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float metalness, float linRoughness, float transmDist)
 {
     float3 lDir = lightPosViewSpace - fragPosViewSpace;
     float dist = length(lDir);
     lDir = normalize(lDir);
     float3 halfVec = normalize(-normalize(fragPosViewSpace.xyz) + lDir.xyz);
 
-    float attenuation = 1 / (pLight.constant + (pLight.lin * dist) + (pLight.quad * pow(dist, 2)));
+    float attenuation = 1 / (pLight.constant + (pLight.lin * dist) + (pLight.quadratic * pow(dist, 2)));
 
     float VdotN = abs(dot(normal, viewDir)) + 1e-5f;
     float LdotN = saturate(dot(lDir, normal));
@@ -224,7 +224,7 @@ ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, floa
 
     float3 lightDir = normalize(posSpotLightViewSpace[lightIndex] - posFragViewSpace);
     float cosAngle = dot(-lightDir, normalize(dirSpotLightViewSpace[lightIndex].xyz));
-    if (cosAngle > spotLights[lightIndex].cosCutoffAngle)
+    if (cosAngle > spotLights[lightIndex].cos_cutoff_angle)
     {
         float3 viewDir = -normalize(posFragViewSpace).xyz;
         float3 halfVec = normalize(viewDir + lightDir);
@@ -235,10 +235,10 @@ ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, floa
         float NdotH = saturate(dot(halfVec, normal));
         
         //TODO: provide falloff for spotlight in constant buffer
-        float attenuation = cosAngle - spotLights[lightIndex].cosCutoffAngle;
+        float attenuation = cosAngle - spotLights[lightIndex].cos_cutoff_angle;
         
         float correctedBias = max(0.002f, 0.005f * (1.0f - abs(dot(lightDir, normal))));
-        float transmDist = computeTransmDist(posWS, spotLights[lightIndex].nearPlaneDist, spotLights[lightIndex].farPlaneDist, lightViewMat, lightProjMat, correctedBias, SpotShadowMap, normal);
+        float transmDist = computeTransmDist(posWS, spotLights[lightIndex].near_plane_dist, spotLights[lightIndex].far_plane_dist, lightViewMat, lightProjMat, correctedBias, SpotShadowMap, normal);
         float E = max(0.2f + dot(-normal, lightDir.xyz), 0.0f);
         float3 transmittedRad = T(transmDist * 100.0f) * E;
     

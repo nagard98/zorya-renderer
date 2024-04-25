@@ -1075,7 +1075,7 @@ namespace zorya
 			dx::XMVECTOR point_light_final_pos = dx::XMVector4Transform(dx::XMLoadFloat4(&point_lights[i].point_light.pos_world_space), point_lights[i].final_world_transform);
 			tmp_lights_cb.point_pos_view_space[i] = dx::XMVector4Transform(point_light_final_pos, view_desc.cam.get_view_matrix());
 			tmp_lights_cb.point_lights[i].constant = point_lights[i].point_light.constant;
-			tmp_lights_cb.point_lights[i].linear = point_lights[i].point_light.linear;
+			tmp_lights_cb.point_lights[i].lin = point_lights[i].point_light.lin;
 			tmp_lights_cb.point_lights[i].quadratic = point_lights[i].point_light.quadratic;
 			tmp_lights_cb.point_lights[i].near_plane_dist = point_lights[i].point_light.near_plane_dist;
 			tmp_lights_cb.point_lights[i].far_plane_dist = point_lights[i].point_light.far_plane_dist;

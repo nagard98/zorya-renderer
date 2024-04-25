@@ -23,16 +23,16 @@ struct PS_OUT
 cbuffer light : register(b0)
 {
     //scene lights
-    DirectionalLight dirLight;
+    Directional_Light dirLight;
     
     int numPLights;
     int numSpotLights;
     int2 pad;
     
-    PointLight pointLights[16];
+    Point_Light pointLights[16];
     float4 posPointLightViewSpace[16];
     
-    SpotLight spotLights[16];
+    Spot_Light spotLights[16];
     float4 posSpotLightViewSpace[16];
     float4 dirSpotLightViewSpace[16];
     
@@ -262,7 +262,7 @@ PS_OUT ps(float4 fragPos : SV_Position)
         float3 dmfp = meanFreePathColor.rgb * meanFreePathDist * scale;
         float maxDmfp = max(dmfp.r, max(dmfp.g, dmfp.b));
         
-        float3 A = pow(subsurfaceAlbedo.rgb, RCP_GAMMA); //albedo;
+        float3 A = subsurfaceAlbedo.rgb; //albedo;
         float maxA = max(A.r, max(A.g, A.b));
         
         float s = 3.5f + 100.0f * pow(maxA - 0.33, 4.0f);
@@ -415,6 +415,7 @@ PS_OUT ps(float4 fragPos : SV_Position)
     }
     else if (sssModelId == 1)
     {
+        //JIMENEZ GAUSSIAN (2009)
         if (centerDepth <= 0.999999f)
         {
             float w[7] = { 0.006, 0.061, 0.242, 0.382, 0.242, 0.061, 0.006 };
@@ -422,17 +423,19 @@ PS_OUT ps(float4 fragPos : SV_Position)
             
             float linDepth = linearizeDepth(centerDepth) / FAR_PLANE;
             float sssLevel = scale;
-            float correction = BETA;
+            float correction = 800; //BETA;
+            float gauss_standard_deviation = meanFreePathDist;
+            float maxdd = 0.001f;
             
             if (dir.x == 1)
             {
-                float s_x = sssLevel / (linDepth + correction * abs(ddx(linDepth)));
-                finalWidth = s_x * meanFreePathDist /** pixelSize */* dir;
+                float s_x = sssLevel / (linDepth + correction * min(abs(ddx(linDepth)), maxdd));
+                finalWidth = s_x * gauss_standard_deviation /** pixelSize*/ * dir;
             }
             else
             {
-                float s_y = sssLevel / (linDepth + correction * abs(ddy(linDepth)));
-                finalWidth = s_y * meanFreePathDist /** pixelSize */* dir;
+                float s_y = sssLevel / (linDepth + correction * min(abs(ddy(linDepth)), maxdd));
+                finalWidth = s_y * gauss_standard_deviation /** pixelSize*/ * dir;
             }
 
             float2 offset = uvCoord - finalWidth;

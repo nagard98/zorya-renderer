@@ -257,7 +257,8 @@ HRESULT init_data()
 	//RenderableEntity mHnd15 = rf.LoadModelFromFile("./shaders/assets/plane.obj", true);
 	//RenderableEntity mHnd16 = rf.LoadModelFromFile("./shaders/assets/cornell-box/CornellBox-Original.obj");
 	//RenderableEntity mHnd17 = rf.LoadModelFromFile("./shaders/assets/sphere.dae");
-	Renderable_Entity mHnd18 = rf.load_model_from_file("./assets/brocc-the-athlete/source/Sporter_Retopo.fbx");
+	//Renderable_Entity mHnd18 = rf.load_model_from_file("./assets/brocc-the-athlete/source/Sporter_Retopo.fbx");
+	Renderable_Entity mHnd19 = rf.load_model_from_file("./assets/Human2/head_and_jacket.gltf");
 	rf.add_light(nullptr, dx::XMVectorSet(1.0f, 0.0f, 0.0, 0.0f), 1.0f, 8.0f);
 	//rf.AddLight(nullptr, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.22f, 0.20f);
 

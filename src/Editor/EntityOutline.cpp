@@ -436,11 +436,11 @@ namespace zorya
 					{
 					case SSS_MODEL::JIMENEZ_GAUSS:
 					{
-						ImGui::DragFloat("Mean Free Path Distance", &mat_desc_2.sss_model.mean_free_path_distance, 0.001f, 0.001f, 1000.0f, "%.4f");
-						if (ImGui::IsItemEdited())
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
+						//ImGui::DragFloat("Mean Free Path Distance", &mat_desc_2.sss_model.mean_free_path_distance, 0.001f, 0.001f, 1000.0f, "%.4f");
+						//if (ImGui::IsItemEdited())
+						//{
+						//	submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
+						//}
 
 						ImGui::DragFloat("Scale", &mat_desc_2.sss_model.scale, 0.001f, 0.001f, 1000.0f, "%.4f");
 						if (ImGui::IsItemEdited())
@@ -467,7 +467,7 @@ namespace zorya
 					}
 					case SSS_MODEL::GOLUBEV:
 					{
-						ImGui::ColorEdit3("Subsurface Albedo", &mat_desc_2.sss_model.subsurface_albedo.x);
+						ImGui::InputFloat3("Subsurface Albedo", &mat_desc_2.sss_model.subsurface_albedo.x);
 						if (ImGui::IsItemEdited())
 						{
 							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;

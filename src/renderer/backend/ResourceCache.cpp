@@ -127,12 +127,21 @@ namespace zorya
 
 				break;
 			}
-			default:
+			case SSS_MODEL::JIMENEZ_GAUSS:
 			{
 				m->sss_prms.scale = fmax(0.0f, standard_material_desc.sss_model.scale);
 				m->sss_prms.mean_free_path_dist = standard_material_desc.sss_model.mean_free_path_distance; //from cm to m
 				break;
 			}
+			case SSS_MODEL::JIMENEZ_SEPARABLE:
+			{
+				m->sss_prms.scale = fmax(0.0f, standard_material_desc.sss_model.scale);
+				m->sss_prms.mean_free_path_dist = standard_material_desc.sss_model.mean_free_path_distance; //from cm to m
+				break;
+			}
+			default:
+				OutputDebugString("ERROR :: ResourceCache.cpp :: Specified invalid sss model");
+				break;
 
 			}
 

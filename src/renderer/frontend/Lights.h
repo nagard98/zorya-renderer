@@ -41,7 +41,7 @@ struct Point_Light
     PROPERTY(asd)
         float constant;
     PROPERTY(asd)
-        float linear;
+        float lin;
     PROPERTY(asd)
         float quadratic;
 
