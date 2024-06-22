@@ -271,7 +271,7 @@ HRESULT init_data()
 	dx::XMVECTOR cam_dir = dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
 	dx::XMVECTOR cam_up = dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-	g_cam = Camera(cam_pos, cam_dir, cam_up, dx::XM_PIDIV2 * rhi.m_viewport.Height / rhi.m_viewport.Width, rhi.m_viewport.Width / rhi.m_viewport.Height, 0.01f, 10.0f);
+	g_cam = Camera(cam_pos, cam_dir, cam_up, dx::XM_PIDIV2 * (rhi.m_viewport.Height / rhi.m_viewport.Width), rhi.m_viewport.Width / rhi.m_viewport.Height, 0.01f, 100.0f);
 	//-----------------------------------------------------------------------------
 
 	return hr;

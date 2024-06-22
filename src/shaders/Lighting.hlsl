@@ -14,10 +14,13 @@ Texture2D SpotShadowMap : register(t6);
 
 SamplerState texSampler : register(s0);
 
+static const int numSamplesJimenezSep = 15;
 static const float revPi = 1 / 3.14159f;
 static const float gamma = 1.0f / 2.2f;
-static const float SCREEN_WIDTH = 1280.0f;
-static const float SCREEN_HEIGHT = 720.0f;
+//static const float SCREEN_WIDTH = 1280.0f;
+//static const float SCREEN_HEIGHT = 720.0f;
+static const float SCREEN_WIDTH = 1920.0f;
+static const float SCREEN_HEIGHT = 1080.0f;
 
 struct PS_OUT
 {
@@ -34,6 +37,24 @@ struct ExitRadiance_t
     float3 transmitted;
 };
 
+struct ModelSSS
+{
+    //golubev subsurface scattering model
+    float4 samples[16];
+    float4 subsurfaceAlbedo;
+    float4 meanFreePathColor;
+    
+    float meanFreePathDist;
+    float scale;
+    
+    float2 dir;
+    int numSamples;
+    int3 pad2;
+
+    //golubev subsurface scattering model
+    float4 kernel[numSamplesJimenezSep];
+    //float4 kernel[16];
+};
 
 cbuffer light : register(b0)
 {
@@ -50,21 +71,7 @@ cbuffer light : register(b0)
     float4 posSpotLightViewSpace[16];
     float4 dirSpotLightViewSpace[16];
     
-    //int sssModelId;
-    //int pad3[3];
-    
-    float4 samples[16];
-	float4 subsurfaceAlbedo;
-	float4 meanFreePathColor;
-    
-	float meanFreePathDist;
-	float scale;
-    
-    float2 dir;
-    int numSamples;
-    int3 pad2;
-    
-    float4 kernel[7];
+    ModelSSS sssModels[64];
 };
 
 cbuffer omniDirShadowMatrixes : register(b2)
@@ -85,9 +92,9 @@ cbuffer camMat : register(b5)
     float4x4 invCamViewMat;
 }
 
-ExitRadiance_t computeColDirLight(Directional_Light dLight, float3 viewDir, float3 normal, float3 smoothNormal, float metalness, float roughness, float thickness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat);
-ExitRadiance_t computeColPoint_Light(Point_Light pLight, float4 posLightViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float metalness, float roughness, float transmDist);
-ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float roughness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat);
+ExitRadiance_t computeColDirLight(Directional_Light dLight, float3 viewDir, float3 normal, float3 smoothNormal, float metalness, float roughness, float thickness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat, uint pixel_sss_model_id);
+ExitRadiance_t computeColPoint_Light(Point_Light pLight, float4 posLightViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float metalness, float roughness, float transmDist, uint pixel_sss_model_id);
+ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float roughness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat, uint pixel_sss_model_id);
 
 float3 T(float s);
 float3 posFromDepth(float2 quadTexCoord, float sampledDepth, uniform float4x4 invMat);
@@ -99,13 +106,18 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
     float2 uvCoord = float2(fragPos.x / SCREEN_WIDTH, fragPos.y / SCREEN_HEIGHT);
     
     float sampledDepth = gbuffer_depth.Sample(texSampler, uvCoord).r;
-    float3 albedo = pow(gbuffer_albedo.Sample(texSampler, uvCoord).rgb, (1.0f / gamma));
+    float4 albedo_sample = gbuffer_albedo.Sample(texSampler, uvCoord).rgba;
+    //float3 albedo = pow(albedo_sample.rgb, (1.0f / gamma));
     float3 normal = gbuffer_normal.Sample(texSampler, uvCoord).xyz * 2.0f - 1.0f;
     float3 smoothNormal = smooth_normals.Sample(texSampler, uvCoord).xyz * 2.0f - 1.0f;
     float3 roughMetThick = gbuffer_roughness.Sample(texSampler, uvCoord).rgb;
+    
     float linRoughness = pow(roughMetThick.r, 4.0f);
     float metalness = roughMetThick.g;
     float thickness = roughMetThick.b;
+    
+    uint sssParamsPack = albedo_sample.a * 255.0f;
+    uint pixel_sss_model_id = (sssParamsPack & 3);
     
     float3 positionVS = posFromDepth(uvCoord, sampledDepth, invCamProjMat);
     float4 positionWS = mul(float4(positionVS, 1.0f), invCamViewMat);
@@ -117,11 +129,11 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
     radExitance.specular = float3(0.0f, 0.0f, 0.0f);
     radExitance.transmitted = float3(0.0f, 0.0f, 0.0f);
     
-    if (sampledDepth <= 0.9999f)
+    if (albedo_sample.a < 1.0f)
     {
         if (dirLight.dir.w == 0.0f)
         {
-            ExitRadiance_t tmpRadExitance = computeColDirLight(dirLight, viewDir, normal, smoothNormal, metalness, linRoughness, thickness, positionWS, dirLightViewMat, dirLightProjMat);
+            ExitRadiance_t tmpRadExitance = computeColDirLight(dirLight, viewDir, normal, smoothNormal, metalness, linRoughness, thickness, positionWS, dirLightViewMat, dirLightProjMat, pixel_sss_model_id);
 
             radExitance.diffuse += tmpRadExitance.diffuse;
             radExitance.specular += tmpRadExitance.specular;
@@ -130,7 +142,7 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
     
         for (int i = 0; i < numSpotLights; i++)
         {
-            ExitRadiance_t tmpRadExitance = computeColSpotLight(i, float4(positionVS, 1.0f), normal, metalness, linRoughness, positionWS, spotLightViewMat[i], spotLightProjMat[i]);
+            ExitRadiance_t tmpRadExitance = computeColSpotLight(i, float4(positionVS, 1.0f), normal, metalness, linRoughness, positionWS, spotLightViewMat[i], spotLightProjMat[i], pixel_sss_model_id);
         
             radExitance.diffuse += tmpRadExitance.diffuse;
             radExitance.specular += tmpRadExitance.specular;
@@ -140,27 +152,25 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
         for (int i = 0; i < numPLights; i++)
         {
             float transmDist = 10.0f;
-            ExitRadiance_t tmpRadExitance = computeColPoint_Light(Point_Lights[i], posPoint_LightViewSpace[i], float4(positionVS, 1.0f), normal, viewDir, metalness, linRoughness, transmDist);
+            ExitRadiance_t tmpRadExitance = computeColPoint_Light(Point_Lights[i], posPoint_LightViewSpace[i], float4(positionVS, 1.0f), normal, viewDir, metalness, linRoughness, transmDist, pixel_sss_model_id);
         
             radExitance.diffuse += tmpRadExitance.diffuse;
             radExitance.specular += tmpRadExitance.specular;
             radExitance.transmitted += tmpRadExitance.transmitted;
         }
     
-        radExitance.diffuse = saturate(radExitance.diffuse * albedo);
-        radExitance.transmitted = radExitance.transmitted * albedo;
     }
 
     PS_OUT ps_out;
-    ps_out.diffuse = float4(pow(radExitance.diffuse, gamma), 1.0f);
-    ps_out.specular = float4(pow(radExitance.specular, gamma), 1.0f);
-    ps_out.transmitted = float4(pow(radExitance.transmitted, gamma), 1.0f);
+    ps_out.diffuse = float4(radExitance.diffuse, 1.0f);
+    ps_out.specular = float4(radExitance.specular, 1.0f);
+    ps_out.transmitted = float4(radExitance.transmitted, 1.0f);
     
-    ps_out.ambient = float4(pow((albedo * 0.03f/* * max(0.0f, dot(normal.xyz, dirLight.dir.xyz))*/), gamma), 1.0f);
+    ps_out.ambient = float4(0.03f, 0.03f, 0.03f, 1.0f); /* * max(0.0f, dot(normal.xyz, dirLight.dir.xyz))*/
     return ps_out;
 }
 
-ExitRadiance_t computeColDirLight(Directional_Light dLight, float3 viewDir, float3 normal, float3 smoothNormal, float metalness, float linRoughness, float thickness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat)
+ExitRadiance_t computeColDirLight(Directional_Light dLight, float3 viewDir, float3 normal, float3 smoothNormal, float metalness, float linRoughness, float thickness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat, uint pixel_sss_model_id)
 {
     ExitRadiance_t exitRadiance;
     float3 lDir = -normalize(dLight.dir.xyz);
@@ -173,12 +183,21 @@ ExitRadiance_t computeColDirLight(Directional_Light dLight, float3 viewDir, floa
     float LdotH = saturate(dot(lDir, halfVec));
     float NdotH = saturate(dot(halfVec, normal));
     
-    float correctedBias = max(0.002f, 0.005f * (1.0f - abs(dot(lDir, smoothNormal))));
-    float transmDist = computeTransmDist(posWS, dLight.near_plane_dist, dLight.far_plane_dist, lightViewMat, lightProjMat, correctedBias, ShadowMap, smoothNormal);
-    float E = max(0.2f + dot(-smoothNormal, -dLight.dir.xyz), 0.0f);
-    //TODO: instead of hardcoded scale, use model scale
-    thickness = clamp(thickness, 0.0f, 0.5f) * 2.0f;
-    float3 transmittedRad = thickness * T(transmDist * 100.0f) * E;
+    float3 transmittedRad = float3(0, 0, 0);
+    
+    if (pixel_sss_model_id > 0)
+    {
+        float correctedBias = max(0.002f, 0.005f * (1.0f - abs(dot(lDir, smoothNormal))));
+        float transmDist = computeTransmDist(posWS, dLight.near_plane_dist, dLight.far_plane_dist, lightViewMat, lightProjMat, correctedBias, ShadowMap, smoothNormal);
+        float E = max(0.3f + dot(-smoothNormal, -dLight.dir.xyz), 0.0f);
+        ////TODO: instead of hardcoded scale, use model scale
+        //thickness = clamp(thickness, 0.0f, 0.5f) * 2.0f;
+        //float3 transmittedRad = thickness * T(transmDist * 100.0f) * E;
+    
+        //float E = max(0.2f + dot(-normal, lDir), 0.0f);
+        transmittedRad = /*thickness * */T(transmDist * 50.0f) * E;
+    }
+
     
     brdfOut_t brdfOut = brdf(VdotN, LdotN, LdotH, NdotH, linRoughness, metalness);
     exitRadiance.diffuse = brdfOut.diffuse * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi;
@@ -188,7 +207,7 @@ ExitRadiance_t computeColDirLight(Directional_Light dLight, float3 viewDir, floa
     return exitRadiance;
 }
 
-ExitRadiance_t computeColPoint_Light(Point_Light pLight, float4 lightPosViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float metalness, float linRoughness, float transmDist)
+ExitRadiance_t computeColPoint_Light(Point_Light pLight, float4 lightPosViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float metalness, float linRoughness, float transmDist, uint pixel_sss_model_id)
 {
     float3 lDir = lightPosViewSpace - fragPosViewSpace;
     float dist = length(lDir);
@@ -202,8 +221,13 @@ ExitRadiance_t computeColPoint_Light(Point_Light pLight, float4 lightPosViewSpac
     float LdotH = saturate(dot(lDir, halfVec));
     float NdotH = saturate(dot(halfVec, normal));
     
-    float E = max(0.2f + dot(-normal, lDir), 0.0f);
-    float3 transmittedRad = T(transmDist * 100.0f) * E;
+    float3 transmittedRad = float3(0, 0, 0);
+    
+    if (pixel_sss_model_id > 0)
+    {
+        float E = max(0.3f + dot(-normal, lDir), 0.0f);
+        transmittedRad = T(transmDist * 100.0f) * E;
+    }
     
     brdfOut_t brdfOut = brdf(VdotN, LdotN, LdotH, NdotH, linRoughness, metalness);
     
@@ -215,7 +239,7 @@ ExitRadiance_t computeColPoint_Light(Point_Light pLight, float4 lightPosViewSpac
     return exitRadiance;
 }
 
-ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float linRoughness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat)
+ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float linRoughness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat, uint pixel_sss_model_id)
 {
     ExitRadiance_t exitRadiance;
     exitRadiance.diffuse = float3(0.0f, 0.0f, 0.0f);
@@ -237,11 +261,16 @@ ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, floa
         //TODO: provide falloff for spotlight in constant buffer
         float attenuation = cosAngle - spotLights[lightIndex].cos_cutoff_angle;
         
-        float correctedBias = max(0.002f, 0.005f * (1.0f - abs(dot(lightDir, normal))));
-        float transmDist = computeTransmDist(posWS, spotLights[lightIndex].near_plane_dist, spotLights[lightIndex].far_plane_dist, lightViewMat, lightProjMat, correctedBias, SpotShadowMap, normal);
-        float E = max(0.2f + dot(-normal, lightDir.xyz), 0.0f);
-        float3 transmittedRad = T(transmDist * 100.0f) * E;
-    
+        float3 transmittedRad = float3(0, 0, 0);
+        
+        if (pixel_sss_model_id > 0)
+        {
+            float correctedBias = max(0.002f, 0.005f * (1.0f - abs(dot(lightDir, normal))));
+            float transmDist = computeTransmDist(posWS, spotLights[lightIndex].near_plane_dist, spotLights[lightIndex].far_plane_dist, lightViewMat, lightProjMat, correctedBias, SpotShadowMap, normal);
+            float E = max(0.3f + dot(-normal, lightDir.xyz), 0.0f);
+            transmittedRad = T(transmDist * 100.0f) * E;
+        }
+        
         brdfOut_t brdfOut = brdf(VdotN, LdotN, LdotH, NdotH, linRoughness, metalness);
         exitRadiance.diffuse = brdfOut.diffuse * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
         exitRadiance.specular = brdfOut.specular * LdotN * float3(3.14f, 3.14f, 3.14f) * revPi * attenuation;
@@ -273,19 +302,22 @@ float3 posFromDepth(float2 quadTexCoord, float sampledDepth, uniform float4x4 in
     return vPosVS.xyz / vPosVS.w;
 }
 
+
 float computeTransmDist(float4 positionWS, float nearPlane, float farPlane, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat, float correctedBias, Texture2D shadowMap, float3 normalVS)
 {
     float4 normalWS = mul(float4(normalVS,0.0f), invCamViewMat);
     float4 shrinkedPos = float4(positionWS.xyz - 0.005f * normalWS.xyz, 1.0f);
-    float4 positionLPS = mul(shrinkedPos, mul(lightViewMat, lightProjMat));
+    float4 positionLPS = mul(shrinkedPos, lightViewMat);
+    float linCurrDepth = positionLPS.z;
+    positionLPS = mul(positionLPS, lightProjMat);
     
     float3 ndCoords = positionLPS.xyz / positionLPS.w;
-    float currentDepth = ndCoords.z; /*positionLPS.z; */
+    //float currentDepth = ndCoords.z; /*positionLPS.z; */
     float2 shadowMapUV = (ndCoords.xy + 1.0f) * rcp(2.0f);
     shadowMapUV = float2(shadowMapUV.x, 1.0f - shadowMapUV.y);
     
-    float linSamplDepth = (nearPlane * farPlane) / (farPlane + /*min(*/shadowMap.Sample(texSampler, shadowMapUV).r/*, currentDepth-correctedBias)*/ * (nearPlane - farPlane));
-    float linCurrDepth = (nearPlane * farPlane) / (farPlane + (currentDepth) * (nearPlane - farPlane));
+    float sampDepth = shadowMap.Sample(texSampler, shadowMapUV).r;
+    float linSamplDepth = (1.0f - sampDepth) * (farPlane-nearPlane) + nearPlane;
     
     return abs(linSamplDepth - linCurrDepth);
 }

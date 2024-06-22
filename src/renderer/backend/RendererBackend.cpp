@@ -24,6 +24,7 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <memory.h>
 
 
 namespace zorya
@@ -56,7 +57,7 @@ namespace zorya
 			m_shadow_cube_map_dsv[i] = nullptr;
 		}
 
-		for (int i = 0; i < 5; i++)
+		for (int i = 0; i < 6; i++)
 		{
 			m_skin_rt[i] = nullptr;
 			m_skin_maps[i] = nullptr;
@@ -114,7 +115,7 @@ namespace zorya
 		float r, g, b, x, y;
 	};
 
-	float num_samples = 15;
+	float num_samples = 9;
 	std::vector<dx::XMFLOAT4> kernel;
 
 	void load_kernel_file(std::string fileName, std::vector<float>& data)
@@ -153,8 +154,7 @@ namespace zorya
 
 			data.resize(fc);
 			i.read(reinterpret_cast<char*>(&data[0]), fc * 4);
-		}
-		else
+		} else
 		{
 			float v;
 
@@ -220,14 +220,12 @@ namespace zorya
 			v.x = _kernelData[0].r;
 			v.y = _kernelData[0].g;
 			v.z = _kernelData[0].b;
-		}
-		else if (i > _kernelData.size() - 1)
+		} else if (i > _kernelData.size() - 1)
 		{
 			v.x = _kernelData[_kernelData.size() - 1].r;
 			v.y = _kernelData[_kernelData.size() - 1].g;
 			v.z = _kernelData[_kernelData.size() - 1].b;
-		}
-		else
+		} else
 		{
 			Kernel_Sample b = _kernelData[i];
 			Kernel_Sample a = _kernelData[i - 1];
@@ -325,14 +323,12 @@ namespace zorya
 	dx::XMFLOAT3 gauss_1D(float x, dx::XMFLOAT3 variance)
 	{
 		dx::XMVECTOR var = dx::XMLoadFloat3(&variance);
-		dx::XMVECTOR var2 = dx::XMVectorMultiply(var, var);
-		dx::XMVECTOR var2_2 = dx::XMVectorAdd(var2, var2);
-		dx::XMVECTOR x_vec = dx::XMVectorMultiply(dx::XMVectorSet(x, x, x, 0.0f), dx::XMVectorSet(x, x, x, 0.0f));
-		dx::XMVECTOR neg_x_vec = dx::XMVectorNegate(x_vec);
-
-		dx::XMVECTOR res = dx::XMVectorMultiply(dx::XMVectorMultiply(dx::XMVectorReciprocal(var), dx::XMVectorReciprocalSqrt(dx::XMVectorAdd(dx::g_XMPi, dx::g_XMPi))), dx::XMVectorExp(dx::XMVectorMultiply(neg_x_vec, dx::XMVectorReciprocal(var2_2))));
+		const float eul = 2.7182818284f;
+		dx::XMVECTOR eul_vec = dx::XMVectorSet(eul, eul, eul, eul);
+		dx::XMVECTOR sample_gauss_vec = (1 / (var * dx::XM_PI * 2))* dx::XMVectorPow(eul_vec, (-(x * x)) / (2 * (var * var)));
+		
 		dx::XMFLOAT3 gs1D{};
-		dx::XMStoreFloat3(&gs1D, res);
+		dx::XMStoreFloat3(&gs1D, sample_gauss_vec);
 
 		return gs1D;
 		//return rcp(sqrt(2.0f * dx::XM_PI) * variance) * exp(-(x * x) * rcp(2.0f * variance * variance));
@@ -354,16 +350,19 @@ namespace zorya
 			 0.113f * gaussian(0.567f, r) +
 			 0.358f * gaussian(1.99f, r) +
 			 0.078f * gaussian(7.41f, r);*/
-		dx::XMFLOAT3 near_var = dx::XMFLOAT3(0.077f, 0.034f, 0.02f);
-		dx::XMFLOAT3 far_var = dx::XMFLOAT3(1.0f, 0.45f, 0.25f);
+		const float global_scale = 9.27f;
+		dx::XMFLOAT3 near_var = dx::XMFLOAT3(0.055f * global_scale, 0.044f * global_scale, 0.038f * global_scale);
+		dx::XMFLOAT3 far_var = dx::XMFLOAT3(1.0f * global_scale, 0.2f * global_scale, 0.13f * global_scale);
+		const float weight = 0.5f;
+		dx::XMVECTOR weight_vec = dx::XMVectorSet(weight, weight, weight, weight);
+		dx::XMVECTOR rest_weight_vec = dx::XMVectorSet(1.0f - weight, 1.0f - weight, 1.0f - weight, 1.0f - weight);
 
 		dx::XMFLOAT3 g1_float = (gauss_1D(r, near_var));
 		dx::XMFLOAT3 g2_float = (gauss_1D(r, far_var));
 		dx::XMVECTOR g1 = dx::XMLoadFloat3(&g1_float);
 		dx::XMVECTOR g2 = dx::XMLoadFloat3(&g2_float);
 
-		dx::XMVECTOR weight = dx::XMVectorSet(0.5, 0.5f, 0.5f, 0.0f);
-		dx::XMVECTOR res = dx::XMVectorAdd(dx::XMVectorMultiply(weight, g1), dx::XMVectorMultiply(weight, g2));
+		dx::XMVECTOR res = weight_vec * g1 + rest_weight_vec * g2;
 
 		dx::XMFLOAT3 profi{};
 		dx::XMStoreFloat3(&profi, res);
@@ -375,7 +374,7 @@ namespace zorya
 	{
 		HRESULT hr;
 
-		const float RANGE = num_samples > 20 ? 3.0f : 2.0f;
+		const float RANGE = 9.9f;//num_samples > 20 ? 3.0f : 2.0f;
 		const float EXPONENT = 2.0f;
 
 		kernel.resize(num_samples);
@@ -459,8 +458,8 @@ namespace zorya
 
 		m_shadow_map_viewport.TopLeftX = 0.0f;
 		m_shadow_map_viewport.TopLeftY = 0.0f;
-		m_shadow_map_viewport.Width = 2048.0f;
-		m_shadow_map_viewport.Height = 2048.f;
+		m_shadow_map_viewport.Width = 4096.0f;
+		m_shadow_map_viewport.Height = 4096.f;
 		m_shadow_map_viewport.MinDepth = 0.0f;
 		m_shadow_map_viewport.MaxDepth = 1.0f;
 
@@ -548,7 +547,7 @@ namespace zorya
 		m_gbuffer_vertex_shader = Vertex_Shader::create(VShader_ID::STANDARD, s_vertex_layout_desc, ARRAYSIZE(s_vertex_layout_desc));
 
 		Render_Texture_Handle hnd_gbuff[G_Buffer::SIZE];
-		zr = rhi.m_device.create_tex_2d(&hnd_gbuff[0], ZRY_Bind_Flags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, g_resolutionWidth, g_resolutionHeight, G_Buffer::SIZE, nullptr, nullptr, true, 4, 1);
+		zr = rhi.m_device.create_tex_2d(&hnd_gbuff[0], ZRY_Bind_Flags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, g_resolutionWidth, g_resolutionHeight, G_Buffer::SIZE, nullptr, nullptr, false, 1);
 		RETURN_IF_FAILED(zr.value);
 		for (int i = 0; i < G_Buffer::SIZE; i++)
 		{
@@ -556,7 +555,7 @@ namespace zorya
 		}
 
 		Render_SRV_Handle hnd_gbuff_srv[G_Buffer::SIZE];
-		zr = rhi.m_device.create_srv_tex_2d(hnd_gbuff_srv, hnd_gbuff, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_UNORM }, G_Buffer::SIZE, 4);
+		zr = rhi.m_device.create_srv_tex_2d(hnd_gbuff_srv, hnd_gbuff, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_UNORM }, G_Buffer::SIZE);
 		RETURN_IF_FAILED(zr.value);
 		for (int i = 0; i < G_Buffer::SIZE; i++)
 		{
@@ -575,7 +574,7 @@ namespace zorya
 
 		//ambient setup------------------------------------------------
 		Render_Texture_Handle hnd_ambient;
-		zr = rhi.m_device.create_tex_2d(&hnd_ambient, ZRY_Bind_Flags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, g_resolutionWidth, g_resolutionHeight, 1, nullptr, nullptr, true, 0, 1);
+		zr = rhi.m_device.create_tex_2d(&hnd_ambient, ZRY_Bind_Flags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, g_resolutionWidth, g_resolutionHeight, 1, nullptr, nullptr, false, 1);
 		RETURN_IF_FAILED(zr.value);
 		m_ambient_map = rhi.m_device.get_tex_2d_pointer(hnd_ambient);
 
@@ -625,17 +624,17 @@ namespace zorya
 
 
 		Render_Texture_Handle hnd_shadow_map;
-		zr = rhi.m_device.create_tex_2d(&hnd_shadow_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL }, ZRY_Format{ DXGI_FORMAT_R24G8_TYPELESS }, m_shadow_map_viewport.Width, m_shadow_map_viewport.Height, 1, nullptr, nullptr, false, 1);
+		zr = rhi.m_device.create_tex_2d(&hnd_shadow_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL }, ZRY_Format{ DXGI_FORMAT_R32_TYPELESS}, m_shadow_map_viewport.Width, m_shadow_map_viewport.Height, 1, nullptr, nullptr, false, 1);
 		RETURN_IF_FAILED(zr.value);
 		m_shadow_map = rhi.m_device.get_tex_2d_pointer(hnd_shadow_map);
 
 		Render_SRV_Handle hnd_shadow_map_srv;
-		zr = rhi.m_device.create_srv_tex_2d(&hnd_shadow_map_srv, &hnd_shadow_map, ZRY_Format{ DXGI_FORMAT_R24_UNORM_X8_TYPELESS }, 1, -1);
+		zr = rhi.m_device.create_srv_tex_2d(&hnd_shadow_map_srv, &hnd_shadow_map, ZRY_Format{ DXGI_FORMAT_R32_FLOAT}, 1, -1);
 		RETURN_IF_FAILED(zr.value);
 		m_shadow_map_srv = rhi.m_device.get_srv_pointer(hnd_shadow_map_srv);
 
 		Render_DSV_Handle hnd_shadow_map_dsv;
-		zr = rhi.m_device.create_dsv_tex_2d(&hnd_shadow_map_dsv, &hnd_shadow_map, ZRY_Format{ DXGI_FORMAT_D24_UNORM_S8_UINT });
+		zr = rhi.m_device.create_dsv_tex_2d(&hnd_shadow_map_dsv, &hnd_shadow_map, ZRY_Format{ DXGI_FORMAT_D32_FLOAT });
 		RETURN_IF_FAILED(zr.value);
 		m_shadow_map_dsv = rhi.m_device.get_dsv_pointer(hnd_shadow_map_dsv);
 
@@ -683,19 +682,19 @@ namespace zorya
 
 		//Irradiance map setup---------------------------------------------
 
-		Render_Texture_Handle hnd_skin_map[5];
-		Render_RTV_Handle hnd_skin_rtv[5];
-		Render_SRV_Handle hnd_skin_srv[5];
-		zr = rhi.m_device.create_tex_2d(&hnd_skin_map[0], ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R32G32B32A32_FLOAT }, g_resolutionWidth, g_resolutionHeight, 3, &hnd_skin_srv[0], &hnd_skin_rtv[0]);
+		Render_Texture_Handle hnd_skin_map[6];
+		Render_RTV_Handle hnd_skin_rtv[6];
+		Render_SRV_Handle hnd_skin_srv[6];
+		zr = rhi.m_device.create_tex_2d(&hnd_skin_map[0], ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R32G32B32A32_FLOAT }, g_resolutionWidth, g_resolutionHeight, 6, &hnd_skin_srv[0], &hnd_skin_rtv[0], false, 1);
 		RETURN_IF_FAILED(zr.value);
 
-		zr = rhi.m_device.create_tex_2d(&hnd_skin_map[4], ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R32G32B32A32_FLOAT }, g_resolutionWidth, g_resolutionHeight, 1, &hnd_skin_srv[4], &hnd_skin_rtv[4]);
-		RETURN_IF_FAILED(zr.value);
+		//zr = rhi.m_device.create_tex_2d(&hnd_skin_map[4], ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R32G32B32A32_FLOAT }, g_resolutionWidth, g_resolutionHeight, 1, &hnd_skin_srv[4], &hnd_skin_rtv[4], false, 1);
+		//RETURN_IF_FAILED(zr.value);
 
-		zr = rhi.m_device.create_tex_2d(&hnd_skin_map[3], ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R32G32B32A32_FLOAT }, g_resolutionWidth, g_resolutionHeight, 1, &hnd_skin_srv[3], &hnd_skin_rtv[3], true, 8);
-		RETURN_IF_FAILED(zr.value);
+		//zr = rhi.m_device.create_tex_2d(&hnd_skin_map[3], ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R32G32B32A32_FLOAT }, g_resolutionWidth, g_resolutionHeight, 1, &hnd_skin_srv[3], &hnd_skin_rtv[3], false, 1);
+		//RETURN_IF_FAILED(zr.value);
 
-		for (int i = 0; i < 5; i++)
+		for (int i = 0; i < 6; i++)
 		{
 			m_skin_maps[i] = rhi.m_device.get_tex_2d_pointer(hnd_skin_map[i]);
 			m_skin_rt[i] = rhi.m_device.get_rtv_pointer(hnd_skin_rtv[i]);
@@ -715,7 +714,7 @@ namespace zorya
 		m_final_render_target_srv = rhi.m_device.get_srv_pointer(hnd_final_srv);
 
 		Render_RTV_Handle hnd_final_rtv;
-		zr = rhi.m_device.create_rtv_tex_2d(&hnd_final_rtv, &hnd_final_rt, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_UNORM }, 1);
+		zr = rhi.m_device.create_rtv_tex_2d(&hnd_final_rtv, &hnd_final_rt, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_UNORM_SRGB }, 1);
 		RETURN_IF_FAILED(zr.value);
 		m_final_render_target_view = rhi.m_device.get_rtv_pointer(hnd_final_rtv);
 
@@ -748,20 +747,24 @@ namespace zorya
 		//---------------------------------------------------------------------
 
 		//thickness map
-		//rhi.LoadTexture(L"./shaders/assets/Human/Textures/Head/JPG/baked_translucency_4096.jpg", thicknessMapSRV, false);
+		rhi.load_texture(L"./assets/baked_translucency_4096.jpg", m_thickness_map_srv, false);
 
 		std::vector<float> krn;
 		////loadKernelFile("./shaders/assets/Skin2_PreInt_DISCSEP.bn", krn);
-		load_kernel_file("./assets/Skin1_PreInt_DISCSEP.bn", krn);
+		//load_kernel_file("./assets/Skin1_PreInt_DISCSEP.bn", krn);
 		//loadKernelFile("./shaders/assets/Skin1_ArtModProd_DISCSEP.bn", krn);
 		//
-		override_ssss_discr_sep_kernel(krn);
+		//override_ssss_discr_sep_kernel(krn);
 		separable_sss_calculate_kernel();
-		for (int i = 1; i < kernel.size(); i++)
+		for (int i = 0; i < kernel.size(); i++)
 		{
+			OutputDebugString("(");
 			OutputDebugString(std::to_string(kernel[i].w).c_str());
-			OutputDebugString("\n");
+			OutputDebugString(",");
+			OutputDebugString(std::to_string(kernel[i].x).c_str());
+			OutputDebugString("),");
 		}
+		OutputDebugString("\n");
 
 		return hr;
 	}
@@ -823,7 +826,7 @@ namespace zorya
 			//Directional lights--------------------------------------------
 			m_annot->BeginEvent(L"Directional Lights");
 
-			rhi.m_context->ClearDepthStencilView(m_shadow_map_dsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+			rhi.m_context->ClearDepthStencilView(m_shadow_map_dsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 0.0f, 0);
 			rhi.m_context->OMSetRenderTargets(0, nullptr, m_shadow_map_dsv);
 
 			m_shadow_map_vertex_shader.bind_constant_buffer("cbPerObj", m_object_cb);
@@ -840,7 +843,7 @@ namespace zorya
 				dx::XMVECTOR dir_light_pos = dx::XMVectorMultiply(dx::XMVectorNegate(transformed_dir_light), dx::XMVectorSet(3.0f, 3.0f, 3.0f, 1.0f));
 				//TODO: rename these matrices; it isnt clear that they are used for shadow mapping
 				dx::XMMATRIX dir_light_view_matrix = dx::XMMatrixLookAtLH(dir_light_pos, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
-				dx::XMMATRIX dir_light_proj_matrix = dx::XMMatrixOrthographicLH(4.0f, 4.0f, dir_light.near_plane_dist, dir_light.far_plane_dist);
+				dx::XMMATRIX dir_light_proj_matrix = dx::XMMatrixOrthographicLH(8.0f, 8.0f, dir_light.far_plane_dist, dir_light.near_plane_dist);
 
 				dir_shadow_cb.dir_light_shadow_proj_mat = dx::XMMatrixTranspose(dir_light_proj_matrix);
 				dir_shadow_cb.dir_light_shadow_view_mat = dx::XMMatrixTranspose(dir_light_view_matrix);
@@ -863,11 +866,25 @@ namespace zorya
 
 					RHI_State state = RHI_DEFAULT_STATE();
 					RHI_RS_SET_CULL_BACK(state);
-					RHI_OM_DS_SET_DEPTH_COMP_LESS(state);
+					//RHI_OM_DS_SET_DEPTH_COMP_LESS(state);
 
 					rhi.set_state(state);
 
+					D3D11_DEPTH_STENCIL_DESC dir_sm_depth_desc{};
+					dir_sm_depth_desc.StencilEnable = false;
+					dir_sm_depth_desc.DepthEnable = true;
+					dir_sm_depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+					dir_sm_depth_desc.DepthFunc = D3D11_COMPARISON_GREATER;
+
+					ID3D11DepthStencilState* dir_sm_depth_state, *def_depth_state;
+					rhi.m_context->OMGetDepthStencilState(&def_depth_state, nullptr);
+
+					HRESULT h = rhi.m_device.m_device->CreateDepthStencilState(&dir_sm_depth_desc, &dir_sm_depth_state);
+					rhi.m_context->OMSetDepthStencilState(dir_sm_depth_state, 0);
+
 					rhi.m_context->DrawIndexed(submesh_info.hnd_submesh.num_indices, 0, 0);
+
+					rhi.m_context->OMSetDepthStencilState(def_depth_state, 0);
 				}
 			}
 			m_annot->EndEvent();
@@ -994,6 +1011,8 @@ namespace zorya
 
 			rhi.m_context->PSSetShaderResources(0, 1, &m_cubemap_view);
 
+			rhi.m_context->OMSetRenderTargets(1, &m_gbuffer_rtv[G_Buffer::ALBEDO], nullptr);
+
 			RHI_OM_DS_SET_DEPTH_COMP_LESS_EQ(rhi_state);
 			RHI_RS_SET_CULL_BACK(rhi_state);
 			rhi.set_state(rhi_state);
@@ -1059,6 +1078,7 @@ namespace zorya
 		View_CB tmpVCB{ view_desc.cam.get_view_matrix_transposed() };
 		Proj_CB tmpPCB{ view_desc.cam.get_proj_matrix_transposed() };
 		Scene_Lights tmp_lights_cb;
+		Subsurface_Scattering_Params tmp_sss_params_cb[64];
 
 		for (int i = 0; i < num_dir_lights; i++)
 		{
@@ -1106,6 +1126,9 @@ namespace zorya
 		rhi.m_context->UpdateSubresource(m_dir_shad_cb, 0, nullptr, &dir_shadow_cb, 0, 0);
 		rhi.m_context->UpdateSubresource(m_omni_dir_shad_cb, 0, nullptr, &omni_dir_shadow_cb, 0, 0);
 
+		//TODO: solution for the time being
+		bool sss_type_in_scene[4] = { false, false, false, false };
+
 		m_annot->BeginEvent(L"G-Buffer Pass");
 		{
 			//TODO: temporary solution
@@ -1120,14 +1143,13 @@ namespace zorya
 			rhi.m_context->VSSetConstantBuffers(5, 1, &m_omni_dir_shad_cb);
 
 			FLOAT clear_color[4] = { 0.0f,0.0f,0.0f,1.0f };
-			for (int i = 0; i < G_Buffer::SIZE; i++)
-			{
-				rhi.m_context->ClearRenderTargetView(m_gbuffer_rtv[i], clear_color);
-			}
+			rhi.m_context->ClearRenderTargetView(m_gbuffer_rtv[G_Buffer::NORMAL], clear_color);
+			rhi.m_context->ClearRenderTargetView(m_gbuffer_rtv[G_Buffer::ROUGH_MET], clear_color);
 
 			ID3D11RenderTargetView* rt2[4] = { m_gbuffer_rtv[0], m_gbuffer_rtv[1], m_gbuffer_rtv[2], m_skin_rt[4] };
 			rhi.m_context->OMSetRenderTargets(4, &rt2[0]/*&GBufferRTV[0]*/, m_depth_dsv);
 
+			int sss_submesh_count = 0;
 			for (Submesh_Info const& submesh_info : view_desc.submeshes_info)
 			{
 				rhi.m_context->IASetVertexBuffers(0, 1, buffer_cache.get_vertex_buffer(submesh_info.hnd_buffer_cache).buffer.GetAddressOf(), strides, offsets);
@@ -1144,6 +1166,19 @@ namespace zorya
 				mat.model.bind_texture_2d("SpotShadowMap", Shader_Texture2D{ m_spot_shadow_map_srv });
 
 				mat.model.bind_texture_2d("ThicknessMap", m_thickness_map_srv);
+
+				//TODO: fix - don't use submesh count for sss model arr index (need to implement asset register)
+				if (mat.mat_prms.sss_model_id != 0)
+				{
+					sss_type_in_scene[mat.mat_prms.sss_model_id] = true;
+					mat.mat_prms.sss_model_arr_index = sss_submesh_count;
+					memcpy_s((tmp_sss_params_cb + mat.mat_prms.sss_model_id) + (sss_submesh_count << 2), sizeof(Subsurface_Scattering_Params), &mat.sss_prms, sizeof(Subsurface_Scattering_Params));
+					memcpy_s(((tmp_sss_params_cb + mat.mat_prms.sss_model_id) + (sss_submesh_count << 2))->jimenez_samples_sss, sizeof(dx::XMFLOAT4) * num_samples, kernel.data(), sizeof(dx::XMFLOAT4) * num_samples);
+					sss_submesh_count += 1;
+				} else
+				{
+					mat.mat_prms.sss_model_arr_index = 0;
+				}
 
 				rhi.m_context->PSSetShaderResources(5, 1, &m_shadow_cube_map_srv);
 
@@ -1175,6 +1210,12 @@ namespace zorya
 		m_annot->BeginEvent(L"Lighting Pass");
 		{
 			ID3D11RenderTargetView* render_targets_light_pass[4] = { m_skin_rt[0], m_skin_rt[1], m_skin_rt[2], m_ambient_rtv };
+			
+			float clear_col[4] = { 0.0f,0.0f,0.0f,1.0f };
+			rhi.m_context->ClearRenderTargetView(m_skin_rt[0], clear_col);
+			rhi.m_context->ClearRenderTargetView(m_skin_rt[1], clear_col);
+			rhi.m_context->ClearRenderTargetView(m_skin_rt[2], clear_col);
+			
 			rhi.m_context->OMSetRenderTargets(4, &render_targets_light_pass[0], nullptr);
 
 			rhi.m_context->VSSetShader(m_fullscreen_quad_shader.m_shader, nullptr, 0);
@@ -1188,8 +1229,10 @@ namespace zorya
 			im.invProj = dx::XMMatrixTranspose(dx::XMMatrixInverse(nullptr, view_desc.cam.get_proj_matrix()));
 			im.invView = dx::XMMatrixTranspose(dx::XMMatrixInverse(nullptr, view_desc.cam.get_view_matrix()));
 			rhi.m_context->UpdateSubresource(m_inv_mat_cb, 0, nullptr, &im, 0, 0);
+
 			Constant_Buffer& constBuffTmp = rhi.m_device.m_constant_buffers.at(m_hnd_frame_cb.index);
 			m_lighting_shader.bind_constant_buffer("light", constBuffTmp.buffer);
+
 			//rhi.context->PSSetConstantBuffers(0, 1, &lightsCB);
 			rhi.m_context->PSSetConstantBuffers(5, 1, &m_inv_mat_cb);
 			rhi.m_context->PSSetShaderResources(0, 3, &m_gbuffer_srv[0]);
@@ -1202,11 +1245,10 @@ namespace zorya
 		}
 		m_annot->EndEvent();
 
-		ID3D11ShaderResourceView* null_srv[8] = { nullptr };
+		ID3D11ShaderResourceView* null_srv[10] = { nullptr };
 
 		m_annot->BeginEvent(L"ShadowMap Pass");
 		{
-			//rhi.context->PSSetShaderResources(GBuffer::ALBEDO, 1, &nullSRV[0]);
 			rhi.m_context->PSSetShaderResources(G_Buffer::ROUGH_MET, 1, &null_srv[0]);
 
 			ID3D11RenderTargetView* render_targets_shadowmap_pass[2] = { m_skin_rt[3], m_gbuffer_rtv[G_Buffer::ROUGH_MET] };
@@ -1214,7 +1256,8 @@ namespace zorya
 
 			rhi.m_context->PSSetShaderResources(0, 1, &m_skin_srv[0]);
 			rhi.m_context->PSSetShaderResources(2, 1, &m_skin_srv[1]);
-			rhi.m_context->PSSetShaderResources(7, 1, &m_ambient_srv);
+			rhi.m_context->PSSetShaderResources(7, 1, &m_gbuffer_srv[G_Buffer::ALBEDO]);
+			rhi.m_context->PSSetShaderResources(8, 1, &m_skin_srv[2]); //transmitted irrad
 
 			rhi.m_context->PSSetShader(m_shadow_map_pixel_shader.m_shader, nullptr, 0);
 			Constant_Buffer& tmpConstBuf = rhi.m_device.m_constant_buffers.at(m_hnd_frame_cb.index);
@@ -1224,89 +1267,115 @@ namespace zorya
 		}
 		m_annot->EndEvent();
 
+		Material mat{};
+
 		m_annot->BeginEvent(L"SSSSS Pass");
 		{
+			Constant_Buffer& tmpFrameCB = rhi.m_device.m_constant_buffers.at(m_hnd_frame_cb.index);
+			Frame_Constant_Buff frame_cb;
+			frame_cb.m_scene_lights = tmp_lights_cb;
 
-			if (view_desc.submeshes_info.size() > 0)
+			if (sss_type_in_scene[1] || sss_type_in_scene[3] || sss_type_in_scene[2])
+			{
+				memcpy_s(frame_cb.sss_params, sizeof(frame_cb.sss_params), tmp_sss_params_cb, sizeof(frame_cb.sss_params));
+				m_sssss_pixel_shader.bind_constant_buffer(tmpFrameCB.constant_buffer_name, tmpFrameCB.buffer);
+				rhi.m_device.update_constant_buffer(m_hnd_frame_cb, frame_cb);
+
+				Constant_Buffer& tmpObjBuff = rhi.m_device.m_constant_buffers.at(m_hnd_object_cb.index);
+				m_sssss_pixel_shader.bind_constant_buffer("matPrms", tmpObjBuff.buffer);
+			}
+
+			if (sss_type_in_scene[(uint32_t)SSS_MODEL::GOLUBEV])
 			{
 				rhi.m_context->PSSetShaderResources(0, 3, null_srv);
 				rhi.m_context->PSSetShader(m_sssss_pixel_shader.m_shader, nullptr, 0);
 
-				Material& mat = resource_cache.m_material_cache.at(view_desc.submeshes_info.at(0).hnd_material_cache.index);
-				Constant_Buffer& tmpFrameCB = rhi.m_device.m_constant_buffers.at(m_hnd_frame_cb.index);
-
-				switch (mat.mat_prms.sss_model_id)
+				m_annot->BeginEvent(L"Golubev SSS");
 				{
-				case ((std::uint32_t)SSS_MODEL::GOLUBEV):
-				{
-					//TODO: fix warning generated by shader requiring multiple render targets (for now
-					// suppressed providing useless render target e.g. skinRT[0])
-					ID3D11RenderTargetView* render_targets_golubev_sss_pass[] = { m_final_render_target_view, m_skin_rt[0] };
+					ID3D11RenderTargetView* render_targets_golubev_sss_pass[] = { m_skin_rt[0], m_skin_rt[4] };
 
 					rhi.m_context->OMSetRenderTargets(2, render_targets_golubev_sss_pass, nullptr);
 
-					m_sssss_pixel_shader.bind_constant_buffer(tmpFrameCB.constant_buffer_name, tmpFrameCB.buffer);
-					rhi.m_device.update_constant_buffer(m_hnd_frame_cb, Frame_Constant_Buff{ tmp_lights_cb, mat.sss_prms });
+					mat.mat_prms.sss_model_id = (uint32_t)SSS_MODEL::GOLUBEV;
+					rhi.m_device.update_constant_buffer(m_hnd_object_cb, Object_Constant_Buff{ mat.mat_prms });
 
 					rhi.m_context->PSSetShaderResources(0, 1, &m_skin_srv[3]);
 					rhi.m_context->PSSetShaderResources(1, 1, &m_gbuffer_srv[G_Buffer::ROUGH_MET]);
 					rhi.m_context->PSSetShaderResources(2, 1, &m_skin_srv[2]);
 					rhi.m_context->PSSetShaderResources(3, 1, &m_depth_srv);
 					rhi.m_context->PSSetShaderResources(4, 1, &m_gbuffer_srv[G_Buffer::ALBEDO]);
+					rhi.m_context->PSSetShaderResources(5, 1, null_srv);
 					rhi.m_context->Draw(4, 0);
-
-					break;
 				}
+				m_annot->EndEvent();
+			}
 
-				case ((std::uint32_t)SSS_MODEL::JIMENEZ_SEPARABLE):
+			if (sss_type_in_scene[(uint32_t)SSS_MODEL::JIMENEZ_SEPARABLE])
+			{
+				m_annot->BeginEvent(L"Jimenez Separable SSS");
 				{
+					ID3D11RenderTargetView* render_targets_sep_sss_pass[] = { m_skin_rt[1], m_skin_rt[4] };
 
-					ID3D11RenderTargetView* render_targets_sep_sss_pass[] = { m_skin_rt[1], m_skin_rt[0] };
+					float clear_col[4] = { 0.0f,0.0f,0.0f,1.0f };
+					rhi.m_context->ClearRenderTargetView(render_targets_sep_sss_pass[0], clear_col);
+
+					rhi.m_context->PSSetShader(m_sssss_pixel_shader.m_shader, nullptr, 0);
+
+					mat.mat_prms.sss_model_id = (uint32_t)SSS_MODEL::JIMENEZ_SEPARABLE;
 
 					m_annot->BeginEvent(L"Horizontal Pass");
 					{
 						rhi.m_context->PSSetShaderResources(0, 1, null_srv);
+						rhi.m_context->PSSetShaderResources(2, 1, null_srv);
 						rhi.m_context->OMSetRenderTargets(2, render_targets_sep_sss_pass, nullptr);
 
-						m_sssss_pixel_shader.bind_constant_buffer(tmpFrameCB.constant_buffer_name, tmpFrameCB.buffer);
-						mat.sss_prms.dir = dx::XMFLOAT2(1.0f, 0.0f);
-						memcpy_s(mat.sss_prms.jimenez_samples_sss, sizeof(mat.sss_prms.jimenez_samples_sss), kernel.data(), kernel.size() * sizeof(dx::XMFLOAT4));
-						rhi.m_device.update_constant_buffer(m_hnd_frame_cb, Frame_Constant_Buff{ tmp_lights_cb, mat.sss_prms });
+						mat.mat_prms.dir = dx::XMFLOAT2(1.0f, 0.0f);
+						rhi.m_device.update_constant_buffer(m_hnd_object_cb, Object_Constant_Buff{ mat.mat_prms });
 
 						rhi.m_context->PSSetShaderResources(0, 1, &m_skin_srv[3]);
 						rhi.m_context->PSSetShaderResources(1, 1, &m_gbuffer_srv[G_Buffer::ROUGH_MET]);
 						rhi.m_context->PSSetShaderResources(2, 1, &m_skin_srv[2]);
 						rhi.m_context->PSSetShaderResources(3, 1, &m_depth_srv);
 						rhi.m_context->PSSetShaderResources(4, 1, &m_gbuffer_srv[G_Buffer::ALBEDO]);
+						rhi.m_context->PSSetShaderResources(5, 1, null_srv);
 						rhi.m_context->Draw(4, 0);
 					}
 					m_annot->EndEvent();
 
-					render_targets_sep_sss_pass[0] = m_final_render_target_view;
+					render_targets_sep_sss_pass[0] = m_skin_rt[0];//m_final_render_target_view;
 
 					m_annot->BeginEvent(L"Vertical Pass");
 					{
-						mat.sss_prms.dir = dx::XMFLOAT2(0.0f, 1.0f);
-						rhi.m_device.update_constant_buffer(m_hnd_frame_cb, Frame_Constant_Buff{ tmp_lights_cb, mat.sss_prms });
+						mat.mat_prms.dir = dx::XMFLOAT2(0.0f, 1.0f);
+						rhi.m_device.update_constant_buffer(m_hnd_object_cb, Object_Constant_Buff{ mat.mat_prms });
+
 						rhi.m_context->OMSetRenderTargets(2, render_targets_sep_sss_pass, nullptr);
 						rhi.m_context->PSSetShaderResources(0, 1, &m_skin_srv[1]);
+
 						rhi.m_context->Draw(4, 0);
 					}
 					m_annot->EndEvent();
-
-					break;
 				}
+				m_annot->EndEvent();
+			}
 
-				case ((std::uint32_t)SSS_MODEL::JIMENEZ_GAUSS):
+			if (sss_type_in_scene[(uint32_t)SSS_MODEL::JIMENEZ_GAUSS])
+			{
+				m_annot->BeginEvent(L"Jimenez Sum of Gaussians SSS");
 				{
+					rhi.m_context->PSSetShader(m_sssss_pixel_shader.m_shader, nullptr, 0);
 
+					//TODO: change m_final_... with other render target (m_final is SRGB)
 					ID3D11RenderTargetView* render_targets_gauss_sss_pass[4] = {
-						m_skin_rt[0],
+						m_skin_rt[5],
 						m_skin_rt[1],
 
-						m_final_render_target_view,
-						m_skin_rt[3]
+						m_skin_rt[3],
+						m_skin_rt[0]
 					};
+
+					//float clear_col[4] = { 0.0f,0.0f,0.0f,1.0f };
+					//rhi.m_context->ClearRenderTargetView(render_targets_gauss_sss_pass[3], clear_col);
 
 
 					float blend_factors[4][4] = {
@@ -1318,28 +1387,30 @@ namespace zorya
 
 					float gauss_standard_deviations[4] = { 0.08f, 0.2126f, 0.4694f, 1.3169f };
 
-					memcpy_s(mat.sss_prms.jimenez_samples_sss, sizeof(mat.sss_prms.jimenez_samples_sss), kernel.data(), kernel.size() * sizeof(dx::XMFLOAT4));
+					mat.mat_prms.sss_model_id = (uint32_t)SSS_MODEL::JIMENEZ_GAUSS;
 
 					for (int i = 0; i < 4; i++)
 					{
-						mat.sss_prms.mean_free_path_dist = gauss_standard_deviations[i];
+						mat.mat_prms.sd_gauss_jim = gauss_standard_deviations[i];
 
 						m_annot->BeginEvent(L"Horizontal Pass");
 						{
 							rhi.m_context->PSSetShaderResources(0, 1, null_srv);
+							rhi.m_context->PSSetShaderResources(2, 1, null_srv);
 							rhi.m_context->OMSetRenderTargets(2, &render_targets_gauss_sss_pass[0], nullptr);
 
-							m_sssss_pixel_shader.bind_constant_buffer(tmpFrameCB.constant_buffer_name, tmpFrameCB.buffer);
-							mat.sss_prms.dir = dx::XMFLOAT2(1.0f, 0.0f);
-							rhi.m_device.update_constant_buffer(m_hnd_frame_cb, Frame_Constant_Buff{ tmp_lights_cb, mat.sss_prms });
+							mat.mat_prms.dir = dx::XMFLOAT2(1.0f, 0.0f);
+							rhi.m_device.update_constant_buffer(m_hnd_object_cb, Object_Constant_Buff{ mat.mat_prms });
 
 							rhi.m_context->OMSetBlendState(NULL, 0, D3D11_DEFAULT_SAMPLE_MASK);
 
-							rhi.m_context->PSSetShaderResources(0, 1, &m_skin_srv[3]);
+
+							rhi.m_context->PSSetShaderResources(0, 1, i == 0 ? &m_skin_srv[3] : &m_skin_srv[0]);
 							rhi.m_context->PSSetShaderResources(1, 1, &m_gbuffer_srv[G_Buffer::ROUGH_MET]);
 							rhi.m_context->PSSetShaderResources(2, 1, &m_skin_srv[2]);
 							rhi.m_context->PSSetShaderResources(3, 1, &m_depth_srv);
 							rhi.m_context->PSSetShaderResources(4, 1, &m_gbuffer_srv[G_Buffer::ALBEDO]);
+							rhi.m_context->PSSetShaderResources(5, 1, null_srv);
 							rhi.m_context->Draw(4, 0);
 						}
 						m_annot->EndEvent();
@@ -1351,8 +1422,8 @@ namespace zorya
 							rhi.m_context->PSSetShaderResources(0, 1, null_srv);
 							rhi.m_context->OMSetRenderTargets(2, &render_targets_gauss_sss_pass[2], nullptr);
 
-							mat.sss_prms.dir = dx::XMFLOAT2(0.0f, 1.0f);
-							rhi.m_device.update_constant_buffer(m_hnd_frame_cb, Frame_Constant_Buff{ tmp_lights_cb, mat.sss_prms });
+							mat.mat_prms.dir = dx::XMFLOAT2(0.0f, 1.0f);
+							rhi.m_device.update_constant_buffer(m_hnd_object_cb, Object_Constant_Buff{mat.mat_prms});
 
 							rhi.m_context->OMSetBlendState(rhi.get_blend_state(1), blend_factors[i], D3D11_DEFAULT_SAMPLE_MASK);
 
@@ -1364,51 +1435,41 @@ namespace zorya
 					}
 
 					rhi.m_context->OMSetBlendState(NULL, 0, D3D11_DEFAULT_SAMPLE_MASK);
-
-					break;
 				}
-
-				default:
-				{
-					rhi.m_context->PSSetShaderResources(0, 1, null_srv);
-					ID3D11RenderTargetView* passRenderTargetViews[] = { m_final_render_target_view, m_skin_rt[0] };
-
-					rhi.m_context->OMSetRenderTargets(2, passRenderTargetViews, nullptr);
-					Constant_Buffer& tmpFrameCB = rhi.m_device.m_constant_buffers.at(m_hnd_frame_cb.index);
-					m_sssss_pixel_shader.bind_constant_buffer(tmpFrameCB.constant_buffer_name, tmpFrameCB.buffer);
-					rhi.m_device.update_constant_buffer(m_hnd_frame_cb, Frame_Constant_Buff{ tmp_lights_cb, mat.sss_prms });
-
-					rhi.m_context->PSSetShaderResources(0, 1, &m_skin_srv[3]);
-					rhi.m_context->PSSetShaderResources(1, 1, &m_gbuffer_srv[G_Buffer::ROUGH_MET]);
-					rhi.m_context->PSSetShaderResources(2, 1, &m_skin_srv[2]);
-					rhi.m_context->PSSetShaderResources(3, 1, &m_depth_srv);
-					rhi.m_context->PSSetShaderResources(4, 1, &m_gbuffer_srv[G_Buffer::ALBEDO]);
-					rhi.m_context->Draw(4, 0);
-
-					break;
-				}
-
-				}
-
-
-				//annot->BeginEvent(L"mips");
-				//{
-				//    rhi.context->GenerateMips(skinSRV[3]);
-				//}
-				//annot->EndEvent();
-
+				m_annot->EndEvent();
 			}
-
 		}
 		m_annot->EndEvent();
 
-		//rhi.context->OMSetRenderTargets(1, rhi.renderTargetView.GetAddressOf(), nullptr);
-		//rhi.context->PSSetShader(shaders.pixelShaders.at((std::uint8_t)PShaderID::PRESENT), nullptr, 0);
-		//rhi.context->PSSetShaderResources(0, 1, &GBufferSRV[GBuffer::ALBEDO]);
-		//rhi.context->Draw(4, 0);
+		m_annot->BeginEvent(L"Final Composit");
+		{
+			rhi.m_context->PSSetShader(m_sssss_pixel_shader.m_shader, nullptr, 0);
+			rhi.m_context->PSSetShaderResources(0, 1, null_srv);
+			ID3D11RenderTargetView* passRenderTargetViews[] = { m_final_render_target_view, m_skin_rt[4] };
+
+			rhi.m_context->OMSetRenderTargets(2, passRenderTargetViews, nullptr);
+
+			Constant_Buffer& tmpObjCB = rhi.m_device.m_constant_buffers.at(m_hnd_object_cb.index);
+			m_sssss_pixel_shader.bind_constant_buffer(tmpObjCB.constant_buffer_name, tmpObjCB.buffer);
+			mat.mat_prms.sss_model_id = 0;
+			rhi.m_device.update_constant_buffer(m_hnd_object_cb, Object_Constant_Buff{ mat.mat_prms });
+
+			rhi.m_context->PSSetShaderResources(0, 1, &m_skin_srv[3]);
+			rhi.m_context->PSSetShaderResources(1, 1, &m_gbuffer_srv[G_Buffer::ROUGH_MET]);
+			rhi.m_context->PSSetShaderResources(2, 1, &m_skin_srv[2]);
+			rhi.m_context->PSSetShaderResources(3, 1, &m_depth_srv);
+			rhi.m_context->PSSetShaderResources(4, 1, &m_gbuffer_srv[G_Buffer::ALBEDO]);
+			rhi.m_context->PSSetShaderResources(5, 1, &m_skin_srv[0]);
+
+			D3D11_SHADER_RESOURCE_VIEW_DESC tmpDesc;
+			m_skin_srv[0]->GetDesc(&tmpDesc);
+
+			rhi.m_context->Draw(4, 0);
+		}
+		m_annot->EndEvent();
 
 
-		rhi.m_context->PSSetShaderResources(0, 8, &null_srv[0]);
+		rhi.m_context->PSSetShaderResources(0, 9, &null_srv[0]);
 
 		rhi.m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	}

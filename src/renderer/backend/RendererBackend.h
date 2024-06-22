@@ -98,7 +98,7 @@ namespace zorya
 		struct Frame_Constant_Buff
 		{
 			Scene_Lights m_scene_lights;
-			Subsurface_Scattering_Params sss_params;
+			Subsurface_Scattering_Params sss_params[64];
 		};
 
 		struct Object_Constant_Buff
@@ -144,9 +144,9 @@ namespace zorya
 		ID3D11ShaderResourceView* m_shadow_cube_map_srv;
 		ID3D11DepthStencilView* m_shadow_cube_map_dsv[6 * 2];
 
-		ID3D11Texture2D* m_skin_maps[5];
-		ID3D11RenderTargetView* m_skin_rt[5];
-		ID3D11ShaderResourceView* m_skin_srv[5];
+		ID3D11Texture2D* m_skin_maps[6];
+		ID3D11RenderTargetView* m_skin_rt[6];
+		ID3D11ShaderResourceView* m_skin_srv[6];
 
 		ID3D11ShaderResourceView* m_cubemap_view; //skybox view
 

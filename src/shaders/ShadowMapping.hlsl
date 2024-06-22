@@ -10,9 +10,11 @@
 static const float revPi = 1 / 3.14159f;
 static const float gamma = 1.0f / 2.2f;
 static const float lightDec = -(1 / 16.0f);
-static const float texScale = 1 / 2048.0f;
-static const float SCREEN_WIDTH = 1280.0f;
-static const float SCREEN_HEIGHT = 720.0f;
+static const float texScale = 1 / 4096.0f;
+//static const float SCREEN_WIDTH = 1280.0f;
+//static const float SCREEN_HEIGHT = 720.0f;
+static const float SCREEN_WIDTH = 1920.0f;
+static const float SCREEN_HEIGHT = 1080.0f;
 
 struct PS_OUT
 {
@@ -23,16 +25,16 @@ struct PS_OUT
 
 cbuffer light : register(b0)
 {
-    DirectionalLight dirLight;
+    Directional_Light dirLight;
     
     int numPLights;
     int numSpotLights;
     int2 pad;
     
-    PointLight pointLights[16];
+    Point_Light pointLights[16];
     float4 posPointLightViewSpace[16];
     
-    SpotLight spotLights[16];
+    Spot_Light spotLights[16];
     float4 posSpotLightViewSpace[16];
     float4 dirSpotLightViewSpace[16];
 };
@@ -56,15 +58,17 @@ cbuffer camMat : register(b5)
 }
 
 Texture2D diffuse : register(t0);
-Texture2D specular : register(t2);
 Texture2D gbuffer_normal : register(t1);
+Texture2D specular : register(t2);
 Texture2D gbuffer_depth : register(t3);
-Texture2D ambient : register(t7);
 
 Texture2D ShadowMap : register(t4);
 Texture2DArray ShadowCubeMap : register(t5);
 //TextureCube ShadowCubeMap : register(t5);
 Texture2D SpotShadowMap : register(t6);
+
+Texture2D gbuffer_albedo : register(t7);
+Texture2D transmitted_irrad : register(t8);
 
 SamplerState texSampler : register(s0);
 
@@ -78,9 +82,10 @@ PS_OUT ps(float4 posFragQuad : SV_POSITION) : SV_Target
 {
     float2 uvCoord = float2(posFragQuad.x / SCREEN_WIDTH, posFragQuad.y / SCREEN_HEIGHT);
     
-    float4 diffuseCol = pow(diffuse.Sample(texSampler, uvCoord), (1.0f / gamma));
-    float4 ambCol = pow(ambient.Sample(texSampler, uvCoord), (1.0f / gamma));
-    float4 specCol = pow(specular.Sample(texSampler, uvCoord), (1.0f / gamma));
+    float4 diffuseCol = diffuse.Sample(texSampler, uvCoord);
+    float4 ambCol = float4(0.03f, 0.03f, 0.03f, 1.0f); // * gbuffer_albedo.Sample(texSampler, uvCoord);
+    float3 trans_irrad = transmitted_irrad.Sample(texSampler, uvCoord).rgb;
+    float4 specCol = specular.Sample(texSampler, uvCoord);
     float sampledDepth = gbuffer_depth.Sample(texSampler, uvCoord);
     float3 normal = gbuffer_normal.Sample(texSampler, uvCoord).xyz * 2.0f - 1.0f;
     
@@ -113,8 +118,8 @@ PS_OUT ps(float4 posFragQuad : SV_POSITION) : SV_Target
     }
     
     PS_OUT ps_out;
-    ps_out.diffuseShadowed = pow(float4(diffuseCol.rgb * (totalArrivingLight * rcp(totalNumLights)) + ambCol.rgb, 1.0f), gamma);
-    ps_out.specularShadowed = pow(float4(specCol.rgb * (totalArrivingLight * rcp(totalNumLights)), 1.0f), gamma);
+    ps_out.diffuseShadowed = float4(diffuseCol.rgb * (totalArrivingLight * rcp(totalNumLights)) + ambCol.rgb + trans_irrad, 1.0f);
+    ps_out.specularShadowed = float4(specCol.rgb * (totalArrivingLight * rcp(totalNumLights)), 1.0f);
     
     return ps_out;
 }
@@ -137,7 +142,7 @@ float computeShadowing(float4 posWorldSpace, float bias, float NdotL)
         {
             float2 offset = float2(i, j) * texScale;
             float sampledDepth = ShadowMap.Sample(texSampler, shadowMapUV + offset).r;
-            shadowingSampled += sampledDepth < currentDepth - correctedBias ? lightDec : 0.0f;
+            shadowingSampled += sampledDepth > currentDepth + correctedBias ? lightDec : 0.0f;
         }
     }
     
@@ -154,7 +159,7 @@ float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragV
     
     float shadowingSampled = 1.0f;
     
-    if (cosAngle > spotLights[lightIndex].cosCutoffAngle)
+    if (cosAngle > spotLights[lightIndex].cos_cutoff_angle)
     {
         float4 posLightSpace = mul(posWorldSpace, mul(spotLightViewMat[lightIndex], spotLightProjMat[lightIndex]));
         float3 ndcPosLightSpace = (posLightSpace.xyz / posLightSpace.w);

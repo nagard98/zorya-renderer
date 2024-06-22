@@ -373,9 +373,9 @@ namespace zorya
         local_transform.scal.z /= unit_scale_factor;
 
         //TODO: remove; just  for development
-        //localTransf.scal.x = 10.0f;
-        //localTransf.scal.y = 10.0f;
-        //localTransf.scal.z = 10.0f;
+        local_transform.scal.x = 10.0f;
+        local_transform.scal.y = 10.0f;
+        local_transform.scal.z = 10.0f;
         local_transform.pos.y = -2.2f;
 
         size_t num_char_converted = 0;
@@ -409,10 +409,10 @@ namespace zorya
             {
 
                 material_params.sss_model.mean_free_path_distance = 0.01f;
-                material_params.sss_model.mean_free_path_color = dx::XMFLOAT4(3.68f, 1.37f, 0.68f, 1.0f);
-                material_params.sss_model.subsurface_albedo = dx::XMFLOAT4(0.436f, 0.015688f, 0.131f, 1.0f);
+                material_params.sss_model.mean_free_path_color = dx::XMFLOAT4(3.68f, 1.37f, 0.68f, 0.0f);
+                material_params.sss_model.subsurface_albedo = dx::XMFLOAT4(0.436f, 0.015688f, 0.131f, 0.0f);
                 material_params.sss_model.scale = 1.0f;
-                material_params.sss_model.num_samples = 4;
+                material_params.sss_model.num_samples = 10;
                 material_params.selected_sss_model = SSS_MODEL::NONE;
 
                 wchar_t tmp_string[128];
@@ -447,7 +447,7 @@ namespace zorya
                 }
                 //wcscpy(matDesc.albedoPath, L"./shaders/assets/Human/Textures/Head/JPG/Colour_8k.jpg");//TODO: REMOVE AFTER TESTING
                 //wcscpy(matDesc.albedoPath, L"./shaders/assets/Human/Textures/Head/Bake/Bake_4096_point.png");
-                //wcscpy(matDesc.albedoPath, L"");
+                //wcscpy(material_params.albedo_path, L"");
 
                 aiString normal_tex_name;
                 count = material->GetTextureCount(aiTextureType_NORMALS);
@@ -464,12 +464,12 @@ namespace zorya
                         normal_tex_path.Append("/");
                         normal_tex_path.Append(normal_tex_name.C_Str());
                         mbstowcs_s(&num_char_converted, tmp_string, normal_tex_path.C_Str(), 128);
-                        //wcscpy(matDesc.normalPath, tmpString);
+                        wcscpy(material_params.normal_path, tmp_string);
                         // L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg";
                     }
                 }
                 //wcscpy(matDesc.normalPath, L"./shaders/assets/Human/Textures/Head/JPG/Normal Map_SubDivision_1.jpg");//TODO: REMOVE AFTER TESTING
-                //wcscpy(matDesc.normalPath, L"");
+                //wcscpy(material_params.normal_path, L"");
 
                 aiColor4D color;
                 success = material->Get(AI_MATKEY_COLOR_DIFFUSE, color);

@@ -36,8 +36,11 @@ cbuffer matPrms : register(b1)
     float cb_roughness;
     float cb_metallic;   
     
+    float2 dir;
     int sssModelId;
-    int pad;
+    int sssModelArrIndex;
+    float pad;
+    float pad2;
 }
 
 #define MAX_SHININESS 64
@@ -100,6 +103,9 @@ PS_OUTPUT ps(PS_INPUT input)
     {
         output.albedo *= ObjTexture.Sample(ObjSamplerState, input.texCoord);
     }
+    
+    int subsurfaceParamsPack = ((sssModelArrIndex & 63) << 2) + (sssModelId & 3);
+    output.albedo.a = (float)subsurfaceParamsPack / 255.0f;
     
     return output;
 }

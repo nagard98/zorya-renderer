@@ -436,13 +436,19 @@ namespace zorya
 					{
 					case SSS_MODEL::JIMENEZ_GAUSS:
 					{
-						//ImGui::DragFloat("Mean Free Path Distance", &mat_desc_2.sss_model.mean_free_path_distance, 0.001f, 0.001f, 1000.0f, "%.4f");
-						//if (ImGui::IsItemEdited())
-						//{
-						//	submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						//}
+						ImGui::DragFloat("Correction", &mat_desc_2.sss_model.mean_free_path_distance, 0.001f, 0.001f, 1000.0f, "%.4f");
+						if (ImGui::IsItemEdited())
+						{
+							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
+						}
+						
+						ImGui::DragFloat("Pixel Size", &mat_desc_2.sss_model.subsurface_albedo.w, 0.001f, 0.001f, 10.0f, "%.4f");
+						if (ImGui::IsItemEdited())
+						{
+							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
+						}
 
-						ImGui::DragFloat("Scale", &mat_desc_2.sss_model.scale, 0.001f, 0.001f, 1000.0f, "%.4f");
+						ImGui::DragFloat("sss level", &mat_desc_2.sss_model.scale, 0.001f, 0.001f, 1000.0f, "%.4f");
 						if (ImGui::IsItemEdited())
 						{
 							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
@@ -452,13 +458,13 @@ namespace zorya
 					}
 					case SSS_MODEL::JIMENEZ_SEPARABLE:
 					{
-						ImGui::DragFloat("Mean Free Path Distance", &mat_desc_2.sss_model.mean_free_path_distance, 0.001f, 0.001f, 1000.0f, "%.4f");
+						ImGui::DragFloat("SSS Width", &mat_desc_2.sss_model.mean_free_path_distance, 0.0001f, 0.0001f, 10.0f, "%.4f");
 						if (ImGui::IsItemEdited())
 						{
 							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
 						}
 
-						ImGui::DragFloat("Scale", &mat_desc_2.sss_model.scale, 0.001f, 0.001f, 1000.0f, "%.4f");
+						ImGui::DragFloat("Scale Width", &mat_desc_2.sss_model.scale, 0.001f, 0.001f, 1000.0f, "%.4f");
 						if (ImGui::IsItemEdited())
 						{
 							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
@@ -488,10 +494,29 @@ namespace zorya
 							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
 						}
 						int num_samples = mat_desc_2.sss_model.num_samples;
-						ImGui::SliderInt("Num Samples", &num_samples, 4, 64);
+						ImGui::SliderInt("Num Samples", &num_samples, 1, 32);
 						if (ImGui::IsItemEdited())
 						{
 							mat_desc_2.sss_model.num_samples = num_samples;
+							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
+						}
+						int num_supersamples = mat_desc_2.sss_model.num_supersamples;
+						ImGui::SliderInt("Num Super Samples", &num_supersamples, 0, 32);
+						if (ImGui::IsItemEdited())
+						{
+							mat_desc_2.sss_model.num_supersamples = num_supersamples;
+							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
+						}
+						bool is_contrast_view = (bool)mat_desc_2.sss_model.subsurface_albedo.w;
+						ImGui::Checkbox("Enable Contrast View", &is_contrast_view);
+						if (ImGui::IsItemEdited())
+						{
+							mat_desc_2.sss_model.subsurface_albedo.w = (float)is_contrast_view;
+							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
+						}
+						ImGui::DragFloat("Contrast Threshold Offset", &mat_desc_2.sss_model.mean_free_path_color.w, 0.001f, -0.5f, 0.5f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+						if (ImGui::IsItemEdited())
+						{
 							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
 						}
 						break;

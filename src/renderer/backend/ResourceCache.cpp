@@ -73,7 +73,7 @@ namespace zorya
 
 		if ((hnd_material_cache.is_cached & UPDATE_MAT_MAPS))
 		{
-			rhi.load_texture(standard_material_desc.albedo_path, m->albedo_map, false);
+			rhi.load_texture(standard_material_desc.albedo_path, m->albedo_map, true);
 			rhi.load_texture(standard_material_desc.normal_path, m->normal_map, false);
 			if ((standard_material_desc.union_tags & METALNESS_IS_MAP) == METALNESS_IS_MAP)
 			{
@@ -105,6 +105,7 @@ namespace zorya
 				m->sss_prms.mean_free_path_dist = standard_material_desc.sss_model.mean_free_path_distance; //from cm to m
 				m->sss_prms.scale = fmax(0.0f, standard_material_desc.sss_model.scale);
 				m->sss_prms.num_samples = max(1, standard_material_desc.sss_model.num_samples);
+				m->sss_prms.num_supersamples = max(1, standard_material_desc.sss_model.num_supersamples);
 
 				srand(42);
 
@@ -112,13 +113,17 @@ namespace zorya
 				std::mt19937 gen(6.0f);
 				std::uniform_real_distribution<> dis(0, 1.0);//uniform distribution between 0 and 1
 
-				for (int i = 0; i < m->sss_prms.num_samples; i++)
+				OutputDebugString("Randommly Generated Numbers Golubev:\n");
+				for (int i = 0; i < 64; i++)
 				{
 					m->sss_prms.samples[i] = dis(gen);
-					OutputDebugString((std::to_string(m->sss_prms.samples[i]).append(", ")).c_str());
+					OutputDebugString((std::to_string(m->sss_prms.samples[i]).append(" ")).c_str());
 				}
+				OutputDebugString("\n");
 
-				std::sort(m->sss_prms.samples, m->sss_prms.samples + (m->sss_prms.num_samples - 1)); //(int)(max(0.0f, m->sssPrms.scale * 4.0f)));
+				//int to_next_float4 = 4 - (m->sss_prms.num_samples % 4);
+				std::sort(m->sss_prms.samples, m->sss_prms.samples + (m->sss_prms.num_samples)); //(int)(max(0.0f, m->sssPrms.scale * 4.0f)));
+				std::sort(m->sss_prms.samples + 32, m->sss_prms.samples + 32 + m->sss_prms.num_supersamples);
 				//std::sort(m->sssPrms.samples + (int)(max(0.0f, m->sssPrms.scale * 4.0f)), m->sssPrms.samples + (int)(max(0.0f, m->sssPrms.scale * 4.0f)) + (int)(std::trunc(max(0.0f, standardMaterialDesc.sssModel.subsurfaceAlbedo.y) * 255.0f) * 4.0f));
 
 				//for (int i = 0; i < 64; i++) {
@@ -131,6 +136,7 @@ namespace zorya
 			{
 				m->sss_prms.scale = fmax(0.0f, standard_material_desc.sss_model.scale);
 				m->sss_prms.mean_free_path_dist = standard_material_desc.sss_model.mean_free_path_distance; //from cm to m
+				m->sss_prms.subsurface_albedo = standard_material_desc.sss_model.subsurface_albedo;
 				break;
 			}
 			case SSS_MODEL::JIMENEZ_SEPARABLE:
@@ -140,9 +146,14 @@ namespace zorya
 				break;
 			}
 			default:
-				OutputDebugString("ERROR :: ResourceCache.cpp :: Specified invalid sss model");
-				break;
+				if (standard_material_desc.selected_sss_model != SSS_MODEL::NONE)
+				{
+					OutputDebugString("ERROR :: ResourceCache.cpp :: Specified invalid sss model\n");
+				}
 
+				m->mat_prms.sss_model_id = 0;
+
+				break;
 			}
 
 			if ((standard_material_desc.union_tags & METALNESS_IS_MAP) == 0)

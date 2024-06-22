@@ -42,7 +42,7 @@ namespace zorya
 		HRESULT init(HWND window_handle, RHI_State initial_state = RHI_DEFAULT_STATE());
 
 		void set_state(RHI_State new_state);
-		RHI_RESULT load_texture(const wchar_t* path, Shader_Texture2D& shader_texture, bool convert_to_linear = true, size_t max_size = 0);
+		RHI_RESULT load_texture(const wchar_t* path, Shader_Texture2D& shader_texture, bool is_srgb, size_t max_size = 0);
 
 		HRESULT resize_window(uint32_t width, uint32_t height);
 

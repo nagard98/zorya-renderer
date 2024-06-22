@@ -37,6 +37,8 @@ namespace zorya
 
 		PROPERTY()
 			uint32_t num_samples;
+
+		uint32_t num_supersamples;
 	};
 
 	struct Multi_Option
@@ -113,7 +115,8 @@ namespace zorya
 		float scale;
 		dx::XMFLOAT2 dir;
 		uint32_t num_samples;
-		uint32_t pad[3];
+		uint32_t num_supersamples;
+		uint32_t pad[2];
 
 		dx::XMFLOAT4 jimenez_samples_sss[15];
 		//dx::XMFLOAT4 kernel[16];
@@ -131,8 +134,12 @@ namespace zorya
 		float roughness;
 		float metalness;
 
+		dx::XMFLOAT2 dir;
 		uint32_t sss_model_id;
-		uint8_t pad[4];
+		uint32_t sss_model_arr_index;
+
+		float sd_gauss_jim;
+		float pad;
 	};
 
 

@@ -34,7 +34,7 @@ namespace zorya
 		m_scene_id = dockspace_ID;
 		ImGuiID left_id = ImGui::DockBuilderSplitNode(m_scene_id, ImGuiDir_Left, 0.15f, nullptr, &m_scene_id);
 		ImGuiID right_id = ImGui::DockBuilderSplitNode(m_scene_id, ImGuiDir_Right, 0.20f, nullptr, &m_scene_id);
-		ImGuiID bottom_id = ImGui::DockBuilderSplitNode(m_scene_id, ImGuiDir_Down, 0.30f, nullptr, &m_scene_id);
+		ImGuiID bottom_id = ImGui::DockBuilderSplitNode(m_scene_id, ImGuiDir_Down, 0.22f, nullptr, &m_scene_id);
 
 		ImGui::DockBuilderDockWindow("Hierarchy", left_id);
 		ImGui::DockBuilderDockWindow("Entity Outline", right_id);

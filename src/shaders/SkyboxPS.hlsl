@@ -16,7 +16,8 @@ PS_OUTPUT ps(PS_INPUT input)
 {
     PS_OUTPUT output;
     
-    output.col = cubemap.Sample(cubemapSampler, input.texCoord);
+    output.col = pow(cubemap.Sample(cubemapSampler, input.texCoord), 2.2f);
+    output.col = float4(0.0f,0.0f,0.0f,1.0f);
     
     return output;
 }

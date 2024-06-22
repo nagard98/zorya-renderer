@@ -392,7 +392,7 @@ namespace zorya
 
 	}
 
-	RHI_RESULT Render_Hardware_Interface::load_texture(const wchar_t* path, Shader_Texture2D& shader_texture, bool convert_to_linear, size_t max_size)
+	RHI_RESULT Render_Hardware_Interface::load_texture(const wchar_t* path, Shader_Texture2D& shader_texture, bool is_srgb = true, size_t max_size)
 	{
 		if (shader_texture.resource_view != nullptr)
 		{
@@ -414,7 +414,7 @@ namespace zorya
 			max_size,
 			D3D11_USAGE_DEFAULT,
 			D3D11_BIND_SHADER_RESOURCE,
-			0, 0, convert_to_linear ? dx::WIC_LOADER_SRGB_DEFAULT : dx::WIC_LOADER_IGNORE_SRGB, NULL, &shader_texture.resource_view);
+			0, 0, is_srgb ? dx::WIC_LOADER_SRGB_DEFAULT : dx::WIC_LOADER_IGNORE_SRGB, NULL, &shader_texture.resource_view);
 
 		return hRes == S_OK ? RHI_OK : RHI_ERR;
 	}

@@ -37,7 +37,7 @@ add_custom_target(zorya_preprocessor
     COMMENT "Running Preprocessor"
 )
 
-add_dependencies(derma zorya_preprocessor)
+#add_dependencies(derma zorya_preprocessor)
 
 # Shader compilation
 set(HLSL_SHADER_FILES "src/shaders/DepthPS.hlsl" "src/shaders/DepthVS.hlsl" "src/shaders/GBufferPS.hlsl"

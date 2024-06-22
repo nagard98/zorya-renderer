@@ -24,10 +24,39 @@
           "name": "CMAKE_EXPORT_COMPILE_COMMANDS",
           "value": "True",
           "type": "BOOL"
+        },
+        {
+          "name": "ASSIMP_BUILD_TESTS",
+          "value": "False",
+          "type": "BOOL"
         }
       ],
       "cmakeExecutable": "C:/Program Files/CMake/bin/cmake.exe",
       "intelliSenseMode": "windows-clang-x64"
+    },
+    {
+      "name": "x64-Clang-Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "buildRoot": "${projectDir}\\build\\${name}",
+      "installRoot": "${projectDir}\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "clang_cl_x64_x64" ],
+      "cmakeExecutable": "C:/Program Files/CMake/bin/cmake.exe",
+      "variables": [
+        {
+          "name": "ASSIMP_WARNINGS_AS_ERRORS",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "BUILD_SHARED_LIBS",
+          "value": "False",
+          "type": "BOOL"
+        }
+      ]
     }
   ]
 }
