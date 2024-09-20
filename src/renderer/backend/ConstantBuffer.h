@@ -11,12 +11,6 @@ namespace zorya
 		ID3D11Buffer* buffer;
 		const char* constant_buffer_name;
 	};
-
-	template <typename T>
-	struct constant_buffer_handle
-	{
-		uint64_t index;
-	};
-
 }
+
 #endif

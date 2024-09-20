@@ -11,3 +11,9 @@
 [submodule "external/imgui-filebrowser"]
 	path = external/imgui-filebrowser
 	url = https://github.com/AirGuanZ/imgui-filebrowser.git
+[submodule "libyaml"]
+	path = external/libyaml
+	url = https://github.com/yaml/libyaml.git
+[submodule ".\\external\\xxHash"]
+	path = .\\external\\xxHash
+	url = https://github.com/Cyan4973/xxHash.git

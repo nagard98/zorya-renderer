@@ -5,38 +5,36 @@
 #include <string>
 #include <cstdint>
 #include <d3d11.h>
+#include <vector>
 
 #include "Shader.h"
 #include "reflection/ReflectionAnnotation.h"
+#include "Asset.h"
+#include "Texture2D.h"
+#include "renderer/frontend/FrontendHandles.h"
+#include "renderer/backend/rhi/RenderDeviceHandles.h"
 
 namespace zorya
 {
 	namespace dx = DirectX;
 
-	enum class SSS_MODEL : uint32_t
-	{
-		NONE,
-		JIMENEZ_GAUSS,
-		JIMENEZ_SEPARABLE,
-		GOLUBEV
-	};
 
 	struct Jimenez_SSS_Model
 	{
 		PROPERTY()
-			dx::XMFLOAT4 subsurface_albedo;
+		dx::XMFLOAT4 subsurface_albedo;
 
 		PROPERTY()
-			dx::XMFLOAT4 mean_free_path_color;
+		dx::XMFLOAT4 mean_free_path_color;
 
 		PROPERTY()
-			float mean_free_path_distance;
+		float mean_free_path_distance;
 
 		PROPERTY()
-			float scale;
+		float scale;
 
 		PROPERTY()
-			uint32_t num_samples;
+		uint32_t num_samples;
 
 		uint32_t num_supersamples;
 	};
@@ -92,7 +90,7 @@ namespace zorya
 		PROPERTY()
 			wchar_t normal_path[128];
 
-		SSS_MODEL selected_sss_model;
+		//SSS_MODEL selected_sss_model;
 
 		PROPERTY()
 			Jimenez_SSS_Model sss_model;
@@ -106,21 +104,6 @@ namespace zorya
 		ID3D11Texture2D* resource;
 	};
 
-	struct Subsurface_Scattering_Params
-	{
-		float samples[64];
-		dx::XMFLOAT4 subsurface_albedo;
-		dx::XMFLOAT4 mean_free_path_color;
-		float mean_free_path_dist;
-		float scale;
-		dx::XMFLOAT2 dir;
-		uint32_t num_samples;
-		uint32_t num_supersamples;
-		uint32_t pad[2];
-
-		dx::XMFLOAT4 jimenez_samples_sss[15];
-		//dx::XMFLOAT4 kernel[16];
-	};
 
 	struct Material_Params
 	{
@@ -143,18 +126,54 @@ namespace zorya
 	};
 
 
-	struct Material
+	//struct Material3
+	//{
+	//	Pixel_Shader model;
+
+	//	Shader_Texture2D* albedo_map;
+	//	Shader_Texture2D* metalness_map;
+	//	Shader_Texture2D* normal_map;
+	//	Shader_Texture2D* smoothness_map;
+
+	//	Subsurface_Scattering_Params sss_prms;
+	//	Material_Params mat_prms;
+	//};
+
+	enum Shading_Model : u32
 	{
-		Pixel_Shader model;
-
-		Shader_Texture2D albedo_map;
-		Shader_Texture2D metalness_map;
-		Shader_Texture2D normal_map;
-		Shader_Texture2D smoothness_map;
-
-		Subsurface_Scattering_Params sss_prms;
-		Material_Params mat_prms;
+		DEFAULT_LIT,
+		SUBSURFACE_GOLUBEV,
+		NUM_SHADING_MODELS
 	};
+
+	static const char* shading_model_names = {"Default Lit\0Subsurface Golubev\0"};
+
+	struct Material : public Asset
+	{
+		Material() : Asset() {};
+		
+		static Material* create(const Asset_Import_Config* import_config);
+
+		Pixel_Shader shader;
+		std::vector<Shader_Resource> resources;
+		uint32_t flags;
+
+		Material_Cache_Handle_t material_hnd; //shouldn't be here
+		//PSO_Handle pso_hnd;
+		Shading_Model shading_model;
+
+		bool is_sss_enabled{ false };
+		Diffusion_Profile_Handle diff_prof_hnd{ 0 };
+
+		void load_asset(const Asset_Import_Config* asset_imp_conf) override;
+
+		int serialize();
+		int deserialize();
+
+		std::vector<Shader_Resource*> get_material_editor_resources();
+	};
+
+	void update_standard_internals(Material& material);
 
 }
 #endif

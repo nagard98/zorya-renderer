@@ -21,6 +21,7 @@ namespace zorya
 		XMFLOAT2,
 		XMFLOAT3,
 		XMFLOAT4,
+		BOOL,
 		WCHAR,
 		STRUCT
 	};
@@ -37,6 +38,7 @@ namespace zorya
 		"XMFLOAT2",
 		"XMFLOAT3",
 		"XMFLOAT4",
+		"BOOL",
 		"WCHAR",
 		"STRUCT"
 	};
@@ -52,6 +54,7 @@ namespace zorya
 		"dx::XMFLOAT2",
 		"dx::XMFLOAT3",
 		"dx::XMFLOAT4",
+		"bool",
 		"wchar_t",
 		"STRUCT"
 	};

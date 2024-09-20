@@ -40,4 +40,14 @@ namespace zorya
 
 		return dx::XMMatrixMultiply(a, matrix_transform_b);
 	}
+
+	Transform_t build_transform(aiMatrix4x4 assimp_transform)
+	{
+		aiVector3D scal;
+		aiVector3D pos;
+		aiVector3D rot;
+		assimp_transform.Decompose(scal, rot, pos);
+
+		return Transform_t{ dx::XMFLOAT3{pos.x, pos.y, pos.z}, dx::XMFLOAT3{rot.x, rot.y, rot.z}, dx::XMFLOAT3{scal.x, scal.y, scal.z} };
+	}
 }

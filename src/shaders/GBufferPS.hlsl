@@ -7,6 +7,7 @@
 #define CUBEMAP_FACE_POSITIVE_Z 4.0f
 #define CUBEMAP_FACE_NEGATIVE_Z 5.0f
 
+
 struct PS_INPUT
 {
     float4 fPos : SV_POSITION;
@@ -17,28 +18,29 @@ struct PS_INPUT
 
 struct PS_OUTPUT
 {
-    float4 albedo : SV_TARGET0;
-    float4 normal : SV_TARGET1;
-    float4 roughMet: SV_TARGET2;
-    float4 vertNormal : SV_TARGET3;
+    float4 indirect_light : SV_TARGET0;
+    float4 albedo : SV_TARGET1;
+    float4 normal : SV_TARGET2;
+    float4 roughMet: SV_TARGET3;
+    float4 vertNormal : SV_TARGET4;
+    float4 translucent : SV_TARGET5;
 };
 
-
-cbuffer matPrms : register(b1)
+cbuffer _matPrms : register(b1)
 {
-    float4 baseColor;
+    float4 _baseColor = float4(0.9f, 0.9f, 0.9f, 1.0f);
 
-    bool hasAlbedoMap;
-    bool hasMetalnessMap;
-    bool hasNormalMap;
-    bool hasSmoothnessMap;
+    bool hasAlbedoMap = false;
+    bool hasMetalnessMap = false;
+    bool hasNormalMap = false;
+    bool hasSmoothnessMap = false;
     
-    float cb_roughness;
-    float cb_metallic;   
+    float _cb_roughness = 0.5f;
+    float _cb_metallic = 0.0f;   
     
-    float2 dir;
-    int sssModelId;
-    int sssModelArrIndex;
+    float2 dir = float2(1.0f, 0.0f);
+    uint _sssModelId;
+    uint _sssModelArrIndex;
     float pad;
     float pad2;
 }
@@ -51,18 +53,13 @@ static const float revPi = 1 / 3.14159f;
 static const float gamma = 1.0f / 2.2f;
 static const float lightDec = -(1 / 16.0f);
 static const float texScale = 1 / 2048.0f;
+static const float ambient_factor = 0.05f;
 
-Texture2D ObjTexture : register(t0);
-Texture2D NormalMap : register(t1);
-Texture2D MetalnessMap : register(t2);
-Texture2D SmoothnessMap : register(t3);
-
-Texture2D ShadowMap : register(t4);
-Texture2DArray ShadowCubeMap : register(t5);
-//TextureCube ShadowCubeMap : register(t5);
-Texture2D SpotShadowMap : register(t6);
-
-Texture2D ThicknessMap : register(t7);
+Texture2D _ObjTexture : register(t0);
+Texture2D _NormalMap : register(t1);
+Texture2D _MetalnessMap : register(t2);
+Texture2D _SmoothnessMap : register(t3);
+Texture2D ThicknessMap : register(t4);
 
 SamplerState ObjSamplerState : register(s0);
 
@@ -74,7 +71,7 @@ PS_OUTPUT ps(PS_INPUT input)
 
     if (hasNormalMap == true)
     {
-        input.fNormal = normalize(NormalMap.Sample(ObjSamplerState, input.texCoord).rgb * 2.0f - 1.0f);
+        input.fNormal = normalize(_NormalMap.Sample(ObjSamplerState, input.texCoord).rgb * 2.0f - 1.0f);
         output.normal = float4(mul(input.tbn, input.fNormal), 0.0f);
     }
     else
@@ -83,29 +80,32 @@ PS_OUTPUT ps(PS_INPUT input)
     }
     output.normal = output.normal * 0.5f + 0.5f;
     
-    output.roughMet.g = cb_metallic;
+    output.roughMet.g = _cb_metallic;
+    
     if (hasMetalnessMap == true)
     {
-        output.roughMet.g =  MetalnessMap.Sample(ObjSamplerState, input.texCoord).r;
+        output.roughMet.g =  _MetalnessMap.Sample(ObjSamplerState, input.texCoord).r;
     }
     
     
-    output.roughMet.r = cb_roughness;
+    output.roughMet.r = _cb_roughness;
     if (hasSmoothnessMap == true)
     {
-        output.roughMet.r = SmoothnessMap.Sample(ObjSamplerState, input.texCoord).g;
+        output.roughMet.r = _SmoothnessMap.Sample(ObjSamplerState, input.texCoord).g;
     }    
     
     output.roughMet.b = ThicknessMap.Sample(ObjSamplerState, input.texCoord).r;
     
-    output.albedo = baseColor;
+    output.albedo = _baseColor;
     if (hasAlbedoMap == true)
     {
-        output.albedo *= ObjTexture.Sample(ObjSamplerState, input.texCoord);
+        output.albedo *= _ObjTexture.Sample(ObjSamplerState, input.texCoord);
     }
     
-    int subsurfaceParamsPack = ((sssModelArrIndex & 63) << 2) + (sssModelId & 3);
+    int subsurfaceParamsPack = ((_sssModelArrIndex & 63)) + ((_sssModelId & 3) << 6);
     output.albedo.a = (float)subsurfaceParamsPack / 255.0f;
+    
+    output.indirect_light = output.albedo * ambient_factor;
     
     return output;
 }

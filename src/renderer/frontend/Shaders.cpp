@@ -49,31 +49,31 @@ namespace zorya
 		ID3DBlob* shader_blob = nullptr;
 		HRESULT h_res;
 
-		h_res = load_shader<ID3D11VertexShader>(L"./shaders/GBufferVS.hlsl", "vs", &shader_blob, &m_vertex_shaders.at((std::uint8_t)VShader_ID::STANDARD), rhi.m_device.m_device);
-		RETURN_IF_FAILED(h_res);
-		h_res = rhi.m_device.m_device->CreateInputLayout(s_vertex_layout_desc, 4, shader_blob->GetBufferPointer(), shader_blob->GetBufferSize(), &m_vertex_layout);
-		RETURN_IF_FAILED(h_res);
+		//h_res = load_shader<ID3D11VertexShader>(L"./shaders/GBufferVS.hlsl", "vs", &shader_blob, &m_vertex_shaders.at((std::uint8_t)VShader_ID::STANDARD), rhi.m_device.m_device);
+		//RETURN_IF_FAILED(h_res);
+		//h_res = rhi.m_device.m_device->CreateInputLayout(s_vertex_layout_desc, 4, shader_blob->GetBufferPointer(), shader_blob->GetBufferSize(), &m_vertex_layout);
+		//RETURN_IF_FAILED(h_res);
 
-		h_res = load_shader<ID3D11VertexShader>(L"./shaders/DepthVS.hlsl", "vs", &shader_blob, &m_vertex_shaders.at((std::uint8_t)VShader_ID::DEPTH), rhi.m_device.m_device);
-		RETURN_IF_FAILED(h_res);
-		h_res = load_shader<ID3D11VertexShader>(L"./shaders/SkyboxVS.hlsl", "vs", &shader_blob, &m_vertex_shaders.at((std::uint8_t)VShader_ID::SKYBOX), rhi.m_device.m_device);
-		RETURN_IF_FAILED(h_res);
-		h_res = load_shader<ID3D11VertexShader>(L"./shaders/FullcreenQuad.hlsl", "vs", &shader_blob, &m_vertex_shaders.at((std::uint8_t)VShader_ID::FULL_QUAD), rhi.m_device.m_device);
-		RETURN_IF_FAILED(h_res);
+		//h_res = load_shader<ID3D11VertexShader>(L"./shaders/DepthVS.hlsl", "vs", &shader_blob, &m_vertex_shaders.at((std::uint8_t)VShader_ID::DEPTH), rhi.m_device.m_device);
+		//RETURN_IF_FAILED(h_res);
+		//h_res = load_shader<ID3D11VertexShader>(L"./shaders/SkyboxVS.hlsl", "vs", &shader_blob, &m_vertex_shaders.at((std::uint8_t)VShader_ID::SKYBOX), rhi.m_device.m_device);
+		//RETURN_IF_FAILED(h_res);
+		//h_res = load_shader<ID3D11VertexShader>(L"./shaders/FullcreenQuad.hlsl", "vs", &shader_blob, &m_vertex_shaders.at((std::uint8_t)VShader_ID::FULL_QUAD), rhi.m_device.m_device);
+		//RETURN_IF_FAILED(h_res);
 
 
-		h_res = load_shader<ID3D11PixelShader>(L"./shaders/GBufferPS.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::STANDARD), rhi.m_device.m_device);
-		RETURN_IF_FAILED(h_res);
-		h_res = load_shader<ID3D11PixelShader>(L"./shaders/SkyboxPS.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SKYBOX), rhi.m_device.m_device);
-		RETURN_IF_FAILED(h_res);
-		h_res = load_shader<ID3D11PixelShader>(L"./shaders/SSSSS.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SSSSS), rhi.m_device.m_device);
-		RETURN_IF_FAILED(h_res);
-		h_res = load_shader<ID3D11PixelShader>(L"./shaders/Lighting.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::LIGHTING), rhi.m_device.m_device);
-		RETURN_IF_FAILED(h_res);
-		h_res = load_shader<ID3D11PixelShader>(L"./shaders/ShadowMapping.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SHADOW_MAP), rhi.m_device.m_device);
-		RETURN_IF_FAILED(h_res);
-		h_res = load_shader<ID3D11PixelShader>(L"./shaders/Present.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::PRESENT), rhi.m_device.m_device);
-		RETURN_IF_FAILED(h_res);
+		//h_res = load_shader<ID3D11PixelShader>(L"./shaders/GBufferPS.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::STANDARD), rhi.m_device.m_device);
+		//RETURN_IF_FAILED(h_res);
+		//h_res = load_shader<ID3D11PixelShader>(L"./shaders/SkyboxPS.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SKYBOX), rhi.m_device.m_device);
+		//RETURN_IF_FAILED(h_res);
+		//h_res = load_shader<ID3D11PixelShader>(L"./shaders/SSSSS.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SSSSS), rhi.m_device.m_device);
+		//RETURN_IF_FAILED(h_res);
+		//h_res = load_shader<ID3D11PixelShader>(L"./shaders/Lighting.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::LIGHTING), rhi.m_device.m_device);
+		//RETURN_IF_FAILED(h_res);
+		//h_res = load_shader<ID3D11PixelShader>(L"./shaders/ShadowMapping.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SHADOW_MAP), rhi.m_device.m_device);
+		//RETURN_IF_FAILED(h_res);
+		//h_res = load_shader<ID3D11PixelShader>(L"./shaders/Present.hlsl", "ps", &shader_blob, &m_pixel_shaders.at((std::uint8_t)PShader_ID::PRESENT), rhi.m_device.m_device);
+		//RETURN_IF_FAILED(h_res);
 
 		if (shader_blob != nullptr) shader_blob->Release();
 
@@ -84,30 +84,30 @@ namespace zorya
 	{
 		HRESULT h_res;
 
-		h_res = rhi.m_device.m_device->CreateVertexShader(g_GBufferVS, sizeof(g_GBufferVS), nullptr, &m_vertex_shaders.at((std::uint8_t)VShader_ID::STANDARD));
-		RETURN_IF_FAILED(h_res);
-		h_res = rhi.m_device.m_device->CreateInputLayout(s_vertex_layout_desc, 4, g_GBufferVS, sizeof(g_GBufferVS), &m_vertex_layout);
-		RETURN_IF_FAILED(h_res);
+		//h_res = rhi.m_device.m_device->CreateVertexShader(g_GBufferVS, sizeof(g_GBufferVS), nullptr, &m_vertex_shaders.at((std::uint8_t)VShader_ID::STANDARD));
+		//RETURN_IF_FAILED(h_res);
+		//h_res = rhi.m_device.m_device->CreateInputLayout(s_vertex_layout_desc, 4, g_GBufferVS, sizeof(g_GBufferVS), &m_vertex_layout);
+		//RETURN_IF_FAILED(h_res);
 
-		h_res = rhi.m_device.m_device->CreateVertexShader(g_DepthVS, sizeof(g_DepthVS), nullptr, &m_vertex_shaders.at((std::uint8_t)VShader_ID::DEPTH));
-		RETURN_IF_FAILED(h_res);
-		h_res = rhi.m_device.m_device->CreateVertexShader(g_SkyboxVS, sizeof(g_SkyboxVS), nullptr, &m_vertex_shaders.at((std::uint8_t)VShader_ID::SKYBOX));
-		RETURN_IF_FAILED(h_res);
-		h_res = rhi.m_device.m_device->CreateVertexShader(g_FullscreenQuad, sizeof(g_FullscreenQuad), nullptr, &m_vertex_shaders.at((std::uint8_t)VShader_ID::FULL_QUAD));
-		RETURN_IF_FAILED(h_res);
+		//h_res = rhi.m_device.m_device->CreateVertexShader(g_DepthVS, sizeof(g_DepthVS), nullptr, &m_vertex_shaders.at((std::uint8_t)VShader_ID::DEPTH));
+		//RETURN_IF_FAILED(h_res);
+		//h_res = rhi.m_device.m_device->CreateVertexShader(g_SkyboxVS, sizeof(g_SkyboxVS), nullptr, &m_vertex_shaders.at((std::uint8_t)VShader_ID::SKYBOX));
+		//RETURN_IF_FAILED(h_res);
+		//h_res = rhi.m_device.m_device->CreateVertexShader(g_FullscreenQuad, sizeof(g_FullscreenQuad), nullptr, &m_vertex_shaders.at((std::uint8_t)VShader_ID::FULL_QUAD));
+		//RETURN_IF_FAILED(h_res);
 
-		h_res = rhi.m_device.m_device->CreatePixelShader(g_GBufferPS, sizeof(g_GBufferPS), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::STANDARD));
-		RETURN_IF_FAILED(h_res);
-		h_res = rhi.m_device.m_device->CreatePixelShader(g_SkyboxPS, sizeof(g_SkyboxPS), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SKYBOX));
-		RETURN_IF_FAILED(h_res);
-		h_res = rhi.m_device.m_device->CreatePixelShader(g_SSSSS, sizeof(g_SSSSS), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SSSSS));
-		RETURN_IF_FAILED(h_res);
-		h_res = rhi.m_device.m_device->CreatePixelShader(g_Lighting, sizeof(g_Lighting), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::LIGHTING));
-		RETURN_IF_FAILED(h_res);
-		h_res = rhi.m_device.m_device->CreatePixelShader(g_ShadowMapping, sizeof(g_ShadowMapping), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SHADOW_MAP));
-		RETURN_IF_FAILED(h_res);
-		h_res = rhi.m_device.m_device->CreatePixelShader(g_Present, sizeof(g_Present), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::PRESENT));
-		RETURN_IF_FAILED(h_res);
+		//h_res = rhi.m_device.m_device->CreatePixelShader(g_GBufferPS, sizeof(g_GBufferPS), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::STANDARD));
+		//RETURN_IF_FAILED(h_res);
+		//h_res = rhi.m_device.m_device->CreatePixelShader(g_SkyboxPS, sizeof(g_SkyboxPS), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SKYBOX));
+		//RETURN_IF_FAILED(h_res);
+		//h_res = rhi.m_device.m_device->CreatePixelShader(g_SSSSS, sizeof(g_SSSSS), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SSSSS));
+		//RETURN_IF_FAILED(h_res);
+		//h_res = rhi.m_device.m_device->CreatePixelShader(g_Lighting, sizeof(g_Lighting), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::LIGHTING));
+		//RETURN_IF_FAILED(h_res);
+		//h_res = rhi.m_device.m_device->CreatePixelShader(g_ShadowMapping, sizeof(g_ShadowMapping), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::SHADOW_MAP));
+		//RETURN_IF_FAILED(h_res);
+		//h_res = rhi.m_device.m_device->CreatePixelShader(g_Present, sizeof(g_Present), nullptr, &m_pixel_shaders.at((std::uint8_t)PShader_ID::PRESENT));
+		//RETURN_IF_FAILED(h_res);
 
 
 		//ID3D11ShaderReflection* shaderReflection = nullptr;

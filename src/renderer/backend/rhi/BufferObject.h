@@ -17,7 +17,7 @@ namespace zorya
 
 		void init(ID3D11Buffer* vertex_buffer, int buffer_size);
 
-		wrl::ComPtr<ID3D11Buffer> buffer;
+		ID3D11Buffer* buffer;
 		int size;
 
 	};
@@ -31,7 +31,7 @@ namespace zorya
 
 		void init(ID3D11Buffer* index_buffer, int buffer_size);
 
-		wrl::ComPtr<ID3D11Buffer> buffer;
+		ID3D11Buffer* buffer;
 		int size;
 
 	};

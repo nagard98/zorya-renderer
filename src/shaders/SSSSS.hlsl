@@ -9,6 +9,8 @@
 
 static const int numSamplesJimenezSep = 9;
 
+#define MaterialTexture Texture2D
+
 Texture2D diffuseIrrad : register(t0);
 Texture2D specularIrrad : register(t1);
 Texture2D transmittedIrrad : register(t2);
@@ -16,7 +18,7 @@ Texture2D depthMap : register(t3);
 Texture2D gbuffer_albedo : register(t4);
 
 //For final composit
-Texture2D sss_ex_rad : register(t5);
+//Texture2D sss_ex_rad : register(t5);
 
 SamplerState texSampler : register(s0);
 
@@ -134,7 +136,19 @@ static const float3 weights[6] = {
     float3(0.078f, 0.0f, 0.0f),
 };
 
-float4 posFromDepth(float2 quadTexCoord, float sampledDepth, uniform float4x4 invMat)
+//float4 posFromDepth(float2 quadTexCoord, float sampledDepth, uniform float4x4 invMat)
+//{
+//    float x = quadTexCoord.x * 2.0f - 1.0f;
+//    float y = (1.0f - quadTexCoord.y) * 2.0f - 1.0f;
+    
+//    float4 vProjPos = float4(x, y, sampledDepth, 1.0f);
+//    float4 vPosVS = mul(vProjPos, invMat);
+    
+//    return vPosVS.xyzw / vPosVS.w;
+//}
+
+
+float3 posFromDepth(float2 quadTexCoord, float sampledDepth, uniform float4x4 invMat)
 {
     float x = quadTexCoord.x * 2.0f - 1.0f;
     float y = (1.0f - quadTexCoord.y) * 2.0f - 1.0f;
@@ -142,7 +156,7 @@ float4 posFromDepth(float2 quadTexCoord, float sampledDepth, uniform float4x4 in
     float4 vProjPos = float4(x, y, sampledDepth, 1.0f);
     float4 vPosVS = mul(vProjPos, invMat);
     
-    return vPosVS.xyzw / vPosVS.w;
+    return vPosVS.xyz / vPosVS.w;
 }
 
 float gauss(float r, float v)
@@ -328,31 +342,31 @@ PS_OUT ps(float4 fragPos : SV_Position)
     float3 albedo = albedo_sample.rgb;
     
     uint sssParamsPack = albedo_sample.a * 255.0f;
-    uint pixel_sss_model_id = (sssParamsPack & 3);
+    uint pixel_sss_model_id = ((sssParamsPack >> 6) & 3);
     
-    if (albedo_sample.a == 1.0f)
-    {
-        if (shader_sss_model_id == 0)
-        {
-            ps_out.lastBiggestBlur = albedo_sample;
-            ps_out.finalComposited = albedo_sample;
-        }
-        else
-        {
-            //TODO: if albedo alpha in sss is 1.0f, then its the background (e.g. skybox)
-            discard;
-        }
+    //if (albedo_sample.a == 1.0f)
+    //{
+    //    if (shader_sss_model_id == 0)
+    //    {
+    //        ps_out.lastBiggestBlur = albedo_sample;
+    //        ps_out.finalComposited = albedo_sample;
+    //    }
+    //    else
+    //    {
+    //        //TODO: if albedo alpha in sss is 1.0f, then its the background (e.g. skybox)
+    //        discard;
+    //    }
 
-        return ps_out;
-    }
+    //    return ps_out;
+    //}
     
     //TODO: move ModelSSS to other constant buffer that is not updated per frame and allow full 256 models
     ModelSSS currentSSSModel = sssModels[sssParamsPack & 63];
        
     Sample_Info center_sample;
     float centerDepth = (depthMap.SampleLevel(texSampler, uvCoord,0).r);
-    float4 centerSampleVS = posFromDepth(uvCoord, centerDepth, invCamProjMat);
-    center_sample.pos = posFromDepth(uvCoord, centerDepth, invCamProjMat);
+    float4 centerSampleVS = float4(posFromDepth(uvCoord, centerDepth, invCamProjMat), 1.0f);
+    center_sample.pos = centerSampleVS/*posFromDepth(uvCoord, centerDepth, invCamProjMat)*/;
     
     float linearizedDepth = linearizeDepth(centerDepth) / FAR_PLANE;
     float centerDepthLin = (NEAR_PLANE * FAR_PLANE) / (FAR_PLANE + centerDepth * (NEAR_PLANE - FAR_PLANE));
@@ -360,9 +374,9 @@ PS_OUT ps(float4 fragPos : SV_Position)
 
     float4 pack_rand_numbers = float4(0.0f,0.0f,0.0f,0.0f);
 
-    //GOLUBEV (2018)
-    if (shader_sss_model_id == 3)
-    {
+    ////GOLUBEV (2018)
+    //if (shader_sss_model_id == 3)
+    //{
         if (pixel_sss_model_id == 3)
         {
             float3 dmfp = currentSSSModel.meanFreePathColor.rgb * currentSSSModel.meanFreePathDist * currentSSSModel.scale;
@@ -398,206 +412,210 @@ PS_OUT ps(float4 fragPos : SV_Position)
         
             sss_state = burley_plus_sample_scene(0, num_sample_packs, currentSSSModel.numSamples, randAngleJitt, uvCoord, sss_state, sss_params, center_sample, currentSSSModel);
         
-            sss_state.neighbor[OUTER_NEIGHBOR] += sss_state.neighbor[INNER_NEIGHBOR];
+            //sss_state.neighbor[OUTER_NEIGHBOR] += sss_state.neighbor[INNER_NEIGHBOR];
             
-            sss_state.neighbor[INNER_NEIGHBOR] *= rcp(sss_params.sample_split_index + 2);
-            sss_state.neighbor[OUTER_NEIGHBOR] *= rcp((float)currentSSSModel.numSamples); // - (sss_params.sample_split_index + 1));
+            //sss_state.neighbor[INNER_NEIGHBOR] *= rcp(sss_params.sample_split_index + 2);
+            //sss_state.neighbor[OUTER_NEIGHBOR] *= rcp((float)currentSSSModel.numSamples); // - (sss_params.sample_split_index + 1));
         
-            float3 local_contrast = abs(sss_state.neighbor[OUTER_NEIGHBOR] - sss_state.neighbor[INNER_NEIGHBOR]) * rcp(sss_state.neighbor[OUTER_NEIGHBOR] + sss_state.neighbor[INNER_NEIGHBOR]);
-            local_contrast = round(saturate(local_contrast + currentSSSModel.meanFreePathColor.a));
+            //float3 local_contrast = abs(sss_state.neighbor[OUTER_NEIGHBOR] - sss_state.neighbor[INNER_NEIGHBOR]) * rcp(sss_state.neighbor[OUTER_NEIGHBOR] + sss_state.neighbor[INNER_NEIGHBOR]);
+            //local_contrast = round(saturate(local_contrast + currentSSSModel.meanFreePathColor.a));
             
-            if (any(local_contrast))
-            {
-                float idx_last_supersampling_sample = currentSSSModel.numSamples + currentSSSModel.num_supersamples;
-                int num_supersampling_packs = round((currentSSSModel.num_supersamples * rcp(4.0f)) + 0.5f);
+            //if (any(local_contrast))
+            //{
+            //    float idx_last_supersampling_sample = currentSSSModel.numSamples + currentSSSModel.num_supersamples;
+            //    int num_supersampling_packs = round((currentSSSModel.num_supersamples * rcp(4.0f)) + 0.5f);
                 
-                randAngleJitt = pseudoRandom(uvCoord, 4.3619f) * 2.0f * PI;
-                sss_state.curSamp = 0.0f;
+            //    randAngleJitt = pseudoRandom(uvCoord, 4.3619f) * 2.0f * PI;
+            //    sss_state.curSamp = 0.0f;
                 
-                sss_state = burley_plus_sample_scene(8, 8 + num_supersampling_packs, currentSSSModel.num_supersamples, randAngleJitt, uvCoord, sss_state, sss_params, center_sample, currentSSSModel);
-            }
+            //    sss_state = burley_plus_sample_scene(8, 8 + num_supersampling_packs, currentSSSModel.num_supersamples, randAngleJitt, uvCoord, sss_state, sss_params, center_sample, currentSSSModel);
+            //}
         
-            if (round(saturate(currentSSSModel.subsurfaceAlbedo.a)) == 0.0f)
-            {
+            //if (round(saturate(currentSSSModel.subsurfaceAlbedo.a)) == 0.0f)
+            //{
                 sss_state.sss /= sss_state.weights_sum;
                 col = sss_state.sss /** albedo*/; //multiply with albedo only if havent done pre scattering
-            }
-            else
-            {
-                col = any(local_contrast) ? float3(1.0f, 1.0f, 1.0f) : float3(0.0f, 0.0f, 0.0f);
-            }
+            //}
+            //else
+            //{
+            //    col = any(local_contrast) ? float3(1.0f, 1.0f, 1.0f) : float3(0.0f, 0.0f, 0.0f);
+            //}
             
-            ps_out.lastBiggestBlur = float4(col, 1.0f);
-            ps_out.finalComposited = float4(col, 1.0f);
-        }
-        else
-        {
-            discard;
-        }
+            float3 spec = specularIrrad.SampleLevel(texSampler, uvCoord, 0).rgb;
+            
+            ps_out.lastBiggestBlur = float4(col + spec, 1.0f);
+            ps_out.finalComposited = float4(col + spec, 1.0f);
         
-        return ps_out;
+        
+        }
+        //else
+        //{
+        //    discard;
+        //}
+            return ps_out;
+        
 
-    }
-    else if (shader_sss_model_id == 2)
-    {
-        //JIMENEZ SEPARABLE (2015)
-        if (pixel_sss_model_id == 2)
-        {            
-            float linearMiddleDepth = linearizeDepth(centerDepth);
+    //}
+    //else if (shader_sss_model_id == 2)
+    //{
+    //    //JIMENEZ SEPARABLE (2015)
+    //    if (pixel_sss_model_id == 2)
+    //    {            
+    //        float linearMiddleDepth = linearizeDepth(centerDepth);
         
-            float distanceToProjectionWindow = 1.0 / tan(0.5 * VERT_FOV); //radians(SSSS_FOVY));
-            float scal = distanceToProjectionWindow / linearMiddleDepth;
-            float sssWidth = currentSSSModel.meanFreePathDist;
+    //        float distanceToProjectionWindow = 1.0 / tan(0.5 * VERT_FOV); //radians(SSSS_FOVY));
+    //        float scal = distanceToProjectionWindow / linearMiddleDepth;
+    //        float sssWidth = currentSSSModel.meanFreePathDist;
             
-            float rot_threshold = sssWidth * 1000.0f * currentSSSModel.scale;
+    //        float rot_threshold = sssWidth * 1000.0f * currentSSSModel.scale;
 	
-	        // Calculate the final step to fetch the surrounding pixels:
-            float finalStep = sssWidth * scal /** dir*/;
-            //finalStep *= 1.0f; //SSSS_STREGTH_SOURCE; // Modulate it using the alpha channel.
-            finalStep *= (1.0f / 6.0f); /// (2.0 * meanFreePathDist); // sssWidth in mm / world space unit, divided by 2 as uv coords are from [0 1]
+	   //     // Calculate the final step to fetch the surrounding pixels:
+    //        float finalStep = sssWidth * scal /** dir*/;
+    //        //finalStep *= 1.0f; //SSSS_STREGTH_SOURCE; // Modulate it using the alpha channel.
+    //        finalStep *= (1.0f / 6.0f); /// (2.0 * meanFreePathDist); // sssWidth in mm / world space unit, divided by 2 as uv coords are from [0 1]
 
-            // Accumulate the center sample:
-            float4 colM = diffuseIrrad.SampleLevel(texSampler, uvCoord, 0);
-            float4 colorBlurred = colM;
-            colorBlurred.rgb *= currentSSSModel.kernel[0].rgb;
+    //        // Accumulate the center sample:
+    //        float4 colM = diffuseIrrad.SampleLevel(texSampler, uvCoord, 0);
+    //        float4 colorBlurred = colM;
+    //        colorBlurred.rgb *= currentSSSModel.kernel[0].rgb;
             
-            float3 weight_accum = 0.0001f + currentSSSModel.kernel[0].rgb;
+    //        float3 weight_accum = 0.0001f + currentSSSModel.kernel[0].rgb;
             
-            float mask[4] = { 0.0f, 0.0f, 1.0f, 0.0f };
+    //        float mask[4] = { 0.0f, 0.0f, 1.0f, 0.0f };
             
-            float2 new_axis = float2(0.0f, 0.0f);
-            if (dir.x == 1.0f)
-            {
-                float randAngleJitt = (pseudoRandom(uvCoord, 1.0f) * PI) - (0.5f * PI);
-                float cosRandAngle = cos(randAngleJitt);
-                float sinRandAngle = sin(randAngleJitt);
-                new_axis = float2(cosRandAngle, sinRandAngle);
-            }
-            else
-            {
-                float randAngleJitt = (pseudoRandom(uvCoord, 1.0f) * PI) + (0.5f * PI);
-                float cosRandAngle = cos(randAngleJitt);
-                float sinRandAngle = sin(randAngleJitt);
-                new_axis = float2(cosRandAngle, sinRandAngle);
-            }
+    //        float2 new_axis = float2(0.0f, 0.0f);
+    //        if (dir.x == 1.0f)
+    //        {
+    //            float randAngleJitt = (pseudoRandom(uvCoord, 1.0f) * PI) - (0.5f * PI);
+    //            float cosRandAngle = cos(randAngleJitt);
+    //            float sinRandAngle = sin(randAngleJitt);
+    //            new_axis = float2(cosRandAngle, sinRandAngle);
+    //        }
+    //        else
+    //        {
+    //            float randAngleJitt = (pseudoRandom(uvCoord, 1.0f) * PI) + (0.5f * PI);
+    //            float cosRandAngle = cos(randAngleJitt);
+    //            float sinRandAngle = sin(randAngleJitt);
+    //            new_axis = float2(cosRandAngle, sinRandAngle);
+    //        }
             
-            for (int i = 1; i < numSamplesJimenezSep; i++)
-            {
-                float sample_dist = currentSSSModel.kernel[i].a;
+    //        for (int i = 1; i < numSamplesJimenezSep; i++)
+    //        {
+    //            float sample_dist = currentSSSModel.kernel[i].a;
 
-                float2 jittered_dir = abs(sample_dist) < rot_threshold ? new_axis * finalStep : dir * finalStep;
-                jittered_dir *= sample_dist;
+    //            float2 jittered_dir = abs(sample_dist) < rot_threshold ? new_axis * finalStep : dir * finalStep;
+    //            jittered_dir *= sample_dist;
                 
-                // Fetch color and depth for current sample:
-                float2 offset = uvCoord + jittered_dir;
-                float4 color = diffuseIrrad.SampleLevel(texSampler, offset, 0.0f);
-                uint sssPack = gbuffer_albedo.SampleLevel(texSampler, uvCoord, 0).a * 255.0f;
-                uint pixel_sss_model_id = (sssPack & 3);
+    //            // Fetch color and depth for current sample:
+    //            float2 offset = uvCoord + jittered_dir;
+    //            float4 color = diffuseIrrad.SampleLevel(texSampler, offset, 0.0f);
+    //            uint sssPack = gbuffer_albedo.SampleLevel(texSampler, uvCoord, 0).a * 255.0f;
+    //            uint pixel_sss_model_id = (sssPack & 3);
             
-                //Follow surface
-                float linearSampleDepth = linearizeDepth(depthMap.SampleLevel(texSampler, offset, 0.0f).r);
-                float s = saturate(300.0f * distanceToProjectionWindow *
-                               sssWidth * abs(linearMiddleDepth - linearSampleDepth));
-                s = 1 - s;
-                s *= mask[pixel_sss_model_id];
-                color.rgb = lerp(colM.rgb, color.rgb, s);
+    //            //Follow surface
+    //            float linearSampleDepth = linearizeDepth(depthMap.SampleLevel(texSampler, offset, 0.0f).r);
+    //            float s = saturate(300.0f * distanceToProjectionWindow *
+    //                           sssWidth * abs(linearMiddleDepth - linearSampleDepth));
+    //            s = 1 - s;
+    //            s *= mask[pixel_sss_model_id];
+    //            color.rgb = lerp(colM.rgb, color.rgb, s);
 
-                // Accumulate:
-                float3 local_weight = currentSSSModel.kernel[i].rgb;
-                colorBlurred.rgb += local_weight * color.rgb;
-                weight_accum += local_weight;
-            }
+    //            // Accumulate:
+    //            float3 local_weight = currentSSSModel.kernel[i].rgb;
+    //            colorBlurred.rgb += local_weight * color.rgb;
+    //            weight_accum += local_weight;
+    //        }
         
-            col = colorBlurred.rgb; /// weight_accum;
+    //        col = colorBlurred.rgb; /// weight_accum;
             
-            //col += pow(transmittedIrrad.Sample(texSampler, uvCoord).rgb, RCP_GAMMA) * albedo;
-            ps_out.lastBiggestBlur = float4(col, 1.0f);
-            ps_out.finalComposited = float4(col, 1.0f);
-        }
-        else
-        {
-            discard;
-        }
+    //        //col += pow(transmittedIrrad.Sample(texSampler, uvCoord).rgb, RCP_GAMMA) * albedo;
+    //        ps_out.lastBiggestBlur = float4(col, 1.0f);
+    //        ps_out.finalComposited = float4(col, 1.0f);
+    //    }
+    //    else
+    //    {
+    //        discard;
+    //    }
         
-        return ps_out;
-    }
-    else if (shader_sss_model_id == 1)
-    {
-        //JIMENEZ GAUSSIAN (2009)
-        if (pixel_sss_model_id == 1)
-        {
-            float w[7] = { 0.006, 0.061, 0.242, 0.382, 0.242, 0.061, 0.006 };
-            float2 finalWidth = 0.0f;
+    //    return ps_out;
+    ////}
+    ////else if (shader_sss_model_id == 1)
+    ////{
+    //    //JIMENEZ GAUSSIAN (2009)
+    //    if (pixel_sss_model_id == 1)
+    //    {
+    //        float w[7] = { 0.006, 0.061, 0.242, 0.382, 0.242, 0.061, 0.006 };
+    //        float2 finalWidth = 0.0f;
             
-            float linDepth = linearizeDepth(centerDepth);
-            float sssLevel = currentSSSModel.scale;
-            float correction = currentSSSModel.meanFreePathDist; //BETA;
-            float pixelSize = currentSSSModel.subsurfaceAlbedo.a;
-            float maxdd = 0.001f;
+    //        float linDepth = linearizeDepth(centerDepth);
+    //        float sssLevel = currentSSSModel.scale;
+    //        float correction = currentSSSModel.meanFreePathDist; //BETA;
+    //        float pixelSize = currentSSSModel.subsurfaceAlbedo.a;
+    //        float maxdd = 0.001f;
             
-            float scale_factor = 0.0f;
+    //        float scale_factor = 0.0f;
             
-            if (dir.x == 1)
-            {
-                float dddep = ddx(linDepth);
-                scale_factor = sssLevel / (linDepth + correction * min(abs(dddep), maxdd));
-            }
-            else
-            {
-                float dddep = ddy(linDepth);
-                scale_factor = sssLevel / (linDepth + correction * min(abs(dddep), maxdd)); 
-            }
+    //        if (dir.x == 1)
+    //        {
+    //            float dddep = ddx(linDepth);
+    //            scale_factor = sssLevel / (linDepth + correction * min(abs(dddep), maxdd));
+    //        }
+    //        else
+    //        {
+    //            float dddep = ddy(linDepth);
+    //            scale_factor = sssLevel / (linDepth + correction * min(abs(dddep), maxdd)); 
+    //        }
             
-            finalWidth = scale_factor * sd_gauss_jim * pixelSize * dir;
+    //        finalWidth = scale_factor * sd_gauss_jim * pixelSize * dir;
 
-            float2 offset = uvCoord - finalWidth;
-            col = float3(0.0, 0.0, 0.0);
+    //        float2 offset = uvCoord - finalWidth;
+    //        col = float3(0.0, 0.0, 0.0);
             
-            float mask[4] = { 0.0f, 1.0f, 0.0f, 0.0f };
+    //        float mask[4] = { 0.0f, 1.0f, 0.0f, 0.0f };
             
-            for (int i = 0; i < 7; i++)
-            {
-                uint sssPack = gbuffer_albedo.SampleLevel(texSampler, offset, 0).a * 255.0f;
-                uint pixel_sss_model_id = (sssPack & 3);
+    //        for (int i = 0; i < 7; i++)
+    //        {
+    //            uint sssPack = gbuffer_albedo.SampleLevel(texSampler, offset, 0).a * 255.0f;
+    //            uint pixel_sss_model_id = (sssPack & 3);
                 
-                float3 tap = diffuseIrrad.SampleLevel(texSampler, offset, 0).rgb;
-                col.rgb += w[i] * tap * mask[pixel_sss_model_id];
-                offset += finalWidth / 3.0;
-            }
+    //            float3 tap = diffuseIrrad.SampleLevel(texSampler, offset, 0).rgb;
+    //            col.rgb += w[i] * tap * mask[pixel_sss_model_id];
+    //            offset += finalWidth / 3.0;
+    //        }
             
-            //col += spec;
-            //float dd = min(abs(ddx(linDepth)), maxdd) + min(abs(ddy(linDepth)), maxdd);
-            //scale_factor /= 10000.0f;
-            //col = float3(scale_factor, scale_factor, scale_factor);
+    //        //col += spec;
+    //        //float dd = min(abs(ddx(linDepth)), maxdd) + min(abs(ddy(linDepth)), maxdd);
+    //        //scale_factor /= 10000.0f;
+    //        //col = float3(scale_factor, scale_factor, scale_factor);
             
-            ps_out.lastBiggestBlur = float4(col, 1.0f);
-            ps_out.finalComposited = float4(col, 1.0f);
-        }
-        else
-        {
-            discard;
-        }
+    //        ps_out.lastBiggestBlur = float4(col, 1.0f);
+    //        ps_out.finalComposited = float4(col, 1.0f);
+    //    }
+    //    else
+    //    {
+    //        discard;
+    //    }
         
-        return ps_out;
-    }
-    else /*if (shader_sss_model_id == 0)*/
-    {
-        float3 spec = specularIrrad.SampleLevel(texSampler, uvCoord, 0).rgb;
-        //albedo = float3(1.0f, 1.0f, 1.0f);
+    //    return ps_out;
+    ////}
+    ////else /*if (shader_sss_model_id == 0)*/
+    ////{
+    //    float3 spec = specularIrrad.SampleLevel(texSampler, uvCoord, 0).rgb;
+    //    //albedo = float3(1.0f, 1.0f, 1.0f);
         
-        if (pixel_sss_model_id == 0)
-        {
-            col = mad(diffuseIrrad.SampleLevel(texSampler, uvCoord, 0).rgb, albedo, spec);
-        }
-        else
-        {
-            col = mad(sss_ex_rad.SampleLevel(texSampler, uvCoord, 0).rgb, albedo, spec); //multiply with albedo only if havent done pre scattering
-        }
+    //    if (pixel_sss_model_id == 0)
+    //    {
+    //        col = mad(diffuseIrrad.SampleLevel(texSampler, uvCoord, 0).rgb, albedo, spec);
+    //    }
+    //    else
+    //    {
+    //        col = mad(sss_ex_rad.SampleLevel(texSampler, uvCoord, 0).rgb, albedo, spec); //multiply with albedo only if havent done pre scattering
+    //    }
         
-        ps_out.lastBiggestBlur = float4(col, 1.0f);
-        ps_out.finalComposited = float4(col, 1.0f);
+    //    ps_out.lastBiggestBlur = float4(col, 1.0f);
+    //    ps_out.finalComposited = float4(col, 1.0f);
         
-        return ps_out;
-    }
+    //    return ps_out;
+    //}
     
     }

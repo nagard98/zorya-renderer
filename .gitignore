@@ -17,3 +17,5 @@ src/shaders/headers/*.h
 src/reflection/*_auto_generated.h
 *.cso
 StructLayoutSettings.json
+*.TMP
+*.tmp

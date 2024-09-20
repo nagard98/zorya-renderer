@@ -7,10 +7,10 @@ Texture2D gbuffer_roughness : register(t2);
 Texture2D gbuffer_depth : register(t3);
 Texture2D smooth_normals : register(t7);
 
-Texture2D ShadowMap : register(t4);
-Texture2DArray ShadowCubeMap : register(t5);
-//TextureCube ShadowCubeMap : register(t5);
-Texture2D SpotShadowMap : register(t6);
+//Texture2D ShadowMap : register(t4);
+Texture2D shadow_mask : register(t4);
+//Texture2DArray ShadowCubeMap : register(t5);
+//Texture2D SpotShadowMap : register(t6);
 
 SamplerState texSampler : register(s0);
 
@@ -22,12 +22,17 @@ static const float gamma = 1.0f / 2.2f;
 static const float SCREEN_WIDTH = 1920.0f;
 static const float SCREEN_HEIGHT = 1080.0f;
 
+#define DIRECTIONAL_LIGHT_ID 0
+#define POINT_LIGHT_ID 1
+#define SPOT_LIGHT_ID 2
+
 struct PS_OUT
 {
-    float4 diffuse : SV_TARGET0;
-    float4 specular : SV_TARGET1;
-    float4 transmitted : SV_TARGET2;
-    float4 ambient : SV_TARGET3;
+    float4 scene_lighted : SV_TARGET0;
+    float4 diffuse : SV_TARGET1;
+    float4 specular : SV_TARGET2;
+    float4 transmitted : SV_TARGET3;
+    float4 ambient : SV_TARGET4;
 };
 
 struct ExitRadiance_t
@@ -58,7 +63,7 @@ struct ModelSSS
 
 cbuffer light : register(b0)
 {
-    Directional_Light dirLight;
+    Directional_Light dirLight[1];
     
     int numPLights;
     int numSpotLights;
@@ -72,18 +77,24 @@ cbuffer light : register(b0)
     float4 dirSpotLightViewSpace[16];
     
     ModelSSS sssModels[64];
-};
+}
 
 cbuffer omniDirShadowMatrixes : register(b2)
 {
-    float4x4 dirLightViewMat;
-    float4x4 dirLightProjMat;
+    float4x4 dirLightViewMat[1];
+    float4x4 dirLightProjMat[1];
     
     float4x4 lightViewMat[16 * 6];
     float4x4 lightProjMat;
     
     float4x4 spotLightViewMat[16];
     float4x4 spotLightProjMat[16];
+}
+
+cbuffer draw_constants : register(b3)
+{
+    uint light_index;
+    uint light_type;
 }
 
 cbuffer camMat : register(b5)
@@ -111,6 +122,7 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
     float3 normal = gbuffer_normal.Sample(texSampler, uvCoord).xyz * 2.0f - 1.0f;
     float3 smoothNormal = smooth_normals.Sample(texSampler, uvCoord).xyz * 2.0f - 1.0f;
     float3 roughMetThick = gbuffer_roughness.Sample(texSampler, uvCoord).rgb;
+    float shadowing_factor = shadow_mask.Sample(texSampler, uvCoord).r;
     
     float linRoughness = pow(roughMetThick.r, 4.0f);
     float metalness = roughMetThick.g;
@@ -129,44 +141,48 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
     radExitance.specular = float3(0.0f, 0.0f, 0.0f);
     radExitance.transmitted = float3(0.0f, 0.0f, 0.0f);
     
-    if (albedo_sample.a < 1.0f)
+    switch(light_type)
     {
-        if (dirLight.dir.w == 0.0f)
-        {
-            ExitRadiance_t tmpRadExitance = computeColDirLight(dirLight, viewDir, normal, smoothNormal, metalness, linRoughness, thickness, positionWS, dirLightViewMat, dirLightProjMat, pixel_sss_model_id);
+        case DIRECTIONAL_LIGHT_ID:{
+                ExitRadiance_t tmpRadExitance = computeColDirLight(dirLight[light_index], viewDir, normal, smoothNormal, metalness, linRoughness, thickness, positionWS, dirLightViewMat[light_index], dirLightProjMat[light_index], pixel_sss_model_id);
 
-            radExitance.diffuse += tmpRadExitance.diffuse;
-            radExitance.specular += tmpRadExitance.specular;
-            radExitance.transmitted += tmpRadExitance.transmitted;
-        }
-    
-        for (int i = 0; i < numSpotLights; i++)
-        {
-            ExitRadiance_t tmpRadExitance = computeColSpotLight(i, float4(positionVS, 1.0f), normal, metalness, linRoughness, positionWS, spotLightViewMat[i], spotLightProjMat[i], pixel_sss_model_id);
+                radExitance.diffuse += tmpRadExitance.diffuse;
+                radExitance.specular += tmpRadExitance.specular;
+                radExitance.transmitted += tmpRadExitance.transmitted;
+                break;
+            }
+        case SPOT_LIGHT_ID:{
+                ExitRadiance_t tmpRadExitance = computeColSpotLight(light_index, float4(positionVS, 1.0f), normal, metalness, linRoughness, positionWS, spotLightViewMat[light_index], spotLightProjMat[light_index], pixel_sss_model_id);
         
-            radExitance.diffuse += tmpRadExitance.diffuse;
-            radExitance.specular += tmpRadExitance.specular;
-            radExitance.transmitted += tmpRadExitance.transmitted;
-        }
-    
-        for (int i = 0; i < numPLights; i++)
-        {
-            float transmDist = 10.0f;
-            ExitRadiance_t tmpRadExitance = computeColPoint_Light(Point_Lights[i], posPoint_LightViewSpace[i], float4(positionVS, 1.0f), normal, viewDir, metalness, linRoughness, transmDist, pixel_sss_model_id);
+                radExitance.diffuse += tmpRadExitance.diffuse;
+                radExitance.specular += tmpRadExitance.specular;
+                radExitance.transmitted += tmpRadExitance.transmitted;
+                break;
+            }
+        case POINT_LIGHT_ID:{
+                float transmDist = 10.0f;
+                ExitRadiance_t tmpRadExitance = computeColPoint_Light(Point_Lights[light_index], posPoint_LightViewSpace[light_index], float4(positionVS, 1.0f), normal, viewDir, metalness, linRoughness, transmDist, pixel_sss_model_id);
         
-            radExitance.diffuse += tmpRadExitance.diffuse;
-            radExitance.specular += tmpRadExitance.specular;
-            radExitance.transmitted += tmpRadExitance.transmitted;
-        }
-    
+                radExitance.diffuse += tmpRadExitance.diffuse;
+                radExitance.specular += tmpRadExitance.specular;
+                radExitance.transmitted += tmpRadExitance.transmitted;
+                break;
+            }
     }
 
     PS_OUT ps_out;
-    ps_out.diffuse = float4(radExitance.diffuse, 1.0f);
-    ps_out.specular = float4(radExitance.specular, 1.0f);
+    ps_out.diffuse = shadowing_factor * float4(radExitance.diffuse, 1.0f);
+    ps_out.specular = shadowing_factor * float4(radExitance.specular, 1.0f);
     ps_out.transmitted = float4(radExitance.transmitted, 1.0f);
     
     ps_out.ambient = float4(0.03f, 0.03f, 0.03f, 1.0f); /* * max(0.0f, dot(normal.xyz, dirLight.dir.xyz))*/
+    ps_out.scene_lighted = shadowing_factor * ((ps_out.diffuse * float4(albedo_sample.rgb, 1.0f)) + ps_out.specular);
+    //float4 red = float4(1.0f, 0.0f, 0.0f, 1.0f);
+    //ps_out.ambient = red;
+    //ps_out.diffuse = red;
+    //ps_out.transmitted = red;
+    //ps_out.ambient = red;
+    
     return ps_out;
 }
 
@@ -188,7 +204,7 @@ ExitRadiance_t computeColDirLight(Directional_Light dLight, float3 viewDir, floa
     if (pixel_sss_model_id > 0)
     {
         float correctedBias = max(0.002f, 0.005f * (1.0f - abs(dot(lDir, smoothNormal))));
-        float transmDist = computeTransmDist(posWS, dLight.near_plane_dist, dLight.far_plane_dist, lightViewMat, lightProjMat, correctedBias, ShadowMap, smoothNormal);
+        float transmDist = 0.0f; //computeTransmDist(posWS, dLight.near_plane_dist, dLight.far_plane_dist, lightViewMat, lightProjMat, correctedBias, ShadowMap, smoothNormal);
         float E = max(0.3f + dot(-smoothNormal, -dLight.dir.xyz), 0.0f);
         ////TODO: instead of hardcoded scale, use model scale
         //thickness = clamp(thickness, 0.0f, 0.5f) * 2.0f;
@@ -266,7 +282,7 @@ ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, floa
         if (pixel_sss_model_id > 0)
         {
             float correctedBias = max(0.002f, 0.005f * (1.0f - abs(dot(lightDir, normal))));
-            float transmDist = computeTransmDist(posWS, spotLights[lightIndex].near_plane_dist, spotLights[lightIndex].far_plane_dist, lightViewMat, lightProjMat, correctedBias, SpotShadowMap, normal);
+            float transmDist = 0.0f; //computeTransmDist(posWS, spotLights[lightIndex].near_plane_dist, spotLights[lightIndex].far_plane_dist, lightViewMat, lightProjMat, correctedBias, SpotShadowMap, normal);
             float E = max(0.3f + dot(-normal, lightDir.xyz), 0.0f);
             transmittedRad = T(transmDist * 100.0f) * E;
         }

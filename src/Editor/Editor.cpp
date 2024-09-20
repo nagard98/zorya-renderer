@@ -2,19 +2,26 @@
 #include "editor/SceneHierarchy.h"
 #include "editor/EntityOutline.h"
 #include "editor/Logger.h"
+#include "editor/AssetRegistry.h"
 
-#include "renderer/frontend/RendererFrontend.h"
+#include "renderer/frontend/SceneManager.h"
 #include "renderer/frontend/SceneGraph.h"
 
 #include <vector>
 
 #include "imgui.h"
 #include "imgui_internal.h"
+#include "imgui_impl_dx11.h"
+#include "imgui_impl_win32.h"
 
 #include <d3d11_1.h>
+#include <Windows.h>
 
 namespace zorya
 {
+	ImGui::FileBrowser file_browser;
+	Editor editor;
+
 	Editor::Editor()
 	{
 		m_first_loop = true;
@@ -23,7 +30,29 @@ namespace zorya
 		strncpy_s(m_text_buffer, "\0", 128);
 	}
 
-	void Editor::init(const ImGuiID& dockspace_ID)
+	HRESULT Editor::init(HWND window_hnd, Render_Hardware_Interface& rhi)
+	{
+		ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO();
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+		ImGui_ImplWin32_Init(window_hnd);
+		ImGui_ImplDX11_Init(rhi.m_device.m_device, rhi.m_context);
+
+		m_content_browser.init();
+
+		//TODO: return meaningful value
+		return S_OK;
+	}
+
+	void Editor::shutdown()
+	{
+		ImGui_ImplDX11_Shutdown();
+		ImGui_ImplWin32_Shutdown();
+		ImGui::DestroyContext();
+	}
+
+	void Editor::setup_dockspace(const ImGuiID& dockspace_ID)
 	{
 		ImVec2 work_size = ImGui::GetMainViewport()->WorkSize;
 
@@ -32,12 +61,14 @@ namespace zorya
 		ImGui::DockBuilderSetNodeSize(dockspace_ID, work_size);
 
 		m_scene_id = dockspace_ID;
-		ImGuiID left_id = ImGui::DockBuilderSplitNode(m_scene_id, ImGuiDir_Left, 0.15f, nullptr, &m_scene_id);
 		ImGuiID right_id = ImGui::DockBuilderSplitNode(m_scene_id, ImGuiDir_Right, 0.20f, nullptr, &m_scene_id);
-		ImGuiID bottom_id = ImGui::DockBuilderSplitNode(m_scene_id, ImGuiDir_Down, 0.22f, nullptr, &m_scene_id);
+		ImGuiID bottom_id = ImGui::DockBuilderSplitNode(m_scene_id, ImGuiDir_Down, 0.3f, nullptr, &m_scene_id);
+		ImGuiID left_id = ImGui::DockBuilderSplitNode(m_scene_id, ImGuiDir_Left, 0.15f, nullptr, &m_scene_id);
+
 
 		ImGui::DockBuilderDockWindow("Hierarchy", left_id);
 		ImGui::DockBuilderDockWindow("Entity Outline", right_id);
+		ImGui::DockBuilderDockWindow("Asset Inspector", right_id);
 		ImGui::DockBuilderDockWindow("Asset Explorer", bottom_id);
 		ImGui::DockBuilderDockWindow("Logger", bottom_id);
 		ImGui::DockBuilderDockWindow("Scene", m_scene_id);
@@ -54,8 +85,17 @@ namespace zorya
 		ADD_SPHERE = 4
 	};
 
-	void Editor::render_editor(Renderer_Frontend& frontend_renderer, Camera& editor_cam, const ID3D11ShaderResourceView* scene_view_srv)
+	void Editor::new_frame()
 	{
+		ImGui_ImplDX11_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
+	}
+
+	void Editor::render_editor(Scene_Manager& frontend_renderer, Camera& editor_cam, const ID3D11ShaderResourceView* scene_view_srv)
+	{
+		ImGui::ShowDemoWindow();
+
 		bool clicked[5] = { false };
 
 		if (ImGui::BeginMainMenuBar())
@@ -90,43 +130,61 @@ namespace zorya
 		{
 			m_file_browser_open = true;
 			file_browser.Open();
-
-			//ImGui::OpenPopup("import_model");
 		}
 
 		if (clicked[ADD_DIR_LIGHT])
 		{
-			frontend_renderer.add_light(nullptr, dx::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f));
+			frontend_renderer.add_light(frontend_renderer.m_scene_graph.root_node, dx::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f));
 		}
 
 		if (clicked[ADD_SPOT_LIGHT])
 		{
-			frontend_renderer.add_light(nullptr, dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), dx::XM_PIDIV4);
+			frontend_renderer.add_light(frontend_renderer.m_scene_graph.root_node, dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), dx::XM_PIDIV4);
 		}
 
 		if (clicked[ADD_POINT_LIGHT])
 		{
-			frontend_renderer.add_light(nullptr, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.22f, 0.20f);
-		}
-
-		if (ImGui::BeginPopupModal("import_model", NULL))
-		{
-			if (ImGui::InputText("model path", m_text_buffer, 128))
-			{
-			}
-			if (ImGui::Button("Import"))
-			{
-				ImGui::CloseCurrentPopup();
-				frontend_renderer.load_model_from_file(std::string(m_text_buffer));
-			}
-			ImGui::EndPopup();
+			frontend_renderer.add_light(frontend_renderer.m_scene_graph.root_node, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.22f, 0.20f);
 		}
 
 		file_browser.Display();
 
 		if (file_browser.HasSelected())
 		{
-			frontend_renderer.load_model_from_file(file_browser.GetSelected().u8string());
+			const auto& file = file_browser.GetSelected();
+			const char* dest_folder_path = asset_registry.current_node->value.m_folder_path;
+
+			size_t new_filepath_buff_size = strlen(dest_folder_path) + 1 + file.filename().u8string().length() + 1;
+			char* new_filepath = (char*)malloc(new_filepath_buff_size);
+			ZeroMemory(new_filepath, new_filepath_buff_size);
+			
+			strcat_s(new_filepath, new_filepath_buff_size, dest_folder_path);
+			strcat_s(new_filepath, new_filepath_buff_size, "\\");
+			strcat_s(new_filepath, new_filepath_buff_size, file.filename().u8string().c_str());
+
+			int copy_success = CopyFile(file.u8string().c_str(), new_filepath, true);
+			if (copy_success != 0 && (file.extension().u8string()).compare(".gltf") == 0)
+			{
+				auto bin_filepath = file;
+				bin_filepath.replace_extension(std::filesystem::path(".bin"));
+
+				char new_bin_filepath[MAX_PATH];
+				ZeroMemory(new_bin_filepath, MAX_PATH);
+
+				sprintf(new_bin_filepath, "%s\\%s", dest_folder_path, bin_filepath.filename().u8string().c_str());
+				copy_success = CopyFile(bin_filepath.u8string().c_str(), new_bin_filepath, true);
+			}
+
+			if(copy_success != 0)
+			{
+				Asset_Import_Config* asset_imp_conf = create_asset_import_config(get_asset_type_by_ext(file.extension().u8string().c_str()), new_filepath);
+				asset_registry.current_node->children.emplace_back(Filesystem_Node(Filesystem_Node_Type::FILE, nullptr, asset_imp_conf, file.filename().u8string().c_str()));
+			} 
+			else
+			{
+				//TODO: when copy fails give a message
+			}
+
 			file_browser.ClearSelected();
 		}
 
@@ -134,7 +192,7 @@ namespace zorya
 		ImGuiID dockspace_id = ImGui::DockSpaceOverViewport();
 		if (m_first_loop)
 		{
-			init(dockspace_id);
+			setup_dockspace(dockspace_id);
 			m_first_loop = false;
 		}
 
@@ -142,7 +200,21 @@ namespace zorya
 
 		ImGui::Begin("Hierarchy");
 		{
+			auto start_cursor_pos = ImGui::GetCursorPos();
 			m_scene_hierarchy.render_scene_hierarchy(frontend_renderer, selected_id);
+			
+			ImGui::SetCursorPos(start_cursor_pos);
+			ImGui::Dummy(ImGui::GetWindowSize());
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (auto payload = ImGui::AcceptDragDropPayload(Asset_Type_Names[Asset_Type::STATIC_MESH]))
+				{
+					Asset_With_Config* dropped_payload = static_cast<Asset_With_Config*>(payload->Data);
+					Model3D* model = static_cast<Model3D*>(dropped_payload->asset);
+					build_renderable_entity_tree(scene_manager.m_scene_graph.root_node, model, 0);
+				}
+				ImGui::EndDragDropTarget();
+			}
 		}
 		ImGui::End();
 
@@ -157,20 +229,18 @@ namespace zorya
 				{
 				case Entity_Type::MESH:
 				{
-					Submesh_Info* submesh_info = frontend_renderer.find_submesh_info(selected_node->value.hnd_submesh);
-					m_entity_properties.render_entity_properties(selected_node->value, submesh_info, frontend_renderer.m_materials.at(selected_node->value.hnd_submesh.material_desc_id));
+					m_entity_properties.render_entity_mesh_properties(selected_node->value);
 					break;
 				}
 				case Entity_Type::COLLECTION:
 				{
-					Submesh_Info* submesh_info = frontend_renderer.find_submesh_info(selected_node->value.hnd_submesh);
-					m_entity_properties.render_entity_properties(selected_node->value, submesh_info, frontend_renderer.m_materials.at(selected_node->value.hnd_submesh.material_desc_id));
+					m_entity_properties.render_entity_transform(selected_node->value);
 					break;
 				}
 				case Entity_Type::LIGHT:
 				{
 					Light_Info& light_info = frontend_renderer.m_scene_lights.at(selected_node->value.hnd_light.index);
-					m_entity_properties.render_entity_properties(selected_node->value, light_info);
+					m_entity_properties.render_entity_light_properties(selected_node->value, light_info);
 					break;
 				}
 				default:
@@ -185,18 +255,23 @@ namespace zorya
 		}
 		ImGui::End();
 
-		ImGui::Begin("Logger");
+		ImGui::Begin("Asset Inspector");
 		{
-			Logger::render_logs();
+			m_asset_inspector.render(scene_manager, m_content_browser.selected_asset);
 		}
 		ImGui::End();
 
 		ImGui::Begin("Asset Explorer");
 		{
-
+			m_content_browser.render(asset_registry);
 		}
 		ImGui::End();
 
+		ImGui::Begin("Logger");
+		{
+			Logger::render_logs();
+		}
+		ImGui::End();
 
 		ImGui::Begin("Scene");
 		{
@@ -259,6 +334,9 @@ namespace zorya
 			}
 		}
 		ImGui::End();
+
+		ImGui::Render();
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
 	}
 

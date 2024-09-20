@@ -30,7 +30,7 @@ struct Directional_Light
         float far_plane_dist;
 
     PROPERTY(asd)
-        float ambient;
+        float indirect_light;
     float pad;
 };
 

@@ -3,19 +3,36 @@
 
 #include <vector>
 #include <algorithm>
+#include <utility>
+
+
 
 namespace zorya
 {
-	struct Generic_Entity_Handle;
+	//struct Generic_Entity_Handle;
 
 	template <typename T>
 	struct Node
 	{
 		Node(const T& nodeValue) : value(nodeValue) {}
+		~Node()
+		{
+			for (auto node : children){
+				delete node; 
+				node = nullptr;
+			}
+		}
+
+		void swap(Node<T>& other)
+		{
+			std::swap(this->value, other.value);
+			std::swap(this->children, other.children);
+		}
 
 		T value;
 		std::vector<Node<T>*> children;
 	};
+
 
 	template <typename T>
 	class Scene_Graph
@@ -24,7 +41,7 @@ namespace zorya
 		Scene_Graph(const T& root_value) : root_node(new Node<T>(root_value)) {}
 
 		Node<T>* root_node;
-
+		
 		void insertNode(const T& parent, const T& new_value)
 		{
 			Node<T>* parent_node = nullptr;
@@ -34,84 +51,16 @@ namespace zorya
 			node_at_which_to_append->children.push_back(new_node);
 		}
 
-		void remove_node_recursive(std::vector<Node<T>*>& children, std::vector<Generic_Entity_Handle>& generic_handles_to_remove)
+
+		void remove_node(Node<T>* node_to_remove, Node<T>* parent_of_node)
 		{
-			for (Node<T>* node : children)
-			{
+			Node<T>& node_in_vec = (*node_to_remove);
+			Node<T>& last_node = *parent_of_node->children.at(parent_of_node->children.size() - 1);
+			std::swap(node_in_vec, last_node);
 
-				Generic_Entity_Handle hnd_generic_entity;
-				hnd_generic_entity.tag = node->value.tag;
+			parent_of_node->children.pop_back();
 
-				switch (hnd_generic_entity.tag)
-				{
-				case Entity_Type::LIGHT:
-					hnd_generic_entity.hnd_light = node->value.hnd_light;
-					break;
-				case Entity_Type::MESH:
-					hnd_generic_entity.hnd_submesh = node->value.hnd_submesh;
-					break;
-				default:
-					break;
-				}
-				generic_handles_to_remove.push_back(hnd_generic_entity);
-
-				remove_node_recursive(node->children, generic_handles_to_remove);
-				delete node;
-			}
-			children.clear();
-		}
-
-		std::vector<Generic_Entity_Handle> remove_node(T& value_node_to_remove)
-		{
-
-			std::vector<Generic_Entity_Handle> generic_handles_to_remove;
-
-			Node<T>* parent_node = nullptr;
-			Node<T>* m_node_to_remove = find_node(root_node, value_node_to_remove, &parent_node);
-
-			if (m_node_to_remove != nullptr)
-			{
-
-				Generic_Entity_Handle hnd_generic_entity;
-				hnd_generic_entity.tag = m_node_to_remove->value.tag;
-
-				switch (hnd_generic_entity.tag)
-				{
-				case Entity_Type::LIGHT:
-					hnd_generic_entity.hnd_light = m_node_to_remove->value.hnd_light;
-					generic_handles_to_remove.push_back(hnd_generic_entity);
-					break;
-				case Entity_Type::MESH:
-					hnd_generic_entity.hnd_submesh = m_node_to_remove->value.hnd_submesh;
-					generic_handles_to_remove.push_back(hnd_generic_entity);
-					break;
-				default:
-					break;
-				}
-
-				remove_node_recursive(m_node_to_remove->children, generic_handles_to_remove);
-
-				if (parent_node != nullptr)
-				{
-					for (auto& ref_node_to_remove : parent_node->children)
-					{
-						if (ref_node_to_remove->value == m_node_to_remove->value)
-						{
-							std::swap(ref_node_to_remove, parent_node->children.back());
-							break;
-						}
-					}
-
-					//Node<T>* tmpNode = nodeToRemove;
-					//*(&nodeToRemove) = parentNode->children.at(parentNode->children.size() - 1);
-
-					//std::swap(nodeToRemove, parentNode->children.at(parentNode->children.size() - 1));
-					delete m_node_to_remove;
-					parent_node->children.pop_back();
-				}
-			}
-
-			return generic_handles_to_remove;
+			delete &last_node;
 		}
 
 
@@ -141,6 +90,17 @@ namespace zorya
 		}
 	};
 }
+
+
+namespace std
+{
+	template <typename T>
+	void swap(zorya::Node<T>& lhs, zorya::Node<T>& rhs)
+	{
+		lhs.swap(rhs);
+	}
+}
+
 
 #endif // !SCENE_GRAPH_H
 

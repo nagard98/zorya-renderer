@@ -11,8 +11,8 @@ namespace zorya
 	{
 		m_static_cache.vertex_buffers.resize(MIN_VERTEX_CACHE_SIZE);
 		m_static_cache.index_buffers.resize(MIN_INDEX_CACHE_SIZE);
-		m_static_cache.top_index_buffer = 0;
-		m_static_cache.top_vertex_buffer = 0;
+		m_static_cache.top_index_buffer = 1;
+		m_static_cache.top_vertex_buffer = 1;
 	}
 
 	Buffer_Cache::~Buffer_Cache()
@@ -27,7 +27,7 @@ namespace zorya
 		m_static_cache.top_index_buffer = 0;
 	}
 
-	Buffer_Cache_Handle_t Buffer_Cache::alloc_static_geom(const Submesh_Handle_t hnd_submesh, const uint16_t* geom_index_start, const Vertex* geom_vertex_start)
+	Buffer_Handle_t Buffer_Cache::alloc_static_geom(const Submesh_Handle_t hnd_submesh, const uint16_t* geom_index_start, const Vertex* geom_vertex_start)
 	{
 		ID3D11Buffer* index_buffer = nullptr;
 
@@ -58,13 +58,13 @@ namespace zorya
 		m_static_cache.top_vertex_buffer += 1;
 
 		//TODO: create better implementation; this is a naive solution
-		Buffer_Cache_Handle_t handle = Buffer_Cache_Handle_t{ ((uint32_t)m_static_cache.top_vertex_buffer) - 1, 1 };
+		Buffer_Handle_t handle = Buffer_Handle_t{ ((uint32_t)m_static_cache.top_vertex_buffer) - 1, 1 };
 
 		return handle;
 	}
 
 	//TODO: implement deallocation static geometry from buffer cache
-	void Buffer_Cache::dealloc_static_geom(Buffer_Cache_Handle_t hnd_buffer_cache)
+	void Buffer_Cache::dealloc_static_geom(Buffer_Handle_t hnd_buffer_gpu_resource)
 	{}
 
 	bool Buffer_Cache::is_cached(const Submesh_Handle_t hnd_submesh)
@@ -73,25 +73,25 @@ namespace zorya
 		return hnd_submesh.base_vertex < m_static_cache.top_vertex_buffer;
 	}
 
-	Vertex_Buffer Buffer_Cache::get_vertex_buffer(Buffer_Cache_Handle_t hnd_buffer_cache)
+	Vertex_Buffer Buffer_Cache::get_vertex_buffer(Buffer_Handle_t hnd_buffer_gpu_resource)
 	{
-		if (!((bool)hnd_buffer_cache.is_cached))
+		if (!((bool)hnd_buffer_gpu_resource.is_cached))
 		{
 			OutputDebugString("ERROR :: the buffer handle specified in BufferCache::GetVertexBuffer is not valid\n");
 			return Vertex_Buffer();
 		}
 
-		return m_static_cache.vertex_buffers.at(hnd_buffer_cache.value);
+		return m_static_cache.vertex_buffers.at(hnd_buffer_gpu_resource.index);
 	}
 
-	Index_Buffer Buffer_Cache::get_index_buffer(Buffer_Cache_Handle_t hnd_buffer_cache)
+	Index_Buffer Buffer_Cache::get_index_buffer(Buffer_Handle_t hnd_buffer_gpu_resource)
 	{
-		if (!((bool)hnd_buffer_cache.is_cached))
+		if (!((bool)hnd_buffer_gpu_resource.is_cached))
 		{
 			OutputDebugString("ERROR :: the buffer handle specified in BufferCache::GetIndexBuffer is not valid\n");
 			return Index_Buffer();
 		}
 
-		return m_static_cache.index_buffers.at(hnd_buffer_cache.value);
+		return m_static_cache.index_buffers.at(hnd_buffer_gpu_resource.index);
 	}
 }

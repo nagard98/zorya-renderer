@@ -1,4 +1,4 @@
-#ifndef MODEL_H_
+ #ifndef MODEL_H_
 #define MODEL_H_
 
 #include <DirectXMath.h>
@@ -8,6 +8,13 @@
 #include <d3d11_1.h>
 
 #include "Material.h"
+#include "Asset.h"
+#include "Transform.h"
+#include "renderer/backend/PipelineStateObject.h"
+
+#include "assimp/Importer.hpp"
+#include "assimp/postprocess.h"
+#include "assimp/scene.h"
 
 //#include <BufferCache.h>
 
@@ -15,13 +22,6 @@ namespace zorya
 {
 	namespace wrl = Microsoft::WRL;
 	namespace dx = DirectX;
-
-
-	struct Model_Handle_t
-	{
-		uint16_t base_mesh;
-		uint16_t num_meshes;
-	};
 
 	struct Submesh_Handle_t
 	{
@@ -31,6 +31,41 @@ namespace zorya
 		uint32_t num_vertices;
 		uint32_t num_indices;
 	};
+
+	struct Submesh_Collection
+	{
+		//TODO: can probably be smaller
+		std::vector<int> submesh_indices;
+		std::vector<int> collection_indices;
+		uint32_t depth;
+		Transform_t local_transform;
+	};
+
+
+	class Model3D: public Asset
+	{
+	public:
+		static Model3D* create(const Asset_Import_Config* asset_imp_conf);
+
+		Model3D(const Asset_Import_Config* asset_imp_conf);
+
+		void load_asset(const Asset_Import_Config* tex_imp_config) override {};
+
+		Material_Cache_Handle_t global_material;
+		std::vector<Material*> submesh_materials;
+		//TODO: dont use pso_desc, but something higher level
+		//std::vector<PSO_Desc> submesh_psos;
+		std::vector<Submesh_Handle_t> submeshes;
+		std::vector<std::string> submesh_names;
+		std::vector<Submesh_Collection> submesh_collections;
+		std::vector<std::string> collection_names;
+
+	private:
+		std::vector<int> load_node_children(const aiScene* scene, aiNode** children, unsigned int num_children, unsigned int depth);
+		std::vector<int> load_node_meshes(const aiScene* scene, unsigned int* meshes_indices, unsigned int num_meshes, Transform_t local_transform = IDENTITY_TRANSFORM);
+
+	};
+
 
 	struct Simple_Vertex
 	{

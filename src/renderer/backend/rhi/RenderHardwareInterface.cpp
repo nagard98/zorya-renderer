@@ -9,12 +9,14 @@
 #include "renderer/backend/rhi/RenderDevice.h"
 #include "renderer/backend/rhi/RHIState.h"
 #include "renderer/backend/rhi/RenderHardwareInterface.h"
+#include "renderer/backend/GraphicsContext.h"
 
 #include "renderer/frontend/Material.h"
-
+#include "renderer/frontend/Asset.h"
 #include "ApplicationConfig.h"
 
 #include "WICTextureLoader.h"
+
 
 namespace zorya
 {
@@ -22,14 +24,31 @@ namespace zorya
 
 	Render_Hardware_Interface rhi;
 
-	Render_Hardware_Interface::Render_Hardware_Interface()
-	{}
-
-	Render_Hardware_Interface::~Render_Hardware_Interface()
-	{}
+	Render_Hardware_Interface::Render_Hardware_Interface() {}
+	Render_Hardware_Interface::~Render_Hardware_Interface() {}
 
 	HRESULT Render_Hardware_Interface::init(HWND window_handle, RHI_State initial_state)
 	{
+		gfx_root_signature.root_params[0].base_register = 0;
+		gfx_root_signature.root_params[0].num_resources = 10;
+		gfx_root_signature.root_params[0].view_type = Shader_View_Type::CBV;
+		gfx_root_signature.root_params[0].visibility = Shader_Visibility::VERTEX_SHADER;
+		
+		gfx_root_signature.root_params[1].base_register = 0;
+		gfx_root_signature.root_params[1].num_resources = 10;
+		gfx_root_signature.root_params[1].view_type = Shader_View_Type::SRV;
+		gfx_root_signature.root_params[1].visibility = Shader_Visibility::VERTEX_SHADER;
+		
+		gfx_root_signature.root_params[2].base_register = 0;
+		gfx_root_signature.root_params[2].num_resources = 10;
+		gfx_root_signature.root_params[2].view_type = Shader_View_Type::CBV;
+		gfx_root_signature.root_params[2].visibility = Shader_Visibility::PIXEL_SHADER;
+		
+		gfx_root_signature.root_params[3].base_register = 0;
+		gfx_root_signature.root_params[3].num_resources = 10;
+		gfx_root_signature.root_params[3].view_type = Shader_View_Type::SRV;
+		gfx_root_signature.root_params[3].visibility = Shader_Visibility::PIXEL_SHADER;
+
 		HRESULT h_res = S_OK;
 
 		RECT rect;
@@ -114,6 +133,9 @@ namespace zorya
 
 		RETURN_IF_FAILED(h_res);
 
+		m_device.init();
+		m_gfx_context = new GraphicsContext(rhi.m_device.m_device);
+
 		//IDXGIFactory2* dxgiFactory2 = nullptr;
 		//hRes = dxgiFactory1->QueryInterface(__uuidof(IDXGIFactory2), reinterpret_cast<void**>(&dxgiFactory2));
 
@@ -166,45 +188,13 @@ namespace zorya
 		h_res = m_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(back_buffer.GetAddressOf()));
 		RETURN_IF_FAILED(h_res);
 
+		D3D11_RENDER_TARGET_VIEW_DESC back_buffer_rtv_desc;
+		back_buffer_rtv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+		back_buffer_rtv_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		back_buffer_rtv_desc.Texture2D.MipSlice = 0;
+
 		h_res = m_device.m_device->CreateRenderTargetView(back_buffer.Get(), nullptr, &m_back_buffer_rtv);
 		RETURN_IF_FAILED(h_res);
-
-
-		//Render Target for editor scene window?-----------------------------------------------------------------------
-		//
-		//RenderTextureHandle hndTexRenderTarget;
-
-		//ZRYResult zRes = device.createTex2D(&hndTexRenderTarget, ZRYBindFlags{ D3D11_BIND_SHADER_RESOURCE }, ZRYFormat{ scd.BufferDesc.Format }, scd.BufferDesc.Width, scd.BufferDesc.Height, 1, nullptr, nullptr, false, 1);
-		//RETURN_IF_FAILED(zRes.value);
-		///*ID3D11Texture2D* rtTexture = */device.getTex2DPointer(hndTexRenderTarget);
-
-		//RenderSRVHandle hndSrvRenderTarget;
-		//zRes = device.createSRVTex2D(&hndSrvRenderTarget, &hndTexRenderTarget, ZRYFormat{ DXGI_FORMAT_R8G8B8A8_UNORM }, 1, -1);
-		//RETURN_IF_FAILED(zRes.value);
-		//renderTargetShaderResourceView = device.getSRVPointer(hndSrvRenderTarget);
-
-		//D3D11_TEXTURE2D_DESC editorSceneTexDesc;
-		//ZeroMemory(&editorSceneTexDesc, sizeof(editorSceneTexDesc));
-		//editorSceneTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		//editorSceneTexDesc.ArraySize = 1;
-		//editorSceneTexDesc.MipLevels = 1;
-		//editorSceneTexDesc.Usage = D3D11_USAGE_DEFAULT;
-		//editorSceneTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-		//editorSceneTexDesc.Height = height;
-		//editorSceneTexDesc.Width = width;
-		//editorSceneTexDesc.SampleDesc.Count = MULTISAMPLE_COUNT;
-		//editorSceneTexDesc.SampleDesc.Quality = 0;
-
-		//hRes = device.device->CreateTexture2D(&editorSceneTexDesc, NULL, &editorSceneTex);
-		//RETURN_IF_FAILED(hRes);
-
-		//hRes = device.device->CreateShaderResourceView(editorSceneTex, NULL, &editorSceneSRV);
-		//RETURN_IF_FAILED(hRes);
-
-		//------------------------------------------------------------------------------
-
-
-		(m_context)->OMSetRenderTargets(1, &m_back_buffer_rtv, nullptr);
 
 		m_viewport.TopLeftX = 0;
 		m_viewport.TopLeftY = 0;
@@ -212,10 +202,6 @@ namespace zorya
 		m_viewport.Height = (FLOAT)height;
 		m_viewport.MinDepth = 0.0f;
 		m_viewport.MaxDepth = 1.0f;
-
-		m_context->RSSetViewports(1, &m_viewport);
-
-		set_state(initial_state);
 
 		//TODO:move sampler creation to somewhere else----------------
 		D3D11_SAMPLER_DESC sampler_desc;
@@ -234,10 +220,8 @@ namespace zorya
 		sampler_desc.MaxLOD = FLT_MAX;
 		sampler_desc.MaxAnisotropy = 16;
 
-		h_res = m_device.m_device->CreateSamplerState(&sampler_desc, &m_sampler_state_variants[0].p_state_object);
 		RETURN_IF_FAILED(h_res);
 
-		m_context->PSSetSamplers(0, 1, &m_sampler_state_variants[0].p_state_object);
 		//-----------------------------------------------------------------
 
 		//TODO: move depth/stencil view creation somewhere else------------------
@@ -274,7 +258,6 @@ namespace zorya
 		h_res = m_device.m_device->CreateShaderResourceView(m_back_buffer_depth_tex, &depth_stencil_srv_desc, &m_back_buffer_depth_srv);
 		RETURN_IF_FAILED(h_res);
 
-		m_context->OMSetRenderTargets(1, &m_back_buffer_rtv, m_back_buffer_depth_dsv);
 		//--------------------------------------------------
 
 		//TODO: move blend desc somewhere else-------------
@@ -293,12 +276,7 @@ namespace zorya
 		blend_desc.AlphaToCoverageEnable = false;
 		blend_desc.IndependentBlendEnable = false;
 		blend_desc.RenderTarget[0] = target_blend_desc1;
-
-		h_res = m_device.m_device->CreateBlendState(&blend_desc, &m_blend_state_variants[0].p_state_object);
-		RETURN_IF_FAILED(h_res);
-		//rhi.context->OMSetBlendState(blendVariants[0].pStateObject, 0, 0);
 		//---------------------------
-
 
 		D3D11_RENDER_TARGET_BLEND_DESC rtf_blend_desc{};
 		rtf_blend_desc.BlendEnable = true;
@@ -315,95 +293,33 @@ namespace zorya
 		jimenez_gauss_blend_desc.AlphaToCoverageEnable = false;
 		jimenez_gauss_blend_desc.RenderTarget[0] = rtf_blend_desc;
 
-		h_res = m_device.m_device->CreateBlendState(&jimenez_gauss_blend_desc, &m_blend_state_variants[1].p_state_object);
-		RETURN_IF_FAILED(h_res);
-
 		return h_res;
 	}
 
-	void Render_Hardware_Interface::set_state(RHI_State new_state)
+	void Render_Hardware_Interface::shutdown()
 	{
-		RHI_State state_changes = new_state ^ state;
+		release_all_resources();
 
-		// if state hasn't changed from last update, return
-		if (state_changes == 0)
-		{
-			return;
-		}
+		m_context->ClearState();
+		m_context->Flush();
+		m_debug_layer->Release();
 
-		// Searches raster state object in cache
-		if ((state_changes & RASTER_STATE_MASK) != 0)
-		{
-			RHI_State new_raster_state = new_state & RASTER_STATE_MASK;
-
-			for (int i = 0; i < m_rast_state_variants.size(); i++)
-			{
-				if (m_rast_state_variants[i].variant == -1)
-				{
-					Logger::add_log(Logger::Channel::TRACE, "Building new raster state\n");
-					ZeroMemory(&m_tmp_rast_desc, sizeof(m_tmp_rast_desc));
-					m_tmp_rast_desc.FillMode = (new_raster_state & RASTER_FILL_MODE_MASK) == RASTER_FILL_MODE_SOLID ? D3D11_FILL_SOLID : D3D11_FILL_WIREFRAME;
-					m_tmp_rast_desc.AntialiasedLineEnable = (new_raster_state & RASTER_ANTIALIAS_MASK) == RASTER_ANTIALIAS_MASK;
-					m_tmp_rast_desc.CullMode = (new_raster_state & RASTER_CULL_MODE_MASK) == RASTER_CULL_FRONT ? D3D11_CULL_FRONT : D3D11_CULL_BACK;
-					m_tmp_rast_desc.MultisampleEnable = (new_raster_state & RASTER_MULTISAMPLE_MASK) == RASTER_MULTISAMPLE_MASK;
-					m_tmp_rast_desc.ScissorEnable = (new_raster_state & RASTER_SCISSOR_MASK) == RASTER_SCISSOR_MASK;
-
-					m_rast_state_variants[i].variant = new_raster_state & RASTER_STATE_MASK;
-					m_device.m_device->CreateRasterizerState(&m_tmp_rast_desc, &(m_rast_state_variants[i].p_state_object));
-					m_context->RSSetState(m_rast_state_variants[i].p_state_object);
-					break;
-				}
-				else if (m_rast_state_variants[i].variant == new_raster_state)
-				{
-					m_context->RSSetState(m_rast_state_variants[i].p_state_object);
-					break;
-				}
-			}
-		}
-
-		if ((state_changes & DEPTH_STENCIL_STATE_MASK) != 0)
-		{
-			RHI_State new_depth_stencil_state = new_state & DEPTH_STENCIL_STATE_MASK;
-
-			for (int i = 0; i < m_depth_stencil_state_variants.size(); i++)
-			{
-				if (m_depth_stencil_state_variants[i].variant == -1)
-				{
-					Logger::add_log(Logger::Channel::TRACE, "Building new depth stancil state\n");
-					ZeroMemory(&m_tmp_depth_sten_desc, sizeof(m_tmp_depth_sten_desc));
-					m_tmp_depth_sten_desc.DepthEnable = (new_depth_stencil_state & DEPTH_ENABLE_MASK) == DEPTH_ENABLE_MASK;
-					m_tmp_depth_sten_desc.DepthWriteMask = (new_depth_stencil_state & DEPTH_WRITE_ENABLE_MASK) == DEPTH_WRITE_ENABLE_MASK ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
-					m_tmp_depth_sten_desc.DepthFunc = (new_depth_stencil_state & DEPTH_COMP_MASK) == DEPTH_COMP_LESS ? D3D11_COMPARISON_LESS : D3D11_COMPARISON_LESS_EQUAL;
-
-					m_depth_stencil_state_variants[i].variant = new_depth_stencil_state;
-					m_device.m_device->CreateDepthStencilState(&m_tmp_depth_sten_desc, &(m_depth_stencil_state_variants[i].p_state_object));
-					m_context->OMSetDepthStencilState(m_depth_stencil_state_variants[i].p_state_object, 0.0f);
-					break;
-				}
-				else if (m_depth_stencil_state_variants[i].variant == new_depth_stencil_state)
-				{
-					m_context->OMSetDepthStencilState(m_depth_stencil_state_variants[i].p_state_object, 0.0f);
-					break;
-				}
-			}
-		}
-
-		state = new_state;
-
+		if (m_context) m_context->Release();
+		if (m_device.m_device) m_device.m_device->Release();
 	}
 
-	RHI_RESULT Render_Hardware_Interface::load_texture(const wchar_t* path, Shader_Texture2D& shader_texture, bool is_srgb = true, size_t max_size)
+	RHI_RESULT Render_Hardware_Interface::load_texture(const wchar_t* path, Shader_Texture2D** shader_texture, bool is_srgb = true, size_t max_size)
 	{
-		if (shader_texture.resource_view != nullptr)
+		if (*shader_texture != nullptr)
 		{
 			ID3D11ShaderResourceView* null_views[3] = { nullptr };
 			m_context->PSSetShaderResources(0, 3, null_views);
 
 			ID3D11Resource* texture_resource = nullptr;
-			shader_texture.resource_view->GetResource(&texture_resource);
+			(*shader_texture)->GetResource(&texture_resource);
 
-			shader_texture.resource_view->Release();
-			shader_texture.resource_view = nullptr;
+			(*shader_texture)->Release();
+			*shader_texture = nullptr;
 
 			texture_resource->Release();
 			texture_resource = nullptr;
@@ -414,9 +330,208 @@ namespace zorya
 			max_size,
 			D3D11_USAGE_DEFAULT,
 			D3D11_BIND_SHADER_RESOURCE,
-			0, 0, is_srgb ? dx::WIC_LOADER_SRGB_DEFAULT : dx::WIC_LOADER_IGNORE_SRGB, NULL, &shader_texture.resource_view);
+			0, 0, is_srgb ? dx::WIC_LOADER_SRGB_DEFAULT : dx::WIC_LOADER_IGNORE_SRGB, NULL, shader_texture);
 
 		return hRes == S_OK ? RHI_OK : RHI_ERR;
+	}
+
+	RHI_RESULT Render_Hardware_Interface::load_texture2(const Texture2D* const texture_asset, const Texture_Import_Config* const tex_config, Render_SRV_Handle* hnd_srv, size_t max_size)
+	{
+		assert(texture_asset != nullptr);
+		assert(texture_asset->m_is_loaded == true);
+
+		ID3D11ShaderResourceView* shader_texture = get_srv_pointer(*hnd_srv);
+
+		if (shader_texture != nullptr)
+		{
+			ID3D11ShaderResourceView* null_views[3] = { nullptr };
+			m_context->PSSetShaderResources(0, 3, null_views);
+
+			ID3D11Resource* texture_resource = nullptr;
+			shader_texture->GetResource(&texture_resource);
+
+			shader_texture->Release();
+			shader_texture = nullptr;
+
+			texture_resource->Release();
+			texture_resource = nullptr;
+		}
+
+		Render_Texture_Handle hnd_staging_tex, hnd_final_tex;
+		Render_SRV_Handle hnd_staging_srv/*, hnd_srv_tex*/;
+
+		D3D11_SUBRESOURCE_DATA init_data{};
+		init_data.pSysMem = (const void*)texture_asset->m_data;
+		//TODO: fix number of channels on import
+		init_data.SysMemPitch = tex_config->max_width * 4/*tex_config->channels*/ * 1;
+		
+		ZRY_Result res = m_device.create_tex_2d(&hnd_staging_tex, nullptr, ZRY_Usage{ D3D11_USAGE_DEFAULT }, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ tex_config->is_normal_map ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGI_FORMAT_R8G8B8A8_UNORM_SRGB },
+			tex_config->max_width, tex_config->max_height,
+			1, &hnd_staging_srv, nullptr, true, 0, 1, 1, 0);
+		assert(res.value == S_OK);
+
+		ID3D11Texture2D* stag_tex = m_device.get_tex_2d_pointer(hnd_staging_tex);
+		m_context->UpdateSubresource(stag_tex, 0, nullptr, init_data.pSysMem, init_data.SysMemPitch, 0);
+
+		ID3D11ShaderResourceView* stag_srv = m_device.get_srv_pointer(hnd_staging_srv);
+		m_context->GenerateMips(stag_srv);
+
+		res = m_device.create_tex_2d(&hnd_final_tex, nullptr, ZRY_Usage{ D3D11_USAGE_DEFAULT}, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE }, ZRY_Format{ tex_config->is_normal_map ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGI_FORMAT_R8G8B8A8_UNORM_SRGB },
+			tex_config->max_width, tex_config->max_height,
+			1, hnd_srv, nullptr, false, 0, 1, 1, 0);
+		assert(res.value == S_OK);
+
+		ID3D11Texture2D* final_tex = m_device.get_tex_2d_pointer(hnd_final_tex);
+		m_context->CopyResource(final_tex, stag_tex);
+
+		stag_srv->Release();
+		stag_tex->Release();
+
+		return res.value;
+	}
+
+	ZRY_Result Render_Hardware_Interface::create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, ZRY_Usage usage, ZRY_Bind_Flags bind_flags, ZRY_Format format, float width, float height, int numTex, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int array_size, int sample_count, int sample_quality)
+	{
+		ZRY_Result zr = m_device.create_tex_2d(tex_handle, init_data, usage, bind_flags, format, width, height, numTex, srv_handle, rtv_handle, generate_mips, mip_levels, array_size, sample_count, sample_quality);
+		return zr;
+	}
+
+	ZRY_Result Render_Hardware_Interface::create_srv_tex_2d(Render_SRV_Handle* srv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int num_SRVs, int mip_levels, int most_detailed_mip)
+	{
+		ZRY_Result zr = m_device.create_srv_tex_2d(srv_handle, tex_handle, format, num_SRVs, mip_levels, most_detailed_mip);
+		return zr;
+	}
+
+	ZRY_Result Render_Hardware_Interface::create_rtv_tex_2d(Render_RTV_Handle* rtv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int num_RTVs, int mip_slice)
+	{
+		ZRY_Result zr = m_device.create_rtv_tex_2d(rtv_handle, tex_handle, format, num_RTVs, mip_slice);
+		return zr;
+	}
+
+	ZRY_Result Render_Hardware_Interface::create_dsv_tex_2d(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int num_DSVs, int mip_slice, bool is_read_only)
+	{
+		ZRY_Result zr = m_device.create_dsv_tex_2d(dsv_handle, tex_handle, format, num_DSVs, mip_slice, is_read_only);
+		return zr;
+	}
+
+	ZRY_Result Render_Hardware_Interface::create_tex_cubemap(Render_Texture_Handle* tex_handle, ZRY_Bind_Flags bind_flags, ZRY_Format format, float width, float height, int num_tex, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int array_size, int sample_count, int sample_quality)
+	{
+		ZRY_Result zr = m_device.create_tex_cubemap(tex_handle, bind_flags, format, width, height, num_tex, srv_handle, rtv_handle, generate_mips, mip_levels, array_size, sample_count, sample_quality);
+		return zr;
+	}
+
+	ZRY_Result Render_Hardware_Interface::create_srv_tex_2d_array(Render_SRV_Handle* srv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int num_SRVs, int array_size, int first_array_slice, int mipLevels, int most_detailed_mip)
+	{
+		ZRY_Result zr = m_device.create_srv_tex_2d_array(srv_handle, tex_handle, format, num_SRVs, array_size, first_array_slice, mipLevels, most_detailed_mip );
+		return zr;
+	}
+
+	ZRY_Result Render_Hardware_Interface::create_dsv_tex_2d_array(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int array_size, int num_DSVs, int mip_slice, int first_array_slice)
+	{
+		ZRY_Result zr = m_device.create_dsv_tex_2d_array(dsv_handle, tex_handle, format, array_size, num_DSVs, mip_slice, first_array_slice);
+		return zr;
+	}
+
+	ZRY_Result Render_Hardware_Interface::create_constant_buffer(Constant_Buffer_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc)
+	{
+		ZRY_Result zr = m_device.create_constant_buffer(hnd, buffer_desc);
+		return zr;
+	}
+
+	ZRY_Result Render_Hardware_Interface::create_pso(PSO_Handle* pso_hnd, const PSO_Desc& pso_desc)
+	{
+		ZRY_Result zr = m_device.create_pso(pso_hnd, pso_desc);
+		return zr;
+	}
+
+	ZRY_Result Render_Hardware_Interface::create_pixel_shader(Pixel_Shader_Handle* ps_hnd, const Shader_Bytecode& bytecode)
+	{
+		ZRY_Result zr = m_device.create_pixel_shader(ps_hnd, bytecode);
+		return zr;
+	}
+
+	ZRY_Result Render_Hardware_Interface::create_vertex_shader(Vertex_Shader_Handle* vs_hnd, const Shader_Bytecode& bytecode)
+	{
+		ZRY_Result zr = m_device.create_vertex_shader(vs_hnd, bytecode);
+		return zr;
+	}
+
+	ZRY_Result Render_Hardware_Interface::create_ds_state(DS_State_Handle* ds_state_hnd, const D3D11_DEPTH_STENCIL_DESC& ds_state_desc)
+	{
+		ZRY_Result zr = m_device.create_ds_state(ds_state_hnd, ds_state_desc);
+		return zr;
+	}
+
+	ZRY_Result Render_Hardware_Interface::create_rs_state(RS_State_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc)
+	{
+		ZRY_Result zr = m_device.create_rs_state(rs_state_hnd, rs_state_desc);
+		return zr;
+	}
+
+	Render_SRV_Handle Render_Hardware_Interface::add_srv(ID3D11ShaderResourceView*&& srv_resource)
+	{
+		return m_device.add_srv(std::forward<ID3D11ShaderResourceView*&&>(srv_resource));
+	}
+
+	ID3D11Texture2D* Render_Hardware_Interface::get_tex_2d_pointer(const Render_Texture_Handle rt_hnd) const
+	{
+		ID3D11Texture2D* res = m_device.get_tex_2d_pointer(rt_hnd);
+		return res;
+	}
+
+	ID3D11RenderTargetView* Render_Hardware_Interface::get_rtv_pointer(const Render_RTV_Handle rtv_hnd) const
+	{
+		return m_device.get_rtv_pointer(rtv_hnd);
+	}
+
+	ID3D11ShaderResourceView* Render_Hardware_Interface::get_srv_pointer(const Render_SRV_Handle srv_hnd) const
+	{
+		return m_device.get_srv_pointer(srv_hnd);
+	}
+
+	ID3D11DepthStencilView* Render_Hardware_Interface::get_dsv_pointer(const Render_DSV_Handle dsv_hnd) const
+	{
+		return m_device.get_dsv_pointer(dsv_hnd);
+	}
+
+	ID3D11Buffer* Render_Hardware_Interface::get_cb_pointer(const Constant_Buffer_Handle cb_hnd) const
+	{
+		return m_device.get_cb_pointer(cb_hnd);
+	}
+
+	ID3D11PixelShader* Render_Hardware_Interface::get_ps_pointer(const Pixel_Shader_Handle ps_hnd) const
+	{
+		return m_device.get_ps_pointer(ps_hnd);
+	}
+
+	ID3D11VertexShader* Render_Hardware_Interface::get_vs_pointer(const Vertex_Shader_Handle vs_hnd) const
+	{
+		return m_device.get_vs_pointer(vs_hnd);
+	}
+
+	ID3D11DepthStencilState* Render_Hardware_Interface::get_ds_state_pointer(const DS_State_Handle ds_hnd) const
+	{
+		return m_device.get_ds_state_pointer(ds_hnd);
+	}
+
+	ID3D11RasterizerState* Render_Hardware_Interface::get_rs_state_pointer(const RS_State_Handle rs_hnd) const
+	{
+		return m_device.get_rs_state_pointer(rs_hnd);
+	}
+
+	const Pipeline_State_Object* Render_Hardware_Interface::get_pso_pointer(const PSO_Handle pso_hnd) const
+	{
+		return m_device.get_pso_pointer(pso_hnd);
+	}
+
+	DS_State_Handle Render_Hardware_Interface::ds_state_hnd_from_desc(const D3D11_DEPTH_STENCIL_DESC& ds_state_desc)
+	{
+		return m_device.ds_state_hnd_from_desc(ds_state_desc);
+	}
+
+	RS_State_Handle Render_Hardware_Interface::rs_state_hnd_from_desc(const D3D11_RASTERIZER_DESC& rs_state_desc)
+	{
+		return m_device.rs_state_hnd_from_desc(rs_state_desc);
 	}
 
 	HRESULT Render_Hardware_Interface::resize_window(uint32_t width, uint32_t height)
@@ -493,13 +608,10 @@ namespace zorya
 		return hr;
 	}
 
-	ID3D11BlendState* Render_Hardware_Interface::get_blend_state(int index)
-	{
-		return m_blend_state_variants[index].p_state_object;
-	}
-
 	void Render_Hardware_Interface::release_all_resources()
 	{
+		m_device.release_all_resources();
+
 		if (m_back_buffer_depth_dsv) m_back_buffer_depth_dsv->Release();
 		if (m_back_buffer_depth_srv) m_back_buffer_depth_srv->Release();
 		if (m_back_buffer_depth_tex) m_back_buffer_depth_tex->Release();
@@ -507,27 +619,6 @@ namespace zorya
 
 		if (m_swap_chain) m_swap_chain->Release();
 
-		for (auto& rasterizer_state : m_rast_state_variants)
-		{
-			if (rasterizer_state.p_state_object) rasterizer_state.p_state_object->Release();
-		}
-
-		for (auto& depth_stencil_state : m_depth_stencil_state_variants)
-		{
-			if (depth_stencil_state.p_state_object) depth_stencil_state.p_state_object->Release();
-		}
-
-		for (auto& blend_state : m_blend_state_variants)
-		{
-			if (blend_state.p_state_object) blend_state.p_state_object->Release();
-		}
-
-		for (auto& sampler_state : m_sampler_state_variants)
-		{
-			if (sampler_state.p_state_object) sampler_state.p_state_object->Release();
-		}
-
-		m_device.release_all_resources();
 	}
 
 }

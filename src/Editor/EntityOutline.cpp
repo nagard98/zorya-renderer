@@ -2,7 +2,7 @@
 #include "editor/Logger.h"
 #include "Editor.h"
 
-#include "renderer/frontend/RendererFrontend.h"
+#include "renderer/frontend/SceneManager.h"
 #include "renderer/frontend/Material.h"
 
 #include "reflection/Reflection.h"
@@ -27,7 +27,6 @@ namespace zorya
 	char Entity_Outline::tmp_char_buff[128];
 	ImGuiID Entity_Outline::id_dialog_open = 0;
 
-
 	template<typename T>
 	bool render_entity_property(T* field_addr, const char* name)
 	{
@@ -35,12 +34,13 @@ namespace zorya
 
 		ImGui::SeparatorText(name);
 		{
-			for_each_field([&](auto& refl_field, auto& field_meta) {
-				bool is_edited = render_entity_property(field_meta.type.cast_to((void*)GET_FIELD_ADDRESS(refl_field, field_meta.offset)), field_meta.name);
-				if (is_edited)
+			for_each_field([&](auto& refl_field, auto& field_meta)
 				{
-					modified = UPDATE_MAT_PRMS;
-				}
+					bool is_edited = render_entity_property(field_meta.type.cast_to((void*)GET_FIELD_ADDRESS(refl_field, field_meta.offset)), field_meta.name);
+					if (is_edited)
+					{
+						modified = UPDATE_MAT_PRMS;
+					}
 				}, *field_addr);
 		}
 
@@ -125,19 +125,20 @@ namespace zorya
 		ImGui::PushID((void*)field_addr);
 		ImGuiID id_current_dialog = ImGui::GetItemID();
 
-		if (ImGui::Button("Import"))
-		{
-			zorya::file_browser.Open();
-			Entity_Outline::id_dialog_open = id_current_dialog;
-		}
+		//TODO: fix
+		//if (ImGui::Button("Import"))
+		//{
+		//	file_browser.Open();
+		//	Entity_Outline::id_dialog_open = id_current_dialog;
+		//}
 
-		if (Entity_Outline::id_dialog_open == id_current_dialog && zorya::file_browser.HasSelected())
-		{
-			std::wstring importFilepath = zorya::file_browser.GetSelected().wstring();
-			wcsncpy_s(field_addr, 128, importFilepath.c_str(), wcsnlen_s(importFilepath.c_str(), MAX_PATH));
-			zorya::file_browser.ClearSelected();
-			is_editing_complete = true;
-		}
+		//if (Entity_Outline::id_dialog_open == id_current_dialog && file_browser.HasSelected())
+		//{
+		//	std::wstring importFilepath = file_browser.GetSelected().wstring();
+		//	wcsncpy_s(field_addr, 128, importFilepath.c_str(), wcsnlen_s(importFilepath.c_str(), MAX_PATH));
+		//	file_browser.ClearSelected();
+		//	is_editing_complete = true;
+		//}
 
 		ImGui::PopID();
 
@@ -146,6 +147,103 @@ namespace zorya
 		return is_editing_complete;
 	}
 
+	bool render_entity_property(float* field_addr, int num_components, const char* name)
+	{
+		switch (num_components)
+		{
+		case(1):
+		{
+			ImGui::DragFloat(name, field_addr, 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+			break;
+		}
+		case(2):
+		{
+			ImGui::DragFloat2(name, field_addr, 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+			break;
+		}
+		case(3):
+		{
+			ImGui::DragFloat3(name, field_addr, 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+			break;
+		}
+		case(4):
+		{
+			ImGui::DragFloat4(name, field_addr, 0.01f, 0.001f, 0.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+			break;
+		}
+		default:
+			break;
+		}
+
+		return ImGui::IsItemEdited();
+	}
+
+	bool render_entity_property(uint32_t* field_addr, int num_components, const char* name)
+	{
+		switch (num_components)
+		{
+		case(1):
+		{
+			ImGui::DragInt(name, (int*)field_addr, 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+			break;
+		}
+		case(2):
+		{
+			ImGui::DragInt2(name, (int*)field_addr, 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+			break;
+		}
+		case(3):
+		{
+			ImGui::DragInt3(name, (int*)field_addr, 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+			break;
+		}
+		case(4):
+		{
+			ImGui::DragInt4(name, (int*)field_addr, 0, 0, 1, "%d", ImGuiSliderFlags_AlwaysClamp);
+			break;
+		}
+		default:
+			break;
+		}
+
+		return ImGui::IsItemEdited();
+	}
+
+	bool render_entity_property(bool* field_addr, int num_components, const char* name)
+	{
+		ImGui::Checkbox(name, field_addr);
+		return ImGui::IsItemEdited();
+	}
+
+
+	bool render_entity_property(CB_Variable& property, void* cb_start)
+	{
+		unsigned char* fieldAddr = static_cast<unsigned char*>(cb_start) + property.offset_in_bytes;
+
+		switch (property.description.variable_type)
+		{
+		case (VAR_REFL_TYPE::FLOAT):
+		{
+			return render_entity_property((float*)fieldAddr, property.description.columns, property.name);
+			break;
+		}
+		case (VAR_REFL_TYPE::UINT32):
+		{
+			return render_entity_property((uint32_t*)fieldAddr, property.description.columns, property.name);
+			break;
+		}
+		case (VAR_REFL_TYPE::BOOL):
+		{
+			return render_entity_property((bool*)fieldAddr, property.description.columns, property.name);
+			break;
+		}
+		default:
+		{
+			return false;
+			break;
+		}
+		}
+	}
 
 	template <typename T>
 	struct RenderProperty
@@ -156,6 +254,42 @@ namespace zorya
 		}
 	};
 
+
+	void Entity_Outline::render_entity_light_properties(Renderable_Entity& entity, Light_Info& light_info)
+	{
+		render_entity_transform(entity);
+
+		ImGui::SeparatorText("Light Parameters");
+		{
+			switch (light_info.tag)
+			{
+
+			case Light_Type::DIRECTIONAL:
+				for_each_field([](auto& struct_addr, auto& field_meta)
+					{
+						render_entity_property(field_meta.type.cast_to((void*)GET_FIELD_ADDRESS(struct_addr, field_meta.offset)), field_meta.name);
+					}, light_info.dir_light);
+				break;
+
+			case Light_Type::SPOT:
+				for_each_field([](auto& struct_addr, auto& field_meta)
+					{
+						render_entity_property(field_meta.type.cast_to((void*)GET_FIELD_ADDRESS(struct_addr, field_meta.offset)), field_meta.name);
+					}, light_info.spot_light);
+				break;
+
+			case Light_Type::POINT:
+				for_each_field([](auto& struct_addr, auto& field_meta)
+					{
+						render_entity_property(field_meta.type.cast_to((void*)GET_FIELD_ADDRESS(struct_addr, field_meta.offset)), field_meta.name);
+					}, light_info.point_light);
+				break;
+
+			}
+
+		}
+
+	}
 
 	void Entity_Outline::render_entity_transform(Renderable_Entity& entity)
 	{
@@ -177,39 +311,6 @@ namespace zorya
 		entity.local_world_transf.rot.z *= inv_oe_pi;
 	}
 
-
-	void Entity_Outline::render_entity_properties(Renderable_Entity& entity, Light_Info& light_info)
-	{
-		render_entity_transform(entity);
-
-		ImGui::SeparatorText("Light Parameters");
-		{
-			switch (light_info.tag)
-			{
-
-			case Light_Type::DIRECTIONAL:
-				for_each_field([](auto& struct_addr, auto& field_meta) {
-					render_entity_property(field_meta.type.cast_to((void*)GET_FIELD_ADDRESS(struct_addr, field_meta.offset)), field_meta.name);
-					}, light_info.dir_light);
-				break;
-
-			case Light_Type::SPOT:
-				for_each_field([](auto& struct_addr, auto& field_meta) {
-					render_entity_property(field_meta.type.cast_to((void*)GET_FIELD_ADDRESS(struct_addr, field_meta.offset)), field_meta.name);
-					}, light_info.spot_light);
-				break;
-
-			case Light_Type::POINT:
-				for_each_field([](auto& struct_addr, auto& field_meta) {
-					render_entity_property(field_meta.type.cast_to((void*)GET_FIELD_ADDRESS(struct_addr, field_meta.offset)), field_meta.name);
-					}, light_info.point_light);
-				break;
-
-			}
-
-		}
-
-	}
 
 	bool import_dialog(wchar_t* path, const char* id)
 	{
@@ -238,298 +339,38 @@ namespace zorya
 	}
 
 
-
-	void Entity_Outline::render_entity_properties(Renderable_Entity& entity, Submesh_Info* submesh_info, Reflection_Base* material_desc)
+	void Entity_Outline::render_entity_mesh_properties(Renderable_Entity& entity/*, Submesh_Render_Data* submesh_info*/)
 	{
 		render_entity_transform(entity);
-
+		
 		//TODO: better check if entity has mesh; probably move check to callee of this function
-		if (submesh_info != nullptr)
+		if (entity.submesh_desc != nullptr)
 		{
-			assert(material_desc != nullptr);
-			//auto& matDesc2 = static_cast<ReflectionContainer<StandardMaterialDesc>*>(const_cast<ReflectionBase*>(matDesc))->reflectedStruct;
-			auto& mat_desc_2 = static_cast<Reflection_Container<Standard_Material_Desc>*>(const_cast<Reflection_Base*>(material_desc))->reflected_struct;
+			Material_Cache_Handle_t hnd_material = entity.submesh_desc->hnd_material_cache;
+			Material& material = resource_cache.m_material_cache.at(hnd_material.index);
 
-			ImGui::SeparatorText("Material");
+			bool is_edited = false;
+
+			ImGui::SeparatorText("Rendering");
 			{
-				size_t num_converted_chars = 0;
-
-				//foreachfield([&](auto& structAddr, auto& field_meta) {
-				//	bool isEdited = RenderEProperty(field_meta.type.castTo((void*)GET_FIELD_ADDRESS(structAddr, field_meta.offset)), field_meta.name);
-				//	if (isEdited) {
-				//		smInfo->matCacheHnd.isCached = UPDATE_MAT_PRMS;
-				//	}
-				//}, matDesc2);
-
-
-				zorya::file_browser.Display();
-
-				ImGui::ColorEdit4("Base Color", &mat_desc_2.base_color.x);
-				if (ImGui::IsItemEdited())
+				int mat_index = entity.submesh_desc->hnd_material_cache.index;
+				ImGui::InputInt("Material", &mat_index);
+				entity.submesh_desc->hnd_material_cache.index = mat_index;
+				if (ImGui::BeginDragDropTarget())
 				{
-					submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Asset_Type_Names[Asset_Type::MATERIAL]))
+					{
+						auto payload_data = (Asset_With_Config*)payload->Data;
+						Material* dropped_mat = static_cast<Material*>(payload_data->asset);
+						Asset_Import_Config* dropped_imp_conf = payload_data->import_config;
+						dropped_mat->load_asset(dropped_imp_conf);
+						entity.submesh_desc->hnd_material_cache = dropped_mat->material_hnd;
+						is_edited |= true;
+					}
+
+					ImGui::EndDragDropTarget();
 				}
-
-				wcstombs(tmp_char_buff, mat_desc_2.albedo_path, 128);
-				ImGui::InputTextWithHint("Albedo Map", "Texture Path", tmp_char_buff, 128);
-				if (ImGui::IsItemDeactivatedAfterEdit())
-				{
-					mbstowcs(mat_desc_2.albedo_path, tmp_char_buff, 128);
-					submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
-				}
-
-				if (import_dialog(mat_desc_2.albedo_path, "import_albedo"))
-				{
-					submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
-				}
-
-				ImGui::Spacing();
-				ImGui::Spacing();
-
-				wcstombs(tmp_char_buff, mat_desc_2.normal_path, 128);
-				ImGui::InputTextWithHint("Normal Map", "Texture Path", tmp_char_buff, 128);
-				if (ImGui::IsItemDeactivatedAfterEdit())
-				{
-					mbstowcs(mat_desc_2.normal_path, tmp_char_buff, 128);
-					submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
-				}
-
-				if (import_dialog(mat_desc_2.normal_path, "import_normal"))
-				{
-					submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
-				}
-
-				ImGui::Spacing();
-				ImGui::Spacing();
-
-				//./assets/brocc-the-athlete/textures/Sporter_Albedo.png
-				{
-					static int smoothness_mode = 0;
-
-
-					if ((mat_desc_2.union_tags & SMOOTHNESS_IS_MAP) == SMOOTHNESS_IS_MAP)
-					{
-						smoothness_mode = 1;
-					}
-					else
-					{
-						smoothness_mode = 0;
-					}
-
-					if (ImGui::RadioButton("Value", &smoothness_mode, 0))
-					{
-						//Logger::AddLog(Logger::Channel::TRACE, "Clicked Radio V\n");
-						mat_desc_2.smoothness_value = 0.0f;
-						mat_desc_2.union_tags &= ~SMOOTHNESS_IS_MAP;
-						submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-					}
-					ImGui::SameLine();
-					if (ImGui::RadioButton("Texture", &smoothness_mode, 1))
-					{
-						//Logger::AddLog(Logger::Channel::TRACE, "Clicked Radio T\n");
-						mbstowcs_s(&num_converted_chars, mat_desc_2.smoothness_map, "\0", 128);
-						mat_desc_2.union_tags |= SMOOTHNESS_IS_MAP;
-						submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
-					}
-
-					if (smoothness_mode == 0)
-					{
-						ImGui::SliderFloat("Smoothness", &(mat_desc_2.smoothness_value), 0, 1);
-						if (ImGui::IsItemEdited())
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-					}
-					else
-					{
-						wcstombs_s(&num_converted_chars, tmp_char_buff, mat_desc_2.smoothness_map, 128);
-						ImGui::InputTextWithHint("Smoothness Map", "Texture Path", tmp_char_buff, 128);
-						if (ImGui::IsItemDeactivatedAfterEdit())
-						{
-							mbstowcs_s(&num_converted_chars, mat_desc_2.smoothness_map, tmp_char_buff, 128);
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
-						}
-
-						if (import_dialog(mat_desc_2.smoothness_map, "import_smoothness"))
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
-						}
-					}
-				}
-
-
-				ImGui::Spacing();
-				ImGui::Spacing();
-
-				/*if (ImGui::BeginChild("metalness"))*/
-				{
-					static int metalness_mode = 0;
-
-					if ((mat_desc_2.union_tags & METALNESS_IS_MAP) == METALNESS_IS_MAP)
-					{
-						metalness_mode = 1;
-					}
-					else
-					{
-						metalness_mode = 0;
-					}
-
-					if (ImGui::RadioButton("Value", &metalness_mode, 0))
-					{
-						//Logger::AddLog(Logger::Channel::TRACE, "Clicked Radio V %3d\n", metalnessMode);
-						mat_desc_2.metalness_value = 0.0f;
-						mat_desc_2.union_tags &= ~METALNESS_IS_MAP;
-						submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-					}
-					ImGui::SameLine();
-					if (ImGui::RadioButton("Texture", &metalness_mode, 1))
-					{
-						//Logger::AddLog(Logger::Channel::TRACE, "Clicked Radio T %3d\n", metalnessMode);
-						mbstowcs_s(&num_converted_chars, mat_desc_2.metalness_map, "\0", 128);
-						mat_desc_2.union_tags |= METALNESS_IS_MAP;
-						submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
-					}
-
-					if (metalness_mode == 0)
-					{
-						ImGui::SliderFloat("Metalness", &mat_desc_2.metalness_value, 0, 1);
-						if (ImGui::IsItemEdited())
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-					}
-					else
-					{
-						wcstombs_s(&num_converted_chars, tmp_char_buff, mat_desc_2.metalness_map, 128);
-						ImGui::InputTextWithHint("Metalness Mask", "Texture Path", tmp_char_buff, 128);
-						if (ImGui::IsItemDeactivatedAfterEdit())
-						{
-							mbstowcs_s(&num_converted_chars, mat_desc_2.metalness_map, tmp_char_buff, 128);
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
-						}
-
-						if (import_dialog(mat_desc_2.metalness_map, "import_metalness"))
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_MAPS | UPDATE_MAT_PRMS;
-						}
-					}
-				}
-				//ImGui::EndChild();
-
-				ImGui::Spacing();
-				ImGui::Spacing();
-
-				ImGui::SeparatorText("SSS");
-				{
-					const char* sssOptions[] = { "No SSS", "Jimenez Gaussian" , "Jimenez Separable" , "Golubev" };
-					int selected = (int)(mat_desc_2.selected_sss_model);
-					if (ImGui::Combo("SSS Model", &selected, sssOptions, IM_ARRAYSIZE(sssOptions)))
-					{
-						submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						mat_desc_2.selected_sss_model = (SSS_MODEL)selected;
-					}
-
-
-					ImGui::Spacing();
-
-					switch (mat_desc_2.selected_sss_model)
-					{
-					case SSS_MODEL::JIMENEZ_GAUSS:
-					{
-						ImGui::DragFloat("Correction", &mat_desc_2.sss_model.mean_free_path_distance, 0.001f, 0.001f, 1000.0f, "%.4f");
-						if (ImGui::IsItemEdited())
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-						
-						ImGui::DragFloat("Pixel Size", &mat_desc_2.sss_model.subsurface_albedo.w, 0.001f, 0.001f, 10.0f, "%.4f");
-						if (ImGui::IsItemEdited())
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-
-						ImGui::DragFloat("sss level", &mat_desc_2.sss_model.scale, 0.001f, 0.001f, 1000.0f, "%.4f");
-						if (ImGui::IsItemEdited())
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-
-						break;
-					}
-					case SSS_MODEL::JIMENEZ_SEPARABLE:
-					{
-						ImGui::DragFloat("SSS Width", &mat_desc_2.sss_model.mean_free_path_distance, 0.0001f, 0.0001f, 10.0f, "%.4f");
-						if (ImGui::IsItemEdited())
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-
-						ImGui::DragFloat("Scale Width", &mat_desc_2.sss_model.scale, 0.001f, 0.001f, 1000.0f, "%.4f");
-						if (ImGui::IsItemEdited())
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-						break;
-					}
-					case SSS_MODEL::GOLUBEV:
-					{
-						ImGui::InputFloat3("Subsurface Albedo", &mat_desc_2.sss_model.subsurface_albedo.x);
-						if (ImGui::IsItemEdited())
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-						ImGui::DragFloat3("Mean Free Path Color", &mat_desc_2.sss_model.mean_free_path_color.x, 0.001f, 0.001f, 1000.0f, "%.3f");
-						if (ImGui::IsItemEdited())
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-						ImGui::DragFloat("Mean Free Path Distance", &mat_desc_2.sss_model.mean_free_path_distance, 0.001f, 0.001f, 1000.0f, "%.4f");
-						if (ImGui::IsItemEdited())
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-						ImGui::DragFloat("Scale", &mat_desc_2.sss_model.scale, 0.001f, 0.001f, 1000.0f, "%.4f");
-						if (ImGui::IsItemEdited())
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-						int num_samples = mat_desc_2.sss_model.num_samples;
-						ImGui::SliderInt("Num Samples", &num_samples, 1, 32);
-						if (ImGui::IsItemEdited())
-						{
-							mat_desc_2.sss_model.num_samples = num_samples;
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-						int num_supersamples = mat_desc_2.sss_model.num_supersamples;
-						ImGui::SliderInt("Num Super Samples", &num_supersamples, 0, 32);
-						if (ImGui::IsItemEdited())
-						{
-							mat_desc_2.sss_model.num_supersamples = num_supersamples;
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-						bool is_contrast_view = (bool)mat_desc_2.sss_model.subsurface_albedo.w;
-						ImGui::Checkbox("Enable Contrast View", &is_contrast_view);
-						if (ImGui::IsItemEdited())
-						{
-							mat_desc_2.sss_model.subsurface_albedo.w = (float)is_contrast_view;
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-						ImGui::DragFloat("Contrast Threshold Offset", &mat_desc_2.sss_model.mean_free_path_color.w, 0.001f, -0.5f, 0.5f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-						if (ImGui::IsItemEdited())
-						{
-							submesh_info->hnd_material_cache.is_cached = UPDATE_MAT_PRMS;
-						}
-						break;
-					}
-					default:
-						break;
-
-					}
-				}
-
 			}
-
-
 
 		}
 
