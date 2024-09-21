@@ -12,6 +12,7 @@ A DX11 real-time renderer developed as a way to experiment with interesting rend
 - Subsurface scattering algorithms
 - Directional, Point & Spot lights 
 - Shader Reflection
+- Custom Arena & Pool Allocator
 
 ## Subsurface Scattering
 
