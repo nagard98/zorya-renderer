@@ -76,7 +76,8 @@ namespace zorya
 	{
 		uint32_t light_index;
 		uint32_t light_type;
-		uint32_t pad[2];
+		uint32_t face;
+		uint32_t pad;
 	};
 
 	class Renderer

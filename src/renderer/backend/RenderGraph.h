@@ -50,7 +50,7 @@ namespace zorya
         uint32_t width;
         uint32_t height;
         Format format;
-
+        u32 arr_size{1};
         //TODO: temporary here; in the render graph you shouldn't explicitly define the binding options
         //Bind_Flags bind_flags = 0;
     };
@@ -74,12 +74,19 @@ namespace zorya
         int32_t ref_count;
     };
 
+    struct Render_Graph_View_Desc
+    {
+        Bind_Flag bind_flag;
+        u32 slice_start_index{ 0 };
+        u32 slice_size{ 0 };
+        bool is_read_only;
+    };
+
     struct Render_Pass_Resource
     {
         uint32_t resource_hnd;
         uint32_t gpu_res_hnd;
-        Bind_Flag bind_flag;
-        bool is_read_only;
+        Render_Graph_View_Desc view_desc;
     };
 
     struct Render_Pass
@@ -99,8 +106,8 @@ namespace zorya
         Render_Graph_Builder(std::vector<Render_Graph_Resource_Metadata>& _graph_resource_desc, std::vector<Render_Graph_Resource>& _graph_resources, std::vector<std::vector<uint32_t>>& _graph_resources_producers, std::vector<Render_Pass>& _render_passes, std::vector<Render_Resource_Handle>& _gpu_resources)
             : graph_resource_meta(_graph_resource_desc), graph_resources(_graph_resources), graph_resources_producers(_graph_resources_producers), render_passes(_render_passes), num_gpu_resources(0)/*, gpu_resources(_gpu_resources)*/ {}
 
-        Render_Graph_Resource read(Render_Graph_Resource rg_resource, Bind_Flag bind_flag);
-        Render_Graph_Resource write(Render_Graph_Resource rg_resource, Bind_Flag bind_flag);
+        Render_Graph_Resource read(Render_Graph_Resource rg_resource, Bind_Flag bind_flag, u32 slice_index_start = 0, u32 slice_size = 0);
+        Render_Graph_Resource write(Render_Graph_Resource rg_resource, Bind_Flag bind_flag, u32 slice_index_start = 0, u32 slice_size = 0);
         Render_Graph_Resource create(const Render_Graph_Resource_Desc& resource_desc/*, Bind_Flag bind_flag*/);
 
         void build(std::vector<Render_Resource_Handle>& gpu_resources);

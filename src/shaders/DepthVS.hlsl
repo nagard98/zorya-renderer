@@ -46,6 +46,7 @@ cbuffer draw_constants : register(b3)
 {
     uint light_index;
     uint light_type;
+    uint face;
 }
 
 VS_OUTPUT vs(VS_INPUT input)
@@ -63,7 +64,7 @@ VS_OUTPUT vs(VS_INPUT input)
                 break;
             }
         case POINT_LIGHT_ID : {
-                output.lightSpacePos = mul(input.vPosition, mul(worldMatrix, mul(lightViewMat[light_index], lightProjMat)));
+                output.lightSpacePos = mul(input.vPosition, mul(worldMatrix, mul(lightViewMat[light_index * 6 + face], lightProjMat)));
                 break;
             }
 

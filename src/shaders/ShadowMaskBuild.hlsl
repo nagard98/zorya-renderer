@@ -237,9 +237,11 @@ float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewS
                 {
                     float3 offset = float3(i, j, 0.0f) * texScale;
                     float sampledDepth = shadow_cubemap.Sample(tex_sampler, shadowMapUVF + offset).r;
-                    shadowingSampled += sampledDepth < currentDepth - correctedBias ? lightDec : 0.0f;
+                    shadowingSampled += sampledDepth > currentDepth + correctedBias ? lightDec : 0.0f;
                 }
             }
+            
+            return shadowingSampled;
                 
         }
     }

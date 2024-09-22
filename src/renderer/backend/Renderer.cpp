@@ -163,9 +163,9 @@ namespace zorya
 		////-----------------------------------------------------------
 		ZRY_Usage def{ D3D11_USAGE_DEFAULT };
 
-		RETURN_IF_FAILED2(hr, rhi.create_tex_2d(&hnd_final_rt, nullptr, def, ZRY_Bind_Flags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, g_resolutionWidth, g_resolutionHeight, 1, nullptr, nullptr, false, 1, 1).value);
+		RETURN_IF_FAILED2(hr, rhi.create_tex_2d(&hnd_final_rt, nullptr, def, ZRY_Bind_Flags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, g_resolutionWidth, g_resolutionHeight, 1, nullptr, nullptr, false, 1).value);
 		RETURN_IF_FAILED2(hr, rhi.create_srv_tex_2d(&hnd_final_srv, &hnd_final_rt, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_UNORM }).value);
-		RETURN_IF_FAILED2(hr, rhi.create_rtv_tex_2d(&hnd_final_rtv, &hnd_final_rt, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_UNORM_SRGB }, 1).value);
+		RETURN_IF_FAILED2(hr, rhi.create_rtv_tex_2d(&hnd_final_rtv, &hnd_final_rt, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_UNORM_SRGB }).value);
 
 		//----------------------------Skybox----------------------
 		wrl::ComPtr<ID3D11Resource> sky_texture;
@@ -272,7 +272,7 @@ namespace zorya
 			dx::XMVECTOR point_light_final_pos = dx::XMVector4Transform(dx::XMLoadFloat4(&p_light.pos_world_space), view_desc.lights_info[i].final_world_transform);
 			scene_lights.point_pos_view_space[point_light_idx] = dx::XMVector4Transform(point_light_final_pos, view_desc.cam.get_view_matrix());
 
-			if (view_desc.num_point_lights > 0) omni_dir_shad_cb.point_light_proj_mat = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XM_PIDIV2, 1.0f, view_desc.lights_info[i].point_light.near_plane_dist, view_desc.lights_info[i].point_light.far_plane_dist));
+			if (view_desc.num_point_lights > 0) omni_dir_shad_cb.point_light_proj_mat = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XM_PIDIV2, 1.0f, view_desc.lights_info[i].point_light.far_plane_dist, view_desc.lights_info[i].point_light.near_plane_dist));
 
 			omni_dir_shad_cb.point_light_view_mat[point_light_idx * 6 + Cubemap::FACE_POSITIVE_X] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(point_light_final_pos, dx::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
 			omni_dir_shad_cb.point_light_view_mat[point_light_idx * 6 + Cubemap::FACE_NEGATIVE_X] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(point_light_final_pos, dx::XMVectorSet(-1.0f, 0.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));

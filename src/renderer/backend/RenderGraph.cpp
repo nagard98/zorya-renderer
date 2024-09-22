@@ -179,10 +179,10 @@ namespace zorya
 		}
 	}
 
-	static std::vector<uint8_t> cull_render_passes(std::vector<Render_Graph_Resource>& graph_resources, std::vector<std::vector<uint32_t>>& graph_resource_producers, std::vector<Render_Pass>& render_passes)
+	static std::vector<uint8_t> cull_render_passes(std::vector<Render_Graph_Resource>& graph_resources, std::vector<std::vector<u32>>& graph_resource_producers, std::vector<Render_Pass>& render_passes)
 	{
-		std::vector<uint32_t> unreferenced_resources;
-		std::vector<uint32_t> culled_passes;
+		std::vector<u32> unreferenced_resources;
+		std::vector<u32> culled_passes;
 
 		//for (int i = 0; i < render_passes.size(); i++)
 		//{
@@ -280,34 +280,6 @@ namespace zorya
 				{
 					auto& render_pass = render_passes[i];
 
-					//for (auto& read_resource : render_pass.pass_read_resources)
-					//{
-					//	auto& graph_resource = graph_resources.at(read_resource.resource_hnd);
-
-					//	if (graph_resource.ref_count > 0)
-					//	{
-					//		resource_first_use[graph_resource.desc_hnd] = std::min(i, resource_first_use[graph_resource.desc_hnd]);
-					//		resource_last_use[graph_resource.desc_hnd] = (std::max)(i, resource_last_use[graph_resource.desc_hnd]);
-					//	} else
-					//	{
-					//		continue;
-					//	}
-					//}
-
-					//for (auto& write_resource : render_pass.pass_write_resources)
-					//{
-					//	auto& graph_resource = graph_resources.at(write_resource.resource_hnd);
-
-					//	if (graph_resource.ref_count > 0)
-					//	{
-					//		resource_first_use[graph_resource.desc_hnd] = std::min(i, resource_first_use[graph_resource.desc_hnd]);
-					//		resource_last_use[graph_resource.desc_hnd] = (std::max)(i, resource_last_use[graph_resource.desc_hnd]);
-					//	} else
-					//	{
-					//		continue;
-					//	}
-					//}
-
 					for (auto input_res_hnd : render_pass.input_resources)
 					{
 						auto& graph_resource = graph_resources.at(input_res_hnd);
@@ -324,7 +296,7 @@ namespace zorya
 				}
 			}
 
-			std::unordered_set<uint32_t> referenced_graph_resources_desc;
+			std::unordered_set<u32> referenced_graph_resources_desc;
 
 			//Filter resource desc handles for only referenced resources
 			for (auto& graph_resource : graph_resources)
@@ -409,76 +381,42 @@ namespace zorya
 
 								if (is_new_resource_required)
 								{
-									ZRY_Bind_Flags bind_flags{ 0 };
-									bind_flags.value |= (resource_meta.bind_flags & Bind_Flag::RENDER_TARGET) != 0 ? D3D11_BIND_RENDER_TARGET : 0;
-									bind_flags.value |= (resource_meta.bind_flags & Bind_Flag::SHADER_RESOURCE) != 0 ? D3D11_BIND_SHADER_RESOURCE : 0;
-									bind_flags.value |= (resource_meta.bind_flags & Bind_Flag::UNORDERED_ACCESS) != 0 ? D3D11_BIND_UNORDERED_ACCESS : 0;
-									bind_flags.value |= (resource_meta.bind_flags & Bind_Flag::DEPTH_STENCIL) != 0 ? D3D11_BIND_DEPTH_STENCIL : 0;
-
-									auto result = rhi.create_tex_2d(
-										(Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource,
-										nullptr,
-										ZRY_Usage{ D3D11_USAGE_DEFAULT },
-										bind_flags,
-										ZRY_Format{ convert_format(resource_meta.desc.format) },
-										resource_meta.desc.width,
-										resource_meta.desc.height
-									);
-									zassert(result.value == S_OK);
+									zassert(rhi.create_tex((Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, nullptr, resource_meta).value == S_OK);
 								}
 
 							}
 
-							auto& view_map = gpu_resource.views;
-							View_Flags required_flags = read_resource.bind_flag | (read_resource.is_read_only ? Other_Flags::DEPTH_READ_ONLY : 0);
-							auto view = view_map.find(required_flags/*read_resource.bind_flag*/);
+							//auto& view_map = gpu_resource.views;
+							//View_Flags required_flags = read_resource.view_desc.bind_flag | (read_resource.view_desc.is_read_only ? Other_Flags::DEPTH_READ_ONLY : 0);
+							//auto view = view_map.find(required_flags);
 
-							if (view != view_map.end())
-							{
-								gpu_resources.at(read_resource.gpu_res_hnd/*graph_resource.resource_hnd*/) = view->second;
-							} else
-							{
+							//if (view != view_map.end())
+							//{
+							//	gpu_resources.at(read_resource.gpu_res_hnd) = view->second;
+							//} else
+							//{
 								Render_Resource_Handle hnd_view;
 
-								switch (read_resource.bind_flag)
+								switch (read_resource.view_desc.bind_flag)
 								{
 								case zorya::SHADER_RESOURCE:
-								{
-									auto result = rhi.create_srv_tex_2d(
-										(Render_SRV_Handle*)&hnd_view,
-										(Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource,
-										ZRY_Format{ convert_format(resource_meta.desc.format, read_resource.bind_flag) }
-									);
-									zassert(result.value == S_OK);
-
-									view_map[required_flags] = hnd_view;
+								{					
+									zassert(rhi.create_srv((Render_SRV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
+									//view_map[required_flags] = hnd_view;
 
 									break;
 								}
 								case zorya::RENDER_TARGET:
 								{
-									auto result = rhi.create_rtv_tex_2d(
-										(Render_RTV_Handle*)&hnd_view,
-										(Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource,
-										ZRY_Format{ convert_format(resource_meta.desc.format, read_resource.bind_flag) }
-									);
-									zassert(result.value == S_OK);
-
-									view_map[required_flags] = hnd_view;
+									zassert(rhi.create_rtv((Render_RTV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
+									//view_map[required_flags] = hnd_view;
 
 									break;
 								}
 								case zorya::DEPTH_STENCIL:
 								{
-									auto result = rhi.create_dsv_tex_2d(
-										(Render_DSV_Handle*)&hnd_view,
-										(Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource,
-										ZRY_Format{ convert_format(resource_meta.desc.format, read_resource.bind_flag) },
-										1, 0, read_resource.is_read_only
-									);
-									zassert(result.value == S_OK);
-
-									view_map[required_flags] = hnd_view;
+									zassert(rhi.create_dsv((Render_DSV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
+									//view_map[required_flags] = hnd_view;
 
 									break;
 								}
@@ -488,8 +426,8 @@ namespace zorya
 									break;
 								}
 
-								gpu_resources.at(read_resource.gpu_res_hnd/*graph_resource.resource_hnd*/) = hnd_view;
-							}
+								gpu_resources.at(read_resource.gpu_res_hnd) = hnd_view;
+							//}
 
 						} else
 						{
@@ -543,62 +481,35 @@ namespace zorya
 
 								if (is_new_resource_required)
 								{
-									ZRY_Bind_Flags bind_flags{ 0 };
-									bind_flags.value |= (resource_meta.bind_flags & Bind_Flag::RENDER_TARGET) != 0 ? D3D11_BIND_RENDER_TARGET : 0;
-									bind_flags.value |= (resource_meta.bind_flags & Bind_Flag::SHADER_RESOURCE) != 0 ? D3D11_BIND_SHADER_RESOURCE : 0;
-									bind_flags.value |= (resource_meta.bind_flags & Bind_Flag::UNORDERED_ACCESS) != 0 ? D3D11_BIND_UNORDERED_ACCESS : 0;
-									bind_flags.value |= (resource_meta.bind_flags & Bind_Flag::DEPTH_STENCIL) != 0 ? D3D11_BIND_DEPTH_STENCIL : 0;
-
-									auto result = rhi.create_tex_2d(
-										(Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource,
-										nullptr,
-										ZRY_Usage{ D3D11_USAGE_DEFAULT },
-										bind_flags,
-										ZRY_Format{ convert_format(resource_meta.desc.format) },
-										resource_meta.desc.width,
-										resource_meta.desc.height
-									);
-									zassert(result.value == S_OK);
+									zassert(rhi.create_tex((Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, nullptr, resource_meta).value == S_OK);
 								}
 							}
 
 							zassert(gpu_resource.hnd_gpu_resource.index != 0);
 
-							auto& view_map = gpu_resource.views;
-							auto view = view_map.find(write_resource.bind_flag);
+							//auto& view_map = gpu_resource.views;
+							//auto view = view_map.find(write_resource.view_desc.bind_flag);
 
-							if (view != view_map.end())
-							{
-								gpu_resources.at(write_resource.gpu_res_hnd/*graph_resource.resource_hnd*/) = view->second;
-							} else
-							{
+							//if (view != view_map.end())
+							//{
+							//	gpu_resources.at(write_resource.gpu_res_hnd) = view->second;
+							//} else
+							//{
 								Render_Resource_Handle hnd_view;
 
-								switch (write_resource.bind_flag)
+								switch (write_resource.view_desc.bind_flag)
 								{
 								case zorya::RENDER_TARGET:
 								{
-									auto result = rhi.create_rtv_tex_2d(
-										(Render_RTV_Handle*)&hnd_view,
-										(Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource,
-										ZRY_Format{ convert_format(resource_meta.desc.format, write_resource.bind_flag) }
-									);
-									zassert(result.value == S_OK);
-
-									view_map[write_resource.bind_flag] = hnd_view;
+									zassert(rhi.create_rtv((Render_RTV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, write_resource.view_desc).value == S_OK);
+									//view_map[write_resource.view_desc.bind_flag] = hnd_view;
 
 									break;
 								}
 								case zorya::DEPTH_STENCIL:
 								{
-									auto result = rhi.create_dsv_tex_2d(
-										(Render_DSV_Handle*)&hnd_view,
-										(Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource,
-										ZRY_Format{ convert_format(resource_meta.desc.format, write_resource.bind_flag) }
-									);
-									zassert(result.value == S_OK);
-
-									view_map[write_resource.bind_flag] = hnd_view;
+									zassert(rhi.create_dsv((Render_DSV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, write_resource.view_desc).value == S_OK);
+									//view_map[write_resource.view_desc.bind_flag] = hnd_view;
 
 									break;
 								}
@@ -609,15 +520,14 @@ namespace zorya
 									break;
 								}
 
-								gpu_resources.at(write_resource.gpu_res_hnd/*graph_resource.resource_hnd*/) = hnd_view;
+								gpu_resources.at(write_resource.gpu_res_hnd) = hnd_view;
 
-							}
+							//}
 
 						} else
 						{
 							continue;
 						}
-
 					}
 
 				}
@@ -657,98 +567,71 @@ namespace zorya
 		builder.clear();
 	}
 
-	Render_Graph_Resource Render_Graph_Builder::read(Render_Graph_Resource rg_resource, Bind_Flag bind_flag)
+	Render_Graph_Resource Render_Graph_Builder::read(Render_Graph_Resource rg_resource, Bind_Flag bind_flag, u32 slice_index_start, u32 slice_size)
 	{
 		graph_resource_meta.at(rg_resource.desc_hnd).bind_flags |= bind_flag;
 		auto in_resource_hnd = rg_resource.resource_hnd;
 
 		if (rg_resource.ref_count == -1)
 		{
-			//in_resource_hnd = (uint32_t)graph_resources.size();
-			//graph_resources.emplace_back(Render_Graph_Resource{ rg_resource.desc_hnd, in_resource_hnd, 1 });
-			//graph_resources_producers.emplace_back();
 			graph_resources.at(in_resource_hnd).ref_count = 0;
 		}
 
 		auto& in_resource = graph_resources.at(in_resource_hnd);
 		in_resource.ref_count += 1;
 
-		//auto& resource = graph_resources.at(rg_resource.resource_hnd);
-		//auto& resource = graph_resources.at(rg_resource.resource_hnd);
-		//resource.ref_count += 1;
-
-		//auto gpu_res_hnd = (uint32_t)gpu_resources.size();
-		//gpu_resources.emplace_back();
-		uint32_t gpu_res_hnd = num_gpu_resources;
+		u32 gpu_res_hnd = num_gpu_resources;
 		num_gpu_resources += 1;
 
-		uint32_t current_pass_index = render_passes.size() - 1;
+		u32 current_pass_index = render_passes.size() - 1;
 		auto& render_pass = render_passes.at(current_pass_index);
-		render_pass.pass_read_resources.emplace_back(Render_Pass_Resource{ in_resource_hnd, gpu_res_hnd, bind_flag });
+		render_pass.pass_read_resources.emplace_back(Render_Pass_Resource{ in_resource_hnd, gpu_res_hnd, bind_flag, slice_index_start, slice_size });
 		render_pass.input_resources.push_back(in_resource_hnd);
 
 		return Render_Graph_Resource{in_resource.desc_hnd, in_resource.resource_hnd, gpu_res_hnd , in_resource.ref_count};
 	}
 
-	Render_Graph_Resource Render_Graph_Builder::write(Render_Graph_Resource rg_resource, Bind_Flag bind_flag)
+	Render_Graph_Resource Render_Graph_Builder::write(Render_Graph_Resource rg_resource, Bind_Flag bind_flag, u32 slice_index_start, u32 slice_size)
 	{
 		graph_resource_meta.at(rg_resource.desc_hnd).bind_flags |= bind_flag;
 		auto in_resource_hnd = rg_resource.resource_hnd;
 
 		if (rg_resource.ref_count == -1)
 		{
-			//in_resource_hnd = (uint32_t)graph_resources.size();
-			//graph_resources.emplace_back(Render_Graph_Resource{ rg_resource.desc_hnd, in_resource_hnd, 1 });
-			//graph_resources_producers.emplace_back();
 			graph_resources.at(in_resource_hnd).ref_count = 0;
 		}
 		
 		graph_resources.at(in_resource_hnd).ref_count += 1;
 				
-		//auto gpu_res_hnd = (uint32_t)gpu_resources.size();
-		//gpu_resources.emplace_back();
-		uint32_t gpu_res_hnd = num_gpu_resources;
+		u32 gpu_res_hnd = num_gpu_resources;
 		num_gpu_resources += 1;
 
 		//TODO: warning cast of graph_resources size
-		uint32_t out_resource_hnd = (uint32_t)graph_resources.size();
+		u32 out_resource_hnd = (u32)graph_resources.size();
 		Render_Graph_Resource out_resource{ rg_resource.desc_hnd, out_resource_hnd, gpu_res_hnd, 0 };
 		graph_resources.push_back(out_resource);
 
 		//TODO: update resource version after write?
-		uint32_t current_pass_index = render_passes.size() - 1;
+		u32 current_pass_index = render_passes.size() - 1;
 		graph_resources_producers.emplace_back().push_back(current_pass_index);
 
 		auto& render_pass = render_passes.at(current_pass_index);
 		render_pass.input_resources.push_back(in_resource_hnd);
-		//render_pass.pass_input_resources.emplace_back(Render_Pass_Resource{ in_resource_hnd, in_gpu_res_hnd, bind_flag});
-		render_pass.pass_write_resources.emplace_back(Render_Pass_Resource{ out_resource_hnd, gpu_res_hnd, bind_flag });
+		render_pass.pass_write_resources.emplace_back(Render_Pass_Resource{ out_resource_hnd, gpu_res_hnd, bind_flag, slice_index_start, slice_size });
 		render_pass.ref_count += 1;
 
 		return out_resource;
 	}
 
-	Render_Graph_Resource Render_Graph_Builder::create(const Render_Graph_Resource_Desc& resource_desc/*, Bind_Flag bind_flag*/)
+	Render_Graph_Resource Render_Graph_Builder::create(const Render_Graph_Resource_Desc& resource_desc)
 	{
-		//uint32_t index = graph_resources.size();
-		uint32_t index = graph_resource_meta.size();
+		u32 index = graph_resource_meta.size();
 		graph_resource_meta.emplace_back(Render_Graph_Resource_Metadata{ resource_desc, 0 });
 
 		//TODO: warning! casting size; could introduce bugs
-		//uint32_t out_resource_hnd = (uint32_t)graph_resources.size();
-		Render_Graph_Resource rg_resource{ index, (uint32_t)graph_resources.size(), (uint32_t)-1, -1};
+		Render_Graph_Resource rg_resource{ index, (u32)graph_resources.size(), (u32)-1, -1};
 		graph_resources.emplace_back(rg_resource);
 		graph_resources_producers.emplace_back();
-
-		//graph_resources.push_back(rg_resource);
-		//auto& resource = graph_resources.emplace_back(Render_Graph_Resource{ Render_Graph_Resource_Handle{index}, 0, resource_desc });
-
-		//uint32_t current_pass_index = render_passes.size() - 1;
-		//graph_resources_producers.emplace_back().push_back(current_pass_index);
-
-		//auto& render_pass = render_passes.at(current_pass_index);
-		//render_pass.pass_output_resources.emplace_back(Render_Pass_Resource{ out_resource_hnd, bind_flag });
-		//render_pass.ref_count += 1;
 
 		return rg_resource;
 	}
@@ -766,10 +649,10 @@ namespace zorya
 		{
 			for (auto& write_reasource : render_pass.pass_write_resources)
 			{
-				read_reasource.is_read_only = true;
+				read_reasource.view_desc.is_read_only = true;
 				if (graph_resources[read_reasource.resource_hnd].desc_hnd == graph_resources[write_reasource.resource_hnd].desc_hnd)
 				{
-					read_reasource.is_read_only = false;
+					read_reasource.view_desc.is_read_only = false;
 					break;
 				}
 			}

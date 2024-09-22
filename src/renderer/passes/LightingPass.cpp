@@ -114,7 +114,7 @@ namespace zorya
 								Constant_Buffer_Handle vs_cb_hnds[] = { 0 };
 								Render_SRV_Handle vs_srv_hnds[] = { 0 };
 								Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, hnd_inv_mat_cb, hnd_omni_dir_shad_cb, hnd_light_draw_cb };
-								Render_SRV_Handle ps_srv_hnds[] = { registry.get<Render_SRV_Handle>(depth), registry.get<Render_SRV_Handle>(normal), registry.get<Render_SRV_Handle>(shadowmap_data.shadow_maps[i]) };
+								Render_SRV_Handle ps_srv_hnds[] = { registry.get<Render_SRV_Handle>(depth), registry.get<Render_SRV_Handle>(normal), registry.get<Render_SRV_Handle>(shadowmap_data.shadow_maps[i]), registry.get<Render_SRV_Handle>(shadowmap_data.shadow_maps[i]) };
 
 								cmd_list.draw(
 									pipeline_state_manager.get(Pipeline_State::SHADOW_MASK),
