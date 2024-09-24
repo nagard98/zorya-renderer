@@ -3,6 +3,7 @@
 
 #include "renderer/frontend/Asset.h"
 #include "renderer/frontend/Material.h"
+#include "renderer/backend/JimenezSeparable.h"
 #include "renderer/frontend/DiffusionProfile.h"
 #include "renderer/backend/rhi/RenderHardwareInterface.h"
 
@@ -121,7 +122,7 @@ void zorya::Asset_Inspector::render(Scene_Manager& scene_manager, Asset_With_Con
 			
 			ImGui::Spacing();
 
-			if (material.shading_model == Shading_Model::SUBSURFACE_GOLUBEV)
+			if (material.shading_model == Shading_Model::SUBSURFACE_GOLUBEV || material.shading_model == Shading_Model::SUBSURFACE_JIMENEZ_GAUSS || material.shading_model == Shading_Model::SUBSURFACE_JIMENEZ_SEPARABLE)
 			{
 				Guid dprofile_guid = material.diff_prof_hnd.index == 0 ? 0 : resource_cache.m_diffusion_profiles.at(material.diff_prof_hnd.index).m_guid;
 				ImGui::InputScalar("Diffusion Profile", ImGuiDataType_U64, &dprofile_guid);
@@ -132,7 +133,7 @@ void zorya::Asset_Inspector::render(Scene_Manager& scene_manager, Asset_With_Con
 						auto data = static_cast<Asset_With_Config*>(payload->Data);
 						Diffusion_Profile* profile = static_cast<Diffusion_Profile*>(data->asset);
 						material.diff_prof_hnd = profile->hnd;
-						u16 index = scene_manager.add_diffusion_profile(material.diff_prof_hnd);
+						u32 index = scene_manager.add_diffusion_profile(material.diff_prof_hnd);
 
 						set_constant_buff_var(mat_prms, "_sssModelArrIndex", &index, sizeof(index));
 						set_constant_buff_var(mat_prms, "_sssModelId", &profile->model_id, sizeof(profile->model_id));
@@ -167,9 +168,27 @@ void zorya::Asset_Inspector::render(Scene_Manager& scene_manager, Asset_With_Con
 			case zorya::SSS_MODEL::NONE:
 				break;
 			case zorya::SSS_MODEL::JIMENEZ_GAUSS:
+			{
+				bool is_edited = false;
+				is_edited |= render_entity_property(&sss_params.mean_free_path_dist, 1, "Correction Factor (beta)");
+				is_edited |= render_entity_property(&sss_params.scale, 1, "SSS Level (alfa)");
+				is_edited |= render_entity_property(&sss_params.subsurface_albedo.w, 1, "Pixel Size");
 				break;
+			}
 			case zorya::SSS_MODEL::JIMENEZ_SEPARABLE:
+			{
+				bool is_edited = false;
+				is_edited |= render_entity_property(&sss_params.mean_free_path_dist, 1, "Kernel Width");
+				is_edited |= render_entity_property(&sss_params.scale, 1, "Scale");
+
+				if (is_edited)
+				{
+					auto samples = separable_sss_calculate_kernel();
+					memcpy(sss_params.jimenez_samples_sss, samples.data(), sizeof(float4)* samples.size());
+				}
+
 				break;
+			}
 			case zorya::SSS_MODEL::GOLUBEV:
 			{
 				bool is_edited = false;
@@ -188,22 +207,14 @@ void zorya::Asset_Inspector::render(Scene_Manager& scene_manager, Asset_With_Con
 					std::mt19937 gen(6.0f);
 					std::uniform_real_distribution<> dis(0, 1.0);//uniform distribution between 0 and 1
 
-					//OutputDebugString("Randommly Generated Numbers Golubev:\n");
 					for (int i = 0; i < 64; i++)
 					{
 						profile->sss_params.samples[i] = dis(gen);
-						//OutputDebugString((std::to_string(m->sss_prms.samples[i]).append(" ")).c_str());
 					}
-					//OutputDebugString("\n");
 
 					//int to_next_float4 = 4 - (m->sss_prms.num_samples % 4);
 					std::sort(profile->sss_params.samples, profile->sss_params.samples + (profile->sss_params.num_samples)); //(int)(max(0.0f, m->sssPrms.scale * 4.0f)));
 					std::sort(profile->sss_params.samples + 32, profile->sss_params.samples + 32 + profile->sss_params.num_supersamples);
-					//std::sort(m->sssPrms.samples + (int)(max(0.0f, m->sssPrms.scale * 4.0f)), m->sssPrms.samples + (int)(max(0.0f, m->sssPrms.scale * 4.0f)) + (int)(std::trunc(max(0.0f, standardMaterialDesc.sssModel.subsurfaceAlbedo.y) * 255.0f) * 4.0f));
-
-					//for (int i = 0; i < 64; i++) {
-					//	m->matPrms.samples[i] = (float)(rand() % 10000) / 10000.0f;
-					//}
 				}
 
 				break;

@@ -20,7 +20,7 @@ struct PS_OUTPUT
 {
     float4 indirect_light : SV_TARGET0;
     float4 albedo : SV_TARGET1;
-    float4 normal : SV_TARGET2;
+    float2 normal : SV_TARGET2;
     float4 roughMet: SV_TARGET3;
     float4 vertNormal : SV_TARGET4;
     float4 translucent : SV_TARGET5;
@@ -64,6 +64,19 @@ Texture2D ThicknessMap : register(t4);
 SamplerState ObjSamplerState : register(s0);
 
 
+float2 oct_wrap(float2 v)
+{
+    return (1.0 - abs(v.yx)) * (v.xy >= 0.0 ? 1.0 : -1.0);
+}
+ 
+float2 encode_normal(float3 n)
+{
+    n /= (abs(n.x) + abs(n.y) + abs(n.z));
+    n.xy = n.z >= 0.0 ? n.xy : oct_wrap(n.xy);
+    n.xy = n.xy * 0.5 + 0.5;
+    return n.xy;
+}
+
 PS_OUTPUT ps(PS_INPUT input)
 {
     PS_OUTPUT output;
@@ -72,13 +85,13 @@ PS_OUTPUT ps(PS_INPUT input)
     if (hasNormalMap == true)
     {
         input.fNormal = normalize(_NormalMap.Sample(ObjSamplerState, input.texCoord).rgb * 2.0f - 1.0f);
-        output.normal = float4(mul(input.tbn, input.fNormal), 0.0f);
+        output.normal = encode_normal(mul(input.tbn, input.fNormal));
     }
     else
     {
-        output.normal = float4(normalize(input.fNormal), 0.0f);
+        output.normal = encode_normal(normalize(input.fNormal));
     }
-    output.normal = output.normal * 0.5f + 0.5f;
+    //output.normal = output.normal * 0.5f + 0.5f;
     
     output.roughMet.g = _cb_metallic;
     

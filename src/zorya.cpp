@@ -203,14 +203,14 @@ HRESULT init_data()
 
 	scene_manager.add_light(scene_manager.m_scene_graph.root_node, dx::XMVectorSet(1.0f, 0.0f, 0.0, 0.0f), 1.0f, 8.0f);
 	scene_manager.add_light(scene_manager.m_scene_graph.root_node, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.22f, 0.20f);
-	//scene_manager.add_light(scene_manager.m_scene_graph.root_node, dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), dx::XM_PIDIV4);
+	scene_manager.add_light(scene_manager.m_scene_graph.root_node, dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), dx::XM_PIDIV4);
 
 	////Camera setup-------------------------------------------------------------
 	dx::XMVECTOR cam_pos = dx::XMVectorSet(0.0f, 0.0f, -5.0f, 0.0f);
 	dx::XMVECTOR cam_dir = dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
 	dx::XMVECTOR cam_up = dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-	g_cam = Camera(cam_pos, cam_dir, cam_up, dx::XM_PIDIV2 * (rhi.m_viewport.Height / rhi.m_viewport.Width), rhi.m_viewport.Width / rhi.m_viewport.Height, 0.01f, 100.0f);
+	g_cam = Camera(cam_pos, cam_dir, cam_up, dx::XM_PIDIV2 * (rhi.m_viewport.Height / rhi.m_viewport.Width), rhi.m_viewport.Width / rhi.m_viewport.Height, 0.1f, 100.0f);
 	//-----------------------------------------------------------------------------
 
 	return hr;

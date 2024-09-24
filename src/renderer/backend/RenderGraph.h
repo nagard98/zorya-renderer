@@ -24,6 +24,7 @@ namespace zorya
         FORMAT_R8G8B8A8_UNORM_SRGB,
         FORMAT_D32_FLOAT,
         FORMAT_D24_UNORM_S8_UINT,
+        FORMAT_R16G16_UNORM,
         FORMAT_R11G11B10_FLOAT
     };
 

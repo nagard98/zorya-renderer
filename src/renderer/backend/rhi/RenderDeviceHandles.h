@@ -22,22 +22,22 @@ namespace zorya
 
 	struct Render_Texture_Handle
 	{
-		uint64_t index;
+		uint32_t index;
 	};
 
 	struct Render_SRV_Handle
 	{
-		uint64_t index;
+		uint32_t index;
 	};
 
 	struct Render_RTV_Handle
 	{
-		uint64_t index;
+		uint32_t index;
 	};
 
 	struct Render_DSV_Handle
 	{
-		uint64_t index;
+		uint32_t index;
 	};
 
 	struct DS_State_Handle

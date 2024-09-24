@@ -42,6 +42,11 @@ namespace zorya
 				gbuff_tex_desc.height = 1080;
 				gbuff_tex_desc.format = Format::FORMAT_R8G8B8A8_UNORM;
 
+				Render_Graph_Resource_Desc gbuff_normal_desc;
+				gbuff_normal_desc.width = 1920;
+				gbuff_normal_desc.height = 1080;
+				gbuff_normal_desc.format = Format::FORMAT_R16G16_UNORM;
+
 				Render_Graph_Resource_Desc stencil_desc;
 				stencil_desc.width = 1920;
 				stencil_desc.height = 1080;
@@ -49,7 +54,7 @@ namespace zorya
 
 				GBuffer_Data gbuff_data;
 				gbuff_data.albedo = builder.create(gbuff_tex_desc);
-				gbuff_data.normal = builder.create(gbuff_tex_desc);
+				gbuff_data.normal = builder.create(gbuff_normal_desc);
 				gbuff_data.roughness_metalness = builder.create(gbuff_tex_desc);
 				gbuff_data.vertex_normal = builder.create(gbuff_tex_desc);
 
@@ -87,7 +92,7 @@ namespace zorya
 						/*cmd_list.clear_rtv(hnd_gbuff_rtv[G_Buffer::NORMAL], &clear_color.x);
 						cmd_list.clear_rtv(hnd_gbuff_rtv[G_Buffer::ROUGH_MET], &clear_color.x);*/
 						//cmd_list.clear_rtv(registry.get<Render_RTV_Handle>(gbuff_data.stencil), &clear_stencil_color.x);
-						cmd_list.clear_dsv(registry.get<Render_DSV_Handle>(depth_sten_tex), true, 1.0f);
+						cmd_list.clear_dsv(registry.get<Render_DSV_Handle>(depth_sten_tex), true, 0.0f);
 							
 						Render_RTV_Handle rt2_hnds[] = {  
 							registry.get<Render_RTV_Handle>(gbuff_data.indirect_light),
@@ -126,8 +131,8 @@ namespace zorya
 								case (Resource_Type::ZRY_CBUFF): {
 									cb_resource = resource;
 									cb_data = cb_resource->m_parameters;
-									//TODO: temporary hardcoded value for size
-									cmd_list.update_buffer(*arena, resource->m_hnd_gpu_cb, cb_data->cb_start, 52);
+									//TODO: fix temporary hardcoded value for size
+									cmd_list.update_buffer(*arena, resource->m_hnd_gpu_cb, cb_data->cb_start, 64);
 									ps_cb_hnds[resource->m_bind_point] = resource->m_hnd_gpu_cb;
 									num_ps_cb_hnds = resource->m_bind_point + 1;
 						

@@ -272,7 +272,7 @@ namespace zorya
 		return profi;//dx::XMFLOAT3(res.m128_f32[0], res.m128_f32[1], res.m128_f32[2]);
 	}
 
-	void separable_sss_calculate_kernel()
+	std::vector<float4> separable_sss_calculate_kernel()
 	{
 		HRESULT hr;
 
@@ -338,6 +338,7 @@ namespace zorya
 		//    kernel[i].z *= strength.z;
 		//}
 
+		return kernel;
 	}
 }
 

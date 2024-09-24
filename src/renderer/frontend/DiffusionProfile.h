@@ -31,7 +31,7 @@ namespace zorya
 		GOLUBEV
 	};
 
-	static const char* sss_model_names[] = { "None", "Jimenez Gauss", "Jimenez Separable", "Golubev" };
+	static const char* sss_model_names[] = { "None\0Jimenez Gauss\0Jimenez Separable\0Golubev\0" };
 
 	struct Diffusion_Profile : public Asset
 	{

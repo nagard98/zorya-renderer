@@ -250,17 +250,14 @@ namespace zorya
 
 			skip_pass = cull_render_passes(graph_resources, graph_resource_producers, render_passes);
 
-			struct Resource_And_Views
+			struct Resource
 			{
 				Render_Resource_Handle hnd_gpu_resource;
-				std::unordered_map<View_Flags, Render_Resource_Handle> views;
 			};
 
-			std::vector<Resource_And_Views> resource_view_hnds;
-			resource_view_hnds.resize(graph_resource_meta.size());
+			std::vector<Resource> allocated_resources;
+			allocated_resources.resize(graph_resource_meta.size());
 			std::unordered_map<uint64_t, Free_Render_Resource*> free_transient_resources;
-
-			//gpu_resources.resize(graph_resources.size());
 
 			auto buff_size = graph_resource_meta.size() * sizeof(Render_Pass_Index);
 
@@ -319,7 +316,7 @@ namespace zorya
 						Render_Pass_Index last_pass_index = resource_last_use[graph_resource_desc_id];
 						if (last_pass_index == pass_id - 1)
 						{
-							auto& gpu_resource = resource_view_hnds.at(graph_resource_desc_id);
+							auto& gpu_resource = allocated_resources.at(graph_resource_desc_id);
 							auto& resource_meta = graph_resource_meta.at(graph_resource_desc_id);
 
 							Resource_Key resource_key{ resource_meta.desc };
@@ -342,7 +339,7 @@ namespace zorya
 
 						if (graph_resource.ref_count > 0)
 						{
-							auto& gpu_resource = resource_view_hnds.at(graph_resource.desc_hnd);
+							auto& gpu_resource = allocated_resources.at(graph_resource.desc_hnd);
 							auto& resource_meta = graph_resource_meta.at(graph_resource.desc_hnd);
 
 							if (gpu_resource.hnd_gpu_resource.index == 0)
@@ -370,6 +367,8 @@ namespace zorya
 											current->next_free = head;
 											is_new_resource_required = false;
 
+											break;
+
 										} else
 										{
 											head = current;
@@ -386,48 +385,32 @@ namespace zorya
 
 							}
 
-							//auto& view_map = gpu_resource.views;
-							//View_Flags required_flags = read_resource.view_desc.bind_flag | (read_resource.view_desc.is_read_only ? Other_Flags::DEPTH_READ_ONLY : 0);
-							//auto view = view_map.find(required_flags);
+							Render_Resource_Handle hnd_view;
 
-							//if (view != view_map.end())
-							//{
-							//	gpu_resources.at(read_resource.gpu_res_hnd) = view->second;
-							//} else
-							//{
-								Render_Resource_Handle hnd_view;
+							switch (read_resource.view_desc.bind_flag)
+							{
+							case zorya::SHADER_RESOURCE:
+							{					
+								zassert(rhi.create_srv((Render_SRV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
+								break;
+							}
+							case zorya::RENDER_TARGET:
+							{
+								zassert(rhi.create_rtv((Render_RTV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
+								break;
+							}
+							case zorya::DEPTH_STENCIL:
+							{
+								zassert(rhi.create_dsv((Render_DSV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
+								break;
+							}
+							case zorya::UNORDERED_ACCESS:
+							default:
+								zassert(false);
+								break;
+							}
 
-								switch (read_resource.view_desc.bind_flag)
-								{
-								case zorya::SHADER_RESOURCE:
-								{					
-									zassert(rhi.create_srv((Render_SRV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
-									//view_map[required_flags] = hnd_view;
-
-									break;
-								}
-								case zorya::RENDER_TARGET:
-								{
-									zassert(rhi.create_rtv((Render_RTV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
-									//view_map[required_flags] = hnd_view;
-
-									break;
-								}
-								case zorya::DEPTH_STENCIL:
-								{
-									zassert(rhi.create_dsv((Render_DSV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
-									//view_map[required_flags] = hnd_view;
-
-									break;
-								}
-								case zorya::UNORDERED_ACCESS:
-								default:
-									zassert(false);
-									break;
-								}
-
-								gpu_resources.at(read_resource.gpu_res_hnd) = hnd_view;
-							//}
+							gpu_resources.at(read_resource.gpu_res_hnd) = hnd_view;
 
 						} else
 						{
@@ -441,7 +424,7 @@ namespace zorya
 
 						if (graph_resource.ref_count > 0)
 						{
-							auto& gpu_resource = resource_view_hnds.at(graph_resource.desc_hnd);
+							auto& gpu_resource = allocated_resources.at(graph_resource.desc_hnd);
 							auto& resource_meta = graph_resource_meta.at(graph_resource.desc_hnd);
 
 							if (gpu_resource.hnd_gpu_resource.index == 0)
@@ -487,42 +470,28 @@ namespace zorya
 
 							zassert(gpu_resource.hnd_gpu_resource.index != 0);
 
-							//auto& view_map = gpu_resource.views;
-							//auto view = view_map.find(write_resource.view_desc.bind_flag);
+							Render_Resource_Handle hnd_view;
 
-							//if (view != view_map.end())
-							//{
-							//	gpu_resources.at(write_resource.gpu_res_hnd) = view->second;
-							//} else
-							//{
-								Render_Resource_Handle hnd_view;
+							switch (write_resource.view_desc.bind_flag)
+							{
+							case zorya::RENDER_TARGET:
+							{
+								zassert(rhi.create_rtv((Render_RTV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, write_resource.view_desc).value == S_OK);
+								break;
+							}
+							case zorya::DEPTH_STENCIL:
+							{
+								zassert(rhi.create_dsv((Render_DSV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, write_resource.view_desc).value == S_OK);
+								break;
+							}
+							case zorya::UNORDERED_ACCESS:
+							case zorya::SHADER_RESOURCE:
+							default:
+								zassert(false);
+								break;
+							}
 
-								switch (write_resource.view_desc.bind_flag)
-								{
-								case zorya::RENDER_TARGET:
-								{
-									zassert(rhi.create_rtv((Render_RTV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, write_resource.view_desc).value == S_OK);
-									//view_map[write_resource.view_desc.bind_flag] = hnd_view;
-
-									break;
-								}
-								case zorya::DEPTH_STENCIL:
-								{
-									zassert(rhi.create_dsv((Render_DSV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, write_resource.view_desc).value == S_OK);
-									//view_map[write_resource.view_desc.bind_flag] = hnd_view;
-
-									break;
-								}
-								case zorya::UNORDERED_ACCESS:
-								case zorya::SHADER_RESOURCE:
-								default:
-									zassert(false);
-									break;
-								}
-
-								gpu_resources.at(write_resource.gpu_res_hnd) = hnd_view;
-
-							//}
+							gpu_resources.at(write_resource.gpu_res_hnd) = hnd_view;
 
 						} else
 						{

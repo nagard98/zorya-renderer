@@ -125,6 +125,7 @@ namespace zorya
 
 		Constant_Buffer_Handle hnd_cam_transf_cb;
 		Constant_Buffer_Handle hnd_light_draw_cb;
+		Constant_Buffer_Handle hnd_sss_draw_cb;
 		Constant_Buffer_Handle hnd_world_cb;
 		Constant_Buffer_Handle hnd_view_cb;
 		Constant_Buffer_Handle hnd_proj_cb;

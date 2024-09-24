@@ -26,7 +26,7 @@ namespace zorya
 			m_aspect_ratio = aspect_ratio;
 			m_near_z = near_z;
 			m_far_z = far_z;
-			m_proj_matrix = dx::XMMatrixPerspectiveFovLH(m_fov, m_aspect_ratio, m_near_z, m_far_z);
+			m_proj_matrix = dx::XMMatrixPerspectiveFovLH(m_fov, m_aspect_ratio, m_far_z, m_near_z);
 
 		};
 

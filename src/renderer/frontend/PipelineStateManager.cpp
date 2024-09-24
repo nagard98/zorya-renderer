@@ -18,15 +18,25 @@ namespace zorya
 	{
 		{
 			PSO_Desc desc = create_default_gbuff_desc();
-			
 			zassert(rhi.create_pso(&m_shading_models[Shading_Model::DEFAULT_LIT], desc).value == S_OK);
 		}
 		
 		{
 			PSO_Desc desc = create_default_gbuff_desc();
 			desc.stencil_ref_value = 2;
-			
 			zassert(rhi.create_pso(&m_shading_models[Shading_Model::SUBSURFACE_GOLUBEV], desc).value == S_OK);
+		}
+		
+		{
+			PSO_Desc desc = create_default_gbuff_desc();
+			desc.stencil_ref_value = 3;
+			zassert(rhi.create_pso(&m_shading_models[Shading_Model::SUBSURFACE_JIMENEZ_GAUSS], desc).value == S_OK);
+		}
+
+		{
+			PSO_Desc desc = create_default_gbuff_desc();
+			desc.stencil_ref_value = 4;
+			zassert(rhi.create_pso(&m_shading_models[Shading_Model::SUBSURFACE_JIMENEZ_SEPARABLE], desc).value == S_OK);
 		}
 
 		{
@@ -146,7 +156,6 @@ namespace zorya
 			sss_golubev_pso_desc.depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
 			sss_golubev_pso_desc.depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 
-
 			sss_golubev_pso_desc.stencil_ref_value = 2;
 
 			sss_golubev_pso_desc.blend_desc = D3D11_BLEND_DESC{};
@@ -156,6 +165,96 @@ namespace zorya
 			sss_golubev_pso_desc.blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
 			zassert(rhi.create_pso(&m_pipeline_states[Pipeline_State::SSS_GOLUBEV], sss_golubev_pso_desc).value == S_OK);
+		}
+
+		{
+			PSO_Desc sss_jimenez_sep_pso_desc;
+			sss_jimenez_sep_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(u8)PShader_ID::SSSSS];
+			sss_jimenez_sep_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::FULL_QUAD];
+			sss_jimenez_sep_pso_desc.depth_stencil_desc = default_ds_desc;
+			sss_jimenez_sep_pso_desc.rasterizer_desc = default_rs_desc;
+			sss_jimenez_sep_pso_desc.input_elements_desc = nullptr;
+			sss_jimenez_sep_pso_desc.num_elements = 0;
+
+			sss_jimenez_sep_pso_desc.depth_stencil_desc.DepthEnable = false;
+			sss_jimenez_sep_pso_desc.depth_stencil_desc.StencilEnable = true;
+			sss_jimenez_sep_pso_desc.depth_stencil_desc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
+			sss_jimenez_sep_pso_desc.depth_stencil_desc.StencilWriteMask = 0x00;
+			sss_jimenez_sep_pso_desc.depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
+			sss_jimenez_sep_pso_desc.depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+			sss_jimenez_sep_pso_desc.depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+
+			sss_jimenez_sep_pso_desc.stencil_ref_value = 4;
+
+			sss_jimenez_sep_pso_desc.blend_desc = D3D11_BLEND_DESC{};
+			sss_jimenez_sep_pso_desc.blend_desc.AlphaToCoverageEnable = FALSE;
+			sss_jimenez_sep_pso_desc.blend_desc.IndependentBlendEnable = FALSE;
+			sss_jimenez_sep_pso_desc.blend_desc.RenderTarget[0].BlendEnable = false;
+			sss_jimenez_sep_pso_desc.blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+			zassert(rhi.create_pso(&m_pipeline_states[Pipeline_State::SSS_JIMENEZ_SEPARABLE], sss_jimenez_sep_pso_desc).value == S_OK);
+		}
+
+		{
+			PSO_Desc sss_jimenez_gauss_hor_pso_desc;
+			sss_jimenez_gauss_hor_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(u8)PShader_ID::SSSSS];
+			sss_jimenez_gauss_hor_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::FULL_QUAD];
+			sss_jimenez_gauss_hor_pso_desc.depth_stencil_desc = default_ds_desc;
+			sss_jimenez_gauss_hor_pso_desc.rasterizer_desc = default_rs_desc;
+			sss_jimenez_gauss_hor_pso_desc.input_elements_desc = nullptr;
+			sss_jimenez_gauss_hor_pso_desc.num_elements = 0;
+
+			sss_jimenez_gauss_hor_pso_desc.depth_stencil_desc.DepthEnable = false;
+			sss_jimenez_gauss_hor_pso_desc.depth_stencil_desc.StencilEnable = true;
+			sss_jimenez_gauss_hor_pso_desc.depth_stencil_desc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
+			sss_jimenez_gauss_hor_pso_desc.depth_stencil_desc.StencilWriteMask = 0x00;
+			sss_jimenez_gauss_hor_pso_desc.depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
+			sss_jimenez_gauss_hor_pso_desc.depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+			sss_jimenez_gauss_hor_pso_desc.depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+
+			sss_jimenez_gauss_hor_pso_desc.stencil_ref_value = 3;
+
+			sss_jimenez_gauss_hor_pso_desc.blend_desc = D3D11_BLEND_DESC{};
+			sss_jimenez_gauss_hor_pso_desc.blend_desc.AlphaToCoverageEnable = FALSE;
+			sss_jimenez_gauss_hor_pso_desc.blend_desc.IndependentBlendEnable = FALSE;
+			sss_jimenez_gauss_hor_pso_desc.blend_desc.RenderTarget[0].BlendEnable = true;
+			sss_jimenez_gauss_hor_pso_desc.blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+			sss_jimenez_gauss_hor_pso_desc.blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_BLEND_FACTOR;
+			sss_jimenez_gauss_hor_pso_desc.blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_BLEND_FACTOR;
+			sss_jimenez_gauss_hor_pso_desc.blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+			sss_jimenez_gauss_hor_pso_desc.blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_SRC_ALPHA;
+			sss_jimenez_gauss_hor_pso_desc.blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+			sss_jimenez_gauss_hor_pso_desc.blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+			zassert(rhi.create_pso(&m_pipeline_states[Pipeline_State::SSS_JIMENEZ_GAUSS_VERT], sss_jimenez_gauss_hor_pso_desc).value == S_OK);
+		}
+		
+		{
+			PSO_Desc sss_jimenez_gauss_ver_pso_desc;
+			sss_jimenez_gauss_ver_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(u8)PShader_ID::SSSSS];
+			sss_jimenez_gauss_ver_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::FULL_QUAD];
+			sss_jimenez_gauss_ver_pso_desc.depth_stencil_desc = default_ds_desc;
+			sss_jimenez_gauss_ver_pso_desc.rasterizer_desc = default_rs_desc;
+			sss_jimenez_gauss_ver_pso_desc.input_elements_desc = nullptr;
+			sss_jimenez_gauss_ver_pso_desc.num_elements = 0;
+
+			sss_jimenez_gauss_ver_pso_desc.depth_stencil_desc.DepthEnable = false;
+			sss_jimenez_gauss_ver_pso_desc.depth_stencil_desc.StencilEnable = true;
+			sss_jimenez_gauss_ver_pso_desc.depth_stencil_desc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
+			sss_jimenez_gauss_ver_pso_desc.depth_stencil_desc.StencilWriteMask = 0x00;
+			sss_jimenez_gauss_ver_pso_desc.depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
+			sss_jimenez_gauss_ver_pso_desc.depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+			sss_jimenez_gauss_ver_pso_desc.depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+
+			sss_jimenez_gauss_ver_pso_desc.stencil_ref_value = 3;
+
+			sss_jimenez_gauss_ver_pso_desc.blend_desc = D3D11_BLEND_DESC{};
+			sss_jimenez_gauss_ver_pso_desc.blend_desc.AlphaToCoverageEnable = FALSE;
+			sss_jimenez_gauss_ver_pso_desc.blend_desc.IndependentBlendEnable = FALSE;
+			sss_jimenez_gauss_ver_pso_desc.blend_desc.RenderTarget[0].BlendEnable = false;
+			sss_jimenez_gauss_ver_pso_desc.blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+			zassert(rhi.create_pso(&m_pipeline_states[Pipeline_State::SSS_JIMENEZ_GAUSS_HOR], sss_jimenez_gauss_ver_pso_desc).value == S_OK);
 		}
 
 		return S_OK;

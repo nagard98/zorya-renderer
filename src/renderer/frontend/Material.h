@@ -143,10 +143,12 @@ namespace zorya
 	{
 		DEFAULT_LIT,
 		SUBSURFACE_GOLUBEV,
+		SUBSURFACE_JIMENEZ_SEPARABLE,
+		SUBSURFACE_JIMENEZ_GAUSS,
 		NUM_SHADING_MODELS
 	};
 
-	static const char* shading_model_names = {"Default Lit\0Subsurface Golubev\0"};
+	static const char* shading_model_names = {"Default Lit\0Subsurface Golubev\0Subsurface Jimenez Separable\0Subsurface Jimenez Gauss\0"};
 
 	struct Material : public Asset
 	{

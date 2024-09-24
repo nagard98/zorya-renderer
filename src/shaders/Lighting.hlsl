@@ -105,12 +105,21 @@ cbuffer camMat : register(b5)
 
 ExitRadiance_t computeColDirLight(Directional_Light dLight, float3 viewDir, float3 normal, float3 smoothNormal, float metalness, float roughness, float thickness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat, uint pixel_sss_model_id);
 ExitRadiance_t computeColPoint_Light(Point_Light pLight, float4 posLightViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float metalness, float roughness, float transmDist, uint pixel_sss_model_id);
-ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float roughness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat, uint pixel_sss_model_id);
+ExitRadiance_t computeColSpotLight(int lightIndex, float3 viewDir, float3 normal, float metalness, float roughness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat, uint pixel_sss_model_id);
 
 float3 T(float s);
 float3 posFromDepth(float2 quadTexCoord, float sampledDepth, uniform float4x4 invMat);
 float computeTransmDist(float4 positionWS, float nearPlane, float farPlane, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat, float correctedBias, Texture2D shadowMap, float3 normalVS);
 
+float3 decode_normal(float2 f)
+{
+    f = f * 2.0 - 1.0;
+ 
+    float3 n = float3(f.x, f.y, 1.0 - abs(f.x) - abs(f.y));
+    float t = saturate(-n.z);
+    n.xy += n.xy >= 0.0 ? -t : t;
+    return normalize(n);
+}
 
 PS_OUT ps(float4 fragPos : SV_POSITION)
 {
@@ -119,7 +128,8 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
     float sampledDepth = gbuffer_depth.Sample(texSampler, uvCoord).r;
     float4 albedo_sample = gbuffer_albedo.Sample(texSampler, uvCoord).rgba;
     //float3 albedo = pow(albedo_sample.rgb, (1.0f / gamma));
-    float3 normal = gbuffer_normal.Sample(texSampler, uvCoord).xyz * 2.0f - 1.0f;
+    float3 normal = decode_normal(gbuffer_normal.Sample(texSampler, uvCoord).rg);
+    //float3 normal = gbuffer_normal.Sample(texSampler, uvCoord).xyz * 2.0f - 1.0f;
     float3 smoothNormal = smooth_normals.Sample(texSampler, uvCoord).xyz * 2.0f - 1.0f;
     float3 roughMetThick = gbuffer_roughness.Sample(texSampler, uvCoord).rgb;
     float shadowing_factor = shadow_mask.Sample(texSampler, uvCoord).r;
@@ -135,7 +145,8 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
     float4 positionWS = mul(float4(positionVS, 1.0f), invCamViewMat);
     
     float3 viewDir = -normalize(positionVS).xyz;
-
+    viewDir = mul(float4(viewDir, 0.0f), invCamViewMat);
+    
     ExitRadiance_t radExitance;
     radExitance.diffuse = float3(0.0f, 0.0f, 0.0f);
     radExitance.specular = float3(0.0f, 0.0f, 0.0f);
@@ -152,7 +163,7 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
                 break;
             }
         case SPOT_LIGHT_ID:{
-                ExitRadiance_t tmpRadExitance = computeColSpotLight(light_index, float4(positionVS, 1.0f), normal, metalness, linRoughness, positionWS, spotLightViewMat[light_index], spotLightProjMat[light_index], pixel_sss_model_id);
+                ExitRadiance_t tmpRadExitance = computeColSpotLight(light_index, viewDir, normal, metalness, linRoughness, positionWS, spotLightViewMat[light_index], spotLightProjMat[light_index], pixel_sss_model_id);
         
                 radExitance.diffuse += tmpRadExitance.diffuse;
                 radExitance.specular += tmpRadExitance.specular;
@@ -161,7 +172,7 @@ PS_OUT ps(float4 fragPos : SV_POSITION)
             }
         case POINT_LIGHT_ID:{
                 float transmDist = 10.0f;
-                ExitRadiance_t tmpRadExitance = computeColPoint_Light(Point_Lights[light_index], posPoint_LightViewSpace[light_index], float4(positionVS, 1.0f), normal, viewDir, metalness, linRoughness, transmDist, pixel_sss_model_id);
+                ExitRadiance_t tmpRadExitance = computeColPoint_Light(Point_Lights[light_index], posPoint_LightViewSpace[light_index], positionWS /*float4(positionVS, 1.0f)*/, normal, viewDir, metalness, linRoughness, transmDist, pixel_sss_model_id);
         
                 radExitance.diffuse += tmpRadExitance.diffuse;
                 radExitance.specular += tmpRadExitance.specular;
@@ -225,7 +236,8 @@ ExitRadiance_t computeColDirLight(Directional_Light dLight, float3 viewDir, floa
 
 ExitRadiance_t computeColPoint_Light(Point_Light pLight, float4 lightPosViewSpace, float4 fragPosViewSpace, float3 normal, float3 viewDir, float metalness, float linRoughness, float transmDist, uint pixel_sss_model_id)
 {
-    float3 lDir = lightPosViewSpace - fragPosViewSpace;
+    float3 lDir = pLight.pos_world_space - fragPosViewSpace;
+    //float3 lDir = lightPosViewSpace - fragPosViewSpace;
     float dist = length(lDir);
     lDir = normalize(lDir);
     float3 halfVec = normalize(-normalize(fragPosViewSpace.xyz) + lDir.xyz);
@@ -255,18 +267,21 @@ ExitRadiance_t computeColPoint_Light(Point_Light pLight, float4 lightPosViewSpac
     return exitRadiance;
 }
 
-ExitRadiance_t computeColSpotLight(int lightIndex, float4 posFragViewSpace, float3 normal, float metalness, float linRoughness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat, uint pixel_sss_model_id)
+ExitRadiance_t computeColSpotLight(int lightIndex, float3 viewDir, float3 normal, float metalness, float linRoughness, float4 posWS, uniform float4x4 lightViewMat, uniform float4x4 lightProjMat, uint pixel_sss_model_id)
 {
     ExitRadiance_t exitRadiance;
     exitRadiance.diffuse = float3(0.0f, 0.0f, 0.0f);
     exitRadiance.specular = float3(0.0f, 0.0f, 0.0f);
     exitRadiance.transmitted = float3(0.0f, 0.0f, 0.0f);
 
-    float3 lightDir = normalize(posSpotLightViewSpace[lightIndex] - posFragViewSpace);
-    float cosAngle = dot(-lightDir, normalize(dirSpotLightViewSpace[lightIndex].xyz));
+    
+    float3 lightDir = normalize(spotLights[lightIndex].pos_world_space - posWS).xyz;
+    //float3 lightDir = normalize(posSpotLightViewSpace[lightIndex] - posFragViewSpace);
+    float cosAngle = dot(-lightDir, normalize(spotLights[lightIndex].direction.xyz));
+    //float cosAngle = dot(-lightDir, normalize(dirSpotLightViewSpace[lightIndex].xyz));
     if (cosAngle > spotLights[lightIndex].cos_cutoff_angle)
     {
-        float3 viewDir = -normalize(posFragViewSpace).xyz;
+        //float3 viewDir = -normalize(posFragViewSpace).xyz;
         float3 halfVec = normalize(viewDir + lightDir);
             
         float VdotN = abs(dot(normal, viewDir)) + 1e-5f;

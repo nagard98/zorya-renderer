@@ -25,6 +25,13 @@ void zorya::GraphicsContext::set_pso(const PSO_Handle pso_hnd)
 	m_context->IASetInputLayout(pso->input_layout);
 }
 
+void zorya::GraphicsContext::set_blend_factor(const PSO_Handle pso_hnd, const float* blend_factor)
+{
+	auto pso = rhi.get_pso_pointer(pso_hnd);
+	m_context->OMSetBlendState(pso->blend_state, blend_factor, D3D11_DEFAULT_SAMPLE_MASK);
+
+}
+
 void zorya::GraphicsContext::set_vs_constant_buff(Constant_Buffer_Handle* cb_hnd, uint32_t start_slot, uint32_t num_slots)
 {
 	ID3D11Buffer** constant_buffs = (ID3D11Buffer**)malloc(sizeof(ID3D11Buffer*) * num_slots);
@@ -287,10 +294,12 @@ void zorya::Render_Command_List::clear_dsv(const Render_DSV_Handle dsv_hnd, bool
 }
 
 
-void zorya::Render_Command_List::draw(PSO_Handle _pso_hnd, Shader_Render_Targets&& shader_render_targets, Shader_Arguments&& shader_arguments, const Buffer_Handle_t* _hnd_vert_buffers, uint32_t num_vert_buffers, D3D_PRIMITIVE_TOPOLOGY primitive_topology, Submesh_Handle_t hnd_submesh)
+void zorya::Render_Command_List::draw(PSO_Handle _pso_hnd, Shader_Render_Targets&& shader_render_targets, Shader_Arguments&& shader_arguments, const Buffer_Handle_t* _hnd_vert_buffers, uint32_t num_vert_buffers, D3D_PRIMITIVE_TOPOLOGY primitive_topology, Submesh_Handle_t hnd_submesh, float* blend_factor)
 {
 	Render_Command_Draw* cmd = new Render_Command_Draw;
 	cmd->pso_hnd = _pso_hnd;
+	if (blend_factor == nullptr) for (int i = 0; i < 4; i++) cmd->blend_factor[i] = 1.0f;
+	else memcpy(&cmd->blend_factor[0], blend_factor, sizeof(cmd->blend_factor));
 
 	cmd->shader_render_targets = shader_render_targets;
 
@@ -333,6 +342,7 @@ ID3D11CommandList* zorya::Render_Command_List::finish_command_list()
 			gfx_context.set_render_targets(shader_render_targets.rtv_hnds, shader_render_targets.dsv_hnd, shader_render_targets.num_rtv_hnds);
 
 			gfx_context.set_pso(_cmd->pso_hnd);
+			gfx_context.set_blend_factor(_cmd->pso_hnd, _cmd->blend_factor);
 			gfx_context.m_context->IASetPrimitiveTopology(_cmd->primitive_topology);
 			//TODO: fix; should allow multiple vertex buffers
 			gfx_context.set_vertex_buff(_cmd->num_vertex_buffers > 0 ? _cmd->hnd_vertex_buffers[0] : Buffer_Handle_t{0});

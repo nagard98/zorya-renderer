@@ -1,7 +1,6 @@
 #include "renderer/backend/Renderer.h"
 #include "renderer/backend/BufferCache.h"
 #include "renderer/backend/ResourceCache.h"
-#include "renderer/backend/JimenezSeparable.h"
 #include "renderer/backend/RenderGraph.h"
 #include "renderer/backend/PipelineStateObject.h"
 
@@ -96,6 +95,15 @@ namespace zorya
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_light_draw_cb, &cb_light_draw_desc).value);
 
+		D3D11_BUFFER_DESC cb_sss_draw_desc;
+		cb_sss_draw_desc.Usage = D3D11_USAGE_DEFAULT;
+		cb_sss_draw_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		cb_sss_draw_desc.CPUAccessFlags = 0;
+		cb_sss_draw_desc.MiscFlags = 0;
+		cb_sss_draw_desc.ByteWidth = sizeof(SSS_Draw_Constants);
+
+		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_sss_draw_cb, &cb_sss_draw_desc).value);
+
 		//View matrix constant buffer setup-------------------------------------------------------------
 		D3D11_BUFFER_DESC cb_cam_desc;
 		cb_cam_desc.Usage = D3D11_USAGE_DEFAULT;
@@ -176,11 +184,9 @@ namespace zorya
 
 		hnd_sky_cubemap_srv = rhi.add_srv(std::move(m_cubemap_view));
 
-		std::vector<float> krn;
 		//load_kernel_file("./assets/Skin1_PreInt_DISCSEP.bn", krn);
 
 		//override_ssss_discr_sep_kernel(krn);
-		separable_sss_calculate_kernel();
 
 		return hr;
 	}
@@ -228,7 +234,7 @@ namespace zorya
 		Skybox_Pass(render_graph, scope, hnd_sky_cubemap_srv, view_desc, &arena, hnd_world_cb, hnd_view_cb, hnd_proj_cb, m_scene_viewport);
 		GBuffer_Pass(render_graph, scope, &arena, view_desc, hnd_world_cb, hnd_view_cb, hnd_proj_cb);
 		Lighting_Pass(render_graph, scope, &arena, view_desc, hnd_inv_mat_cb, m_hnd_frame_cb, hnd_omni_dir_shad_cb, hnd_cam_transf_cb, hnd_light_draw_cb);
-		SSS_Pass(render_graph, scope, &arena, m_hnd_frame_cb, m_hnd_object_cb);
+		SSS_Pass(render_graph, scope, &arena, m_hnd_frame_cb, m_hnd_object_cb, hnd_sss_draw_cb);
 		Debug_View_Pass(render_graph, scope);
 		Present_Pass(render_graph, scope, &arena);
 
@@ -250,7 +256,7 @@ namespace zorya
 			scene_lights.dir_light = dir_light;
 
 			dx::XMVECTOR transformed_dir_light = dx::XMVector4Transform(dx::XMLoadFloat4(&dir_light.dir), view_desc.lights_info.at(i).final_world_transform);
-			dx::XMStoreFloat4(&scene_lights.dir_light.dir, dx::XMVector4Transform(transformed_dir_light, view_desc.cam.get_view_matrix()));
+			dx::XMStoreFloat4(&scene_lights.dir_light.dir, transformed_dir_light/* dx::XMVector4Transform(transformed_dir_light, view_desc.cam.get_view_matrix())*/);
 
 			//Setup for shadowmapping
 			dx::XMVECTOR dir_light_pos = dx::XMVectorMultiply(dx::XMVectorNegate(transformed_dir_light), dx::XMVectorSet(3.0f, 3.0f, 3.0f, 1.0f));
@@ -270,7 +276,8 @@ namespace zorya
 			scene_lights.point_lights[point_light_idx] = p_light;
 
 			dx::XMVECTOR point_light_final_pos = dx::XMVector4Transform(dx::XMLoadFloat4(&p_light.pos_world_space), view_desc.lights_info[i].final_world_transform);
-			scene_lights.point_pos_view_space[point_light_idx] = dx::XMVector4Transform(point_light_final_pos, view_desc.cam.get_view_matrix());
+			scene_lights.point_pos_view_space[point_light_idx] = point_light_final_pos; //dx::XMVector4Transform(point_light_final_pos, view_desc.cam.get_view_matrix());
+			dx::XMStoreFloat4(&scene_lights.point_lights[point_light_idx].pos_world_space, point_light_final_pos);
 
 			if (view_desc.num_point_lights > 0) omni_dir_shad_cb.point_light_proj_mat = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(dx::XM_PIDIV2, 1.0f, view_desc.lights_info[i].point_light.far_plane_dist, view_desc.lights_info[i].point_light.near_plane_dist));
 
@@ -280,16 +287,6 @@ namespace zorya
 			omni_dir_shad_cb.point_light_view_mat[point_light_idx * 6 + Cubemap::FACE_NEGATIVE_Y] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(point_light_final_pos, dx::XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f)));
 			omni_dir_shad_cb.point_light_view_mat[point_light_idx * 6 + Cubemap::FACE_POSITIVE_Z] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(point_light_final_pos, dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
 			omni_dir_shad_cb.point_light_view_mat[point_light_idx * 6 + Cubemap::FACE_NEGATIVE_Z] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(point_light_final_pos, dx::XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
-
-			//for (int point_light_idx = 0; i < view_desc.num_dir_lights + view_desc.num_point_lights; i++, point_light_idx++)
-			//{
-			//	const Point_Light& p_light = view_desc.lights_info[i].point_light;
-			//	tmp_lights_cb.point_lights[point_light_idx] = p_light;
-
-			//	dx::XMVECTOR point_light_final_pos = dx::XMVector4Transform(dx::XMLoadFloat4(&p_light.pos_world_space), view_desc.lights_info[i].final_world_transform);
-			//	tmp_lights_cb.point_pos_view_space[point_light_idx] = dx::XMVector4Transform(point_light_final_pos, view_desc.cam.get_view_matrix());
-			//}
-			//tmp_lights_cb.num_point_lights = view_desc.num_point_lights;
 
 		}
 		scene_lights.num_point_lights = view_desc.num_point_lights;
@@ -305,8 +302,8 @@ namespace zorya
 			dx::XMStoreFloat4(&scene_lights.spot_lights[spot_light_idx].pos_world_space, spot_light_final_pos);
 			dx::XMStoreFloat4(&scene_lights.spot_lights[spot_light_idx].direction, spot_light_final_dir);
 
-			scene_lights.spot_pos_view_space[spot_light_idx] = dx::XMVector4Transform(spot_light_final_pos, view_desc.cam.get_view_matrix());
-			scene_lights.spot_dir_view_space[spot_light_idx] = dx::XMVector4Transform(spot_light_final_dir, view_desc.cam.get_view_matrix());
+			scene_lights.spot_pos_view_space[spot_light_idx] = spot_light_final_pos;
+			scene_lights.spot_dir_view_space[spot_light_idx] = spot_light_final_dir;// dx::XMVector4Transform(spot_light_final_dir, view_desc.cam.get_view_matrix());
 
 			omni_dir_shad_cb.spot_light_proj_mat[spot_light_idx] = dx::XMMatrixTranspose(dx::XMMatrixPerspectiveFovLH(std::acos(view_desc.lights_info[i].spot_light.cos_cutoff_angle) * 2.0f, 1.0f, view_desc.lights_info[i].spot_light.far_plane_dist, view_desc.lights_info[i].spot_light.near_plane_dist));  //multiply acos by 2, because cutoff angle is considered from center, not entire light angle
 			omni_dir_shad_cb.spot_light_view_mat[spot_light_idx] = dx::XMMatrixTranspose(dx::XMMatrixLookToLH(spot_light_final_pos, spot_light_final_dir, dx::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));

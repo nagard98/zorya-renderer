@@ -94,6 +94,7 @@ namespace zorya
 		Shader_Render_Targets shader_render_targets;
 
 		PSO_Handle pso_hnd;
+		float blend_factor[4];
 		Shader_Arguments shader_arguments;
 
 		Buffer_Handle_t* hnd_vertex_buffers;
@@ -149,6 +150,7 @@ namespace zorya
 		GraphicsContext(ID3D11Device* device);
 
 		void set_pso(const PSO_Handle pso_hnd);
+		void set_blend_factor(const PSO_Handle, const float* blend_factor);
 		void set_vs_constant_buff(Constant_Buffer_Handle* cb_hnd, uint32_t start_slot, uint32_t num_slots);
 		void set_ps_constant_buff(Constant_Buffer_Handle* cb_hnd, uint32_t start_slot, uint32_t num_slots);
 		void set_ps_resource(Render_SRV_Handle* srv_hnd, uint32_t start_slot, uint32_t num_slots);
@@ -161,13 +163,6 @@ namespace zorya
 		void set_vertex_shader(const Vertex_Shader* shader);
 
 		void update_subresource(const Constant_Buffer_Handle cb_hnd, void* data);
-		
-		//template <typename T>
-		//void update_subresource(constant_buffer_handle<T> hnd_constant_buffer, const T& new_buffer_content)
-		//{
-		//	Constant_Buffer* constant_buffer = rhi.get_cb_pointer(hnd_constant_buffer);
-		//	rhi.m_gfx_context->m_context->UpdateSubresource(constant_buffer->buffer, 0, nullptr, &new_buffer_content, 0, 0);
-		//}
 
 		void clear_dsv(const Render_DSV_Handle dsv_hnd, bool clear_depth = true, float depth_clear_val = 0.0f, bool clear_stencil = true, uint8_t stencil_clear_val = 0);
 		void clear_rtv(const Render_RTV_Handle rtv_hnd, DirectX::XMFLOAT4& clear_color);
@@ -198,7 +193,7 @@ namespace zorya
 		Render_Command_List(DX11_Render_Device& render_device);
 
 		//void draw(PSO_Handle _pso_hnd, std::vector<Shader_Resource>& shader_resources, const Buffer_Handle_t* _hnd_vert_buffers, uint32_t num_vert_buffers, Submesh_Handle_t hnd_submesh);
-		void draw(PSO_Handle _pso_hnd, Shader_Render_Targets&& shader_render_targets, Shader_Arguments&& shader_arguments, const Buffer_Handle_t* _hnd_vert_buffers, uint32_t num_vert_buffers, D3D_PRIMITIVE_TOPOLOGY primitive_topology, Submesh_Handle_t hnd_submesh);
+		void draw(PSO_Handle _pso_hnd, Shader_Render_Targets&& shader_render_targets, Shader_Arguments&& shader_arguments, const Buffer_Handle_t* _hnd_vert_buffers, uint32_t num_vert_buffers, D3D_PRIMITIVE_TOPOLOGY primitive_topology, Submesh_Handle_t hnd_submesh, float* blend_factor = nullptr);
 		//void draw_indexed(PSO_Handle _pso_hnd, std::vector<Shader_Resource>& shader_resources, Buffer_Handle_t _hnd_index_buffer, const Buffer_Handle_t* _hnd_vert_buffers, uint32_t num_vert_buffers, Submesh_Handle_t hnd_submesh);
 		void draw_indexed(PSO_Handle _pso_hnd, Shader_Render_Targets&& shader_render_targets, Shader_Arguments&& shader_arguments, Buffer_Handle_t _hnd_index_buffer, const Buffer_Handle_t* _hnd_vert_buffers, uint32_t num_vert_buffers, D3D_PRIMITIVE_TOPOLOGY primitive_topology, Submesh_Handle_t hnd_submesh);
 		void update_buffer(Arena& arena, Constant_Buffer_Handle hnd_cb, void* new_data, size_t size_in_bytes);

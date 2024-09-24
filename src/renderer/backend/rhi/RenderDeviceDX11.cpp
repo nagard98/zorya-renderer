@@ -428,7 +428,7 @@ namespace zorya
 	{
 		m_srv_resources.at(m_srv_count) = srv_resource;
 		srv_resource = nullptr;
-		Render_SRV_Handle hnd_srv{ (uint64_t)m_srv_count };
+		Render_SRV_Handle hnd_srv{ (uint32_t)m_srv_count };
 		m_srv_count += 1;
 
 		return hnd_srv;
@@ -437,36 +437,30 @@ namespace zorya
 	ID3D11Texture2D* DX11_Render_Device::get_tex_2d_pointer(const Render_Texture_Handle rt_hnd) const
 	{
 		ID3D11Texture2D* resource = m_tex_2d_resources.at(rt_hnd.index);
-		//if (resource != nullptr) resource->AddRef();
-
 		return resource;
 	}
 
 	ID3D11RenderTargetView* DX11_Render_Device::get_rtv_pointer(const Render_RTV_Handle rtv_hnd) const
 	{
 		ID3D11RenderTargetView* resource = m_rtv_resources.at(rtv_hnd.index);
-		//if (resource != nullptr) resource->AddRef();
 		return resource;
 	}
 
 	ID3D11ShaderResourceView* DX11_Render_Device::get_srv_pointer(const Render_SRV_Handle srv_hnd) const
 	{
 		ID3D11ShaderResourceView* resource = m_srv_resources.at(srv_hnd.index);
-		//if (resource != nullptr) resource->AddRef();
 		return resource;
 	}
 
 	ID3D11DepthStencilView* DX11_Render_Device::get_dsv_pointer(const Render_DSV_Handle dsv_hnd) const
 	{
 		ID3D11DepthStencilView* resource = m_dsv_resources.at(dsv_hnd.index);
-		//if(resource != nullptr) resource->AddRef();
 		return resource;
 	}
 
 	ID3D11Buffer* DX11_Render_Device::get_cb_pointer(const Constant_Buffer_Handle cb_hnd) const
 	{
 		ID3D11Buffer* buffer = m_cb_resources.at(cb_hnd.index).buffer;
-		//if (buffer != nullptr) buffer->AddRef();
 		return buffer;
 	}
 

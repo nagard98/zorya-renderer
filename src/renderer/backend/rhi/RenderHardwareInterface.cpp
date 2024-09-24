@@ -328,6 +328,11 @@ namespace zorya
 			return DXGI_FORMAT_R24G8_TYPELESS;
 			break;
 		}
+		case zorya::Format::FORMAT_R16G16_UNORM:
+		{
+			return DXGI_FORMAT_R16G16_TYPELESS;
+			break;
+		}
 		case zorya::Format::FORMAT_R11G11B10_FLOAT:
 		{
 			return DXGI_FORMAT_R11G11B10_FLOAT;
@@ -440,6 +445,26 @@ namespace zorya
 			case zorya::RENDER_TARGET:
 			{
 				return DXGI_FORMAT_R11G11B10_FLOAT;
+				break;
+			}
+			case zorya::DEPTH_STENCIL:
+			default:
+			{
+				zassert(false);
+				break;
+			}
+			}
+			break;
+		}
+		case zorya::Format::FORMAT_R16G16_UNORM:
+		{
+			switch (bind_flag)
+			{
+			case zorya::SHADER_RESOURCE:
+			case zorya::UNORDERED_ACCESS:
+			case zorya::RENDER_TARGET:
+			{
+				return DXGI_FORMAT_R16G16_UNORM;
 				break;
 			}
 			case zorya::DEPTH_STENCIL:

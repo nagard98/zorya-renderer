@@ -37,8 +37,8 @@ VS_OUTPUT vs(VS_INPUT Input)
 {
     VS_OUTPUT Output;
 
-    float3 t = normalize(mul(float4(Input.tangent, 0.0f), mul(worldMatrix, viewMatrix)));
-    float3 n = normalize(mul(float4(Input.vNormal, 0.0f), mul(worldMatrix, viewMatrix)));
+    float3 t = normalize(mul(float4(Input.tangent, 0.0f), worldMatrix));
+    float3 n = normalize(mul(float4(Input.vNormal, 0.0f), worldMatrix));
     float3 b = cross(t, n);
 
     Output.tbn = transpose(float3x3(t, b, n));
@@ -47,7 +47,7 @@ VS_OUTPUT vs(VS_INPUT Input)
     Output.vPosition = mul(Input.vPosition, WVPMat);
 
     Output.texCoord = Input.texCoord;
-    Output.vNormal = mul(float4(Input.vNormal,0.0f), mul(worldMatrix, viewMatrix));
+    Output.vNormal = mul(float4(Input.vNormal, 0.0f), worldMatrix/*mul(worldMatrix, viewMatrix)*/);
     
     return Output;
 }
