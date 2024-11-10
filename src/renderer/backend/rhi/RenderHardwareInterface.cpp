@@ -540,9 +540,11 @@ namespace zorya
 		D3D11_SUBRESOURCE_DATA init_data{};
 		init_data.pSysMem = (const void*)texture_asset->m_data;
 		//TODO: fix number of channels on import
-		init_data.SysMemPitch = tex_config->max_width * 4/*tex_config->channels*/ * 1;
+		init_data.SysMemPitch = tex_config->max_width * 4/*tex_config->channels*/ * (texture_asset->is_hdr ? 4 : 1);
 		
-		ZRY_Result res = m_device.create_tex_2d(&hnd_staging_tex, nullptr, ZRY_Usage{ D3D11_USAGE_DEFAULT }, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ tex_config->is_normal_map ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGI_FORMAT_R8G8B8A8_UNORM_SRGB },
+		DXGI_FORMAT format = texture_asset->is_hdr ? DXGI_FORMAT_R32G32B32A32_FLOAT : (tex_config->is_normal_map ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
+
+		ZRY_Result res = m_device.create_tex_2d(&hnd_staging_tex, nullptr, ZRY_Usage{ D3D11_USAGE_DEFAULT }, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ format },
 			tex_config->max_width, tex_config->max_height, 1,
 			&hnd_staging_srv, nullptr, true, 0, 1, 0);
 		assert(res.value == S_OK);
@@ -553,7 +555,7 @@ namespace zorya
 		ID3D11ShaderResourceView* stag_srv = m_device.get_srv_pointer(hnd_staging_srv);
 		m_context->GenerateMips(stag_srv);
 
-		res = m_device.create_tex_2d(&hnd_final_tex, nullptr, ZRY_Usage{ D3D11_USAGE_DEFAULT}, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE }, ZRY_Format{ tex_config->is_normal_map ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGI_FORMAT_R8G8B8A8_UNORM_SRGB },
+		res = m_device.create_tex_2d(&hnd_final_tex, nullptr, ZRY_Usage{ D3D11_USAGE_DEFAULT}, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE }, ZRY_Format{ format },
 			tex_config->max_width, tex_config->max_height, 1,
 			hnd_srv, nullptr, false, 0, 1, 0);
 		assert(res.value == S_OK);
@@ -561,8 +563,9 @@ namespace zorya
 		ID3D11Texture2D* final_tex = m_device.get_tex_2d_pointer(hnd_final_tex);
 		m_context->CopyResource(final_tex, stag_tex);
 
-		stag_srv->Release();
-		stag_tex->Release();
+		//TODO : release by removing also handle
+		//stag_srv->Release();
+		//stag_tex->Release();
 
 		return res.value;
 	}
@@ -576,16 +579,36 @@ namespace zorya
 		bind_flags.value |= (meta.bind_flags & Bind_Flag::UNORDERED_ACCESS) != 0 ? D3D11_BIND_UNORDERED_ACCESS : 0;
 		bind_flags.value |= (meta.bind_flags & Bind_Flag::DEPTH_STENCIL) != 0 ? D3D11_BIND_DEPTH_STENCIL : 0;
 
-		ZRY_Result zr = m_device.create_tex_2d(
-			tex_handle,
-			init_data,
-			ZRY_Usage{ D3D11_USAGE_DEFAULT },
-			bind_flags,
-			ZRY_Format{ convert_format(meta.desc.format) },
-			meta.desc.width,
-			meta.desc.height,
-			meta.desc.arr_size
-		);
+		ZRY_Result zr{ S_OK };
+
+		if (!meta.desc.is_cubemap)
+		{
+			zr = m_device.create_tex_2d(
+				tex_handle,
+				init_data,
+				ZRY_Usage{ D3D11_USAGE_DEFAULT },
+				bind_flags,
+				ZRY_Format{ convert_format(meta.desc.format) },
+				meta.desc.width,
+				meta.desc.height,
+				meta.desc.arr_size,
+				nullptr, nullptr,
+				meta.desc.has_mips, meta.desc.has_mips ? 0 : 1
+			);
+		} 
+		else
+		{
+			zr = m_device.create_tex_cubemap(
+				tex_handle,
+				bind_flags,
+				ZRY_Format{ convert_format(meta.desc.format) },
+				meta.desc.width,
+				meta.desc.height,
+				meta.desc.arr_size,
+				nullptr, nullptr,
+				meta.desc.has_mips, meta.desc.has_mips ? 0 : 1
+			);
+		}
 
 		return zr;
 	}
@@ -594,12 +617,25 @@ namespace zorya
 	{
 		u32 slice_size = view_desc.slice_size == 0 ? meta.desc.arr_size : view_desc.slice_size;
 
-		return m_device.create_srv_tex_2d_array(
-			srv_handle,
-			tex_handle,
-			ZRY_Format{ convert_format(meta.desc.format, Bind_Flag::SHADER_RESOURCE) },
-			slice_size, view_desc.slice_start_index
-		);
+		if (!meta.desc.is_cubemap)
+		{
+			return m_device.create_srv_tex_2d_array(
+				srv_handle,
+				tex_handle,
+				ZRY_Format{ convert_format(meta.desc.format, Bind_Flag::SHADER_RESOURCE) },
+				slice_size, view_desc.slice_start_index
+			);
+		} else
+		{
+			return m_device.create_srv_tex_cubemap(
+				srv_handle,
+				tex_handle,
+				ZRY_Format{ convert_format(meta.desc.format, Bind_Flag::SHADER_RESOURCE) },
+				slice_size, view_desc.slice_start_index
+			);
+		}
+
+
 	}
 
 	ZRY_Result Render_Hardware_Interface::create_dsv(Render_DSV_Handle* dsv_handle, Render_Texture_Handle* tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc)
@@ -622,7 +658,7 @@ namespace zorya
 			rtv_handle,
 			tex_handle,
 			ZRY_Format{ convert_format(meta.desc.format, Bind_Flag::RENDER_TARGET) },
-			slice_size, 0, view_desc.slice_start_index
+			slice_size, view_desc.mip_index, view_desc.slice_start_index
 		);
 	}
 

@@ -330,6 +330,9 @@ void zorya::Render_Command_List::clear()
 
 ID3D11CommandList* zorya::Render_Command_List::finish_command_list()
 {
+	Render_RTV_Handle null_rtvs[8] = { 0 };
+	Render_SRV_Handle null_srvs[10] = { 0 };
+
 	for (auto cmd : cmd_list)
 	{
 		switch (cmd->type)
@@ -339,6 +342,7 @@ ID3D11CommandList* zorya::Render_Command_List::finish_command_list()
 			auto _cmd = static_cast<Render_Command_Draw*>(cmd);
 
 			auto& shader_render_targets = _cmd->shader_render_targets;
+			gfx_context.set_render_targets(null_rtvs, Render_DSV_Handle{ 0 }, 8);
 			gfx_context.set_render_targets(shader_render_targets.rtv_hnds, shader_render_targets.dsv_hnd, shader_render_targets.num_rtv_hnds);
 
 			gfx_context.set_pso(_cmd->pso_hnd);
@@ -350,6 +354,7 @@ ID3D11CommandList* zorya::Render_Command_List::finish_command_list()
 			auto& shader_args = _cmd->shader_arguments;
 			gfx_context.set_vs_constant_buff(shader_args.vs_cb_handles, 0, shader_args.num_vs_cb_handles);
 			gfx_context.set_ps_constant_buff(shader_args.ps_cb_handles, 0, shader_args.num_ps_cb_handles);
+			gfx_context.set_ps_resource(null_srvs, 0, 10);
 			gfx_context.set_ps_resource(shader_args.ps_srv_handles, 0, shader_args.num_ps_srv_handles);
 
 			gfx_context.draw(_cmd->hnd_submesh);
@@ -361,6 +366,7 @@ ID3D11CommandList* zorya::Render_Command_List::finish_command_list()
 			auto _cmd = static_cast<Render_Command_Draw_Indexed*>(cmd);
 
 			auto& shader_render_targets = _cmd->shader_render_targets;
+			gfx_context.set_render_targets(null_rtvs, Render_DSV_Handle{ 0 }, 8);
 			gfx_context.set_render_targets(shader_render_targets.rtv_hnds, shader_render_targets.dsv_hnd, shader_render_targets.num_rtv_hnds);
 
 			gfx_context.set_pso(_cmd->pso_hnd);
@@ -372,6 +378,7 @@ ID3D11CommandList* zorya::Render_Command_List::finish_command_list()
 			auto& shader_args = _cmd->shader_arguments;
 			gfx_context.set_vs_constant_buff(shader_args.vs_cb_handles, 0, shader_args.num_vs_cb_handles);
 			gfx_context.set_ps_constant_buff(shader_args.ps_cb_handles, 0, shader_args.num_ps_cb_handles);
+			gfx_context.set_ps_resource(null_srvs, 0, 10);
 			gfx_context.set_ps_resource(shader_args.ps_srv_handles, 0, shader_args.num_ps_srv_handles);
 
 			gfx_context.draw_indexed(_cmd->hnd_submesh);
@@ -398,7 +405,8 @@ ID3D11CommandList* zorya::Render_Command_List::finish_command_list()
 			src->GetResource(&_src);
 			dest->GetResource(&_dest);
 
-			gfx_context.m_context->CopySubresourceRegion(_dest, 0, 0, 0, 0, _src, 0, nullptr);
+			//gfx_context.m_context->CopySubresourceRegion(_dest, 0, 0, 0, 0, _src, 0, nullptr);
+			gfx_context.m_context->CopyResource(_dest, _src);
 
 			break;
 		}

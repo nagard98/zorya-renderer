@@ -49,6 +49,7 @@ namespace zorya
         return (strncmp(extension, ".png", extension_len) == 0) ||
             (strncmp(extension, ".jpg", extension_len) == 0) ||
             (strncmp(extension, ".jpeg", extension_len) == 0) ||
+            (strncmp(extension, ".hdr", extension_len) == 0) ||
             (strncmp(extension, ".tga", extension_len) == 0);
     }
 
@@ -383,8 +384,17 @@ namespace zorya
         
         case zorya::TEXTURE:
         {
-            asset_imp_conf = new Texture_Import_Config(referenced_asset_file_path);
-            Texture_Import_Config::serialize(static_cast<Texture_Import_Config*>(asset_imp_conf));
+            char metafile_path[MAX_PATH];
+            sprintf(metafile_path, "%s.metafile", referenced_asset_file_path);
+            asset_imp_conf = Texture_Import_Config::deserialize(metafile_path);
+
+            if (asset_imp_conf == nullptr)
+            {
+                asset_imp_conf = new Texture_Import_Config(referenced_asset_file_path);
+                Texture2D::load_asset_info(static_cast<Texture_Import_Config*>(asset_imp_conf));
+                Texture_Import_Config::serialize(static_cast<Texture_Import_Config*>(asset_imp_conf));
+            }
+            
             break;
         }
 
@@ -397,6 +407,7 @@ namespace zorya
             break;
         }
         default:
+            zassert(false);
             break;
         }
 

@@ -292,7 +292,7 @@ void zorya::Content_Browser::render(Asset_Registry& asset_registry)
 		{
 			if (ImGui::MenuItem("Texture"))
 			{
-				file_browser.SetTypeFilters( {".png", ".jpg", ".jpeg"} );
+				file_browser.SetTypeFilters( {".png", ".jpg", ".jpeg", ".hdr"});
 				file_browser.Open();
 			}
 

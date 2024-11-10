@@ -112,6 +112,7 @@ namespace zorya
 			Directional_Light dir_light;
 			Point_Light point_light;
 			Spot_Light spot_light;
+			Sky_Light sky_light;
 		};
 		dx::XMMATRIX final_world_transform;
 	};
@@ -124,6 +125,7 @@ namespace zorya
 		uint8_t num_dir_lights;
 		uint8_t num_point_lights;
 		uint8_t num_spot_lights;
+		Sky_Light skylight;
 		Camera cam;
 	};
 
@@ -141,6 +143,7 @@ namespace zorya
 		void add_light(Node<Renderable_Entity>* attach_to, dx::XMVECTOR direction, float shadowmap_near_plane = 2.0f, float shadowmap_far_plane = 20.0f); //add directional light
 		void add_light(Node<Renderable_Entity>* attach_to, dx::XMVECTOR direction, dx::XMVECTOR position, float cutoff_angle); //add spotlight
 		void add_light(Node<Renderable_Entity>* attach_to, dx::XMVECTOR position, float constant, float linear, float quadratic); //add point light
+		void add_skylight(Node<Renderable_Entity>* attach_to); //add skylight light
 
 		u16 add_diffusion_profile(Diffusion_Profile_Handle hnd_profile);
 

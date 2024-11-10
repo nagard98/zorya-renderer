@@ -70,6 +70,60 @@ namespace zorya
 		}
 
 		{
+			PSO_Desc equirectagular_to_cubemap_pso_desc;
+			equirectagular_to_cubemap_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::SKYBOX];
+			equirectagular_to_cubemap_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::EQUIRECTANGULAR];
+			equirectagular_to_cubemap_pso_desc.depth_stencil_desc = default_ds_desc;
+			equirectagular_to_cubemap_pso_desc.depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+			equirectagular_to_cubemap_pso_desc.rasterizer_desc = default_rs_desc;
+			equirectagular_to_cubemap_pso_desc.input_elements_desc = s_vertex_layout_desc;
+			equirectagular_to_cubemap_pso_desc.num_elements = sizeof(s_vertex_layout_desc) / sizeof(s_vertex_layout_desc[0]);
+			equirectagular_to_cubemap_pso_desc.blend_desc = create_default_blend_desc();
+
+			zassert(rhi.create_pso(&m_pipeline_states[Pipeline_State::EQUIRECTANGULAR_CONVERSION], equirectagular_to_cubemap_pso_desc).value == S_OK);
+		}
+		
+		{
+			PSO_Desc convolve_cubemap_pso_desc;
+			convolve_cubemap_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::SKYBOX];
+			convolve_cubemap_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::CONVOLVE_CUBEMAP];
+			convolve_cubemap_pso_desc.depth_stencil_desc = default_ds_desc;
+			convolve_cubemap_pso_desc.depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+			convolve_cubemap_pso_desc.rasterizer_desc = default_rs_desc;
+			convolve_cubemap_pso_desc.input_elements_desc = s_vertex_layout_desc;
+			convolve_cubemap_pso_desc.num_elements = sizeof(s_vertex_layout_desc) / sizeof(s_vertex_layout_desc[0]);
+			convolve_cubemap_pso_desc.blend_desc = create_default_blend_desc();
+
+			zassert(rhi.create_pso(&m_pipeline_states[Pipeline_State::CONVOLVE_CUBEMAP], convolve_cubemap_pso_desc).value == S_OK);
+		}
+
+		{
+			PSO_Desc build_pre_filtered_map_pso_desc;
+			build_pre_filtered_map_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::SKYBOX];
+			build_pre_filtered_map_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::BUILD_PRE_FILTERED_CUBEMAP];
+			build_pre_filtered_map_pso_desc.depth_stencil_desc = default_ds_desc;
+			build_pre_filtered_map_pso_desc.depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+			build_pre_filtered_map_pso_desc.rasterizer_desc = default_rs_desc;
+			build_pre_filtered_map_pso_desc.input_elements_desc = s_vertex_layout_desc;
+			build_pre_filtered_map_pso_desc.num_elements = sizeof(s_vertex_layout_desc) / sizeof(s_vertex_layout_desc[0]);
+			build_pre_filtered_map_pso_desc.blend_desc = create_default_blend_desc();
+
+			zassert(rhi.create_pso(&m_pipeline_states[Pipeline_State::BUILD_PRE_FILTERED_MAP], build_pre_filtered_map_pso_desc).value == S_OK);
+		}
+		{
+			PSO_Desc build_brdf_lut_map_pso_desc;
+			build_brdf_lut_map_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::FULL_QUAD];
+			build_brdf_lut_map_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::BUILD_PRE_FILTERED_CUBEMAP];
+			build_brdf_lut_map_pso_desc.depth_stencil_desc = default_ds_desc;
+			build_brdf_lut_map_pso_desc.rasterizer_desc = default_rs_desc;
+			build_brdf_lut_map_pso_desc.input_elements_desc = nullptr;
+			build_brdf_lut_map_pso_desc.num_elements = 0;
+			build_brdf_lut_map_pso_desc.blend_desc = create_default_blend_desc();
+
+			zassert(rhi.create_pso(&m_pipeline_states[Pipeline_State::BUILD_BRDF_LUT_MAP], build_brdf_lut_map_pso_desc).value == S_OK);
+		}
+
+		{
 			PSO_Desc composit_pso_desc;
 			composit_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::FULL_QUAD];
 			composit_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::COMPOSIT];

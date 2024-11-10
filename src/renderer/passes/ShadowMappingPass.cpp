@@ -33,6 +33,7 @@ namespace zorya
 					//TODO: fix creation of shadow map; descriptions (at least partial) should be provided by the caller
 					switch (light.tag)
 					{
+					case zorya::Light_Type::SKYLIGHT:
 					case zorya::Light_Type::DIRECTIONAL:
 					case zorya::Light_Type::SPOT:
 					{
@@ -51,8 +52,9 @@ namespace zorya
 						i_point += 1;
 						break;
 					}
+
 					default:
-						break;
+						zassert(false);
 					}
 
 				}

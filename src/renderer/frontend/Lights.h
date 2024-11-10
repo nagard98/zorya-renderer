@@ -5,6 +5,8 @@
 
 #include <DirectXMath.h>
 #include <cstdint>
+#include <renderer/frontend/Texture2D.h>
+#include <renderer/backend/rhi/RenderDeviceHandles.h>
 
 #include "reflection/ReflectionAnnotation.h"
 
@@ -69,13 +71,23 @@ struct Spot_Light
     float pad;
 };
 
+struct Sky_Light
+{
+    Texture2D* environment_texture;
+    Render_SRV_Handle skybox_srv;
+    Render_SRV_Handle irradiance_map_srv;
+    Render_SRV_Handle prefiltered_env_map_srv;
+    Render_SRV_Handle brdf_lut_srv;
+};
+
 #ifdef __cplusplus
 
 enum class Light_Type : uint8_t
 {
     DIRECTIONAL,
     POINT,
-    SPOT
+    SPOT,
+    SKYLIGHT
 };
 
 struct Light_Handle_t

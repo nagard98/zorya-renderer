@@ -1,3 +1,7 @@
+static const float PI = 3.14159265f;
+static const float HALF_PI = PI / 2.0f;
+static const float QUARTER_PI = PI / 4.0f;
+
 struct PS_INPUT
 {
     float4 pos : SV_POSITION;
@@ -6,7 +10,7 @@ struct PS_INPUT
 
 struct PS_OUTPUT
 {
-    float4 col : SV_TARGET;
+    float3 col : SV_TARGET;
 };
 
 TextureCube cubemap : register(t0);
@@ -16,8 +20,8 @@ PS_OUTPUT ps(PS_INPUT input)
 {
     PS_OUTPUT output;
     
-    output.col = pow(cubemap.Sample(cubemapSampler, input.texCoord), 2.2f);
-    //output.col = float4(0.0f,0.0f,0.0f,1.0f);
+    float3 normal = normalize(input.texCoord);
+    output.col = cubemap.Sample(cubemapSampler, normal).rgb;
     
     return output;
 }

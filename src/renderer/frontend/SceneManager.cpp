@@ -191,6 +191,44 @@ namespace zorya
         attach_to->children.push_back(new Node<Renderable_Entity>(renderable_entity));
     }
 
+    void Scene_Manager::add_skylight(Node<Renderable_Entity>* attach_to)
+    {
+        assert(attach_to != nullptr);
+
+        Light_Handle_t hnd_light;
+        hnd_light.tag = Light_Type::SKYLIGHT;
+
+        if (m_freed_scene_light_indices.size() > 0)
+        {
+            hnd_light.index = m_freed_scene_light_indices.back();
+
+            Light_Info& light_info = m_scene_lights.at(hnd_light.index);
+            light_info.tag = Light_Type::SKYLIGHT;
+            light_info.sky_light.environment_texture = nullptr;
+            light_info.final_world_transform = dx::XMMatrixIdentity();
+
+            m_freed_scene_light_indices.pop_back();
+        } else
+        {
+            hnd_light.index = m_scene_lights.size();
+
+            Light_Info& light_info = m_scene_lights.emplace_back();
+            light_info.tag = Light_Type::SKYLIGHT;
+            light_info.sky_light.environment_texture = nullptr;
+            light_info.final_world_transform = dx::XMMatrixIdentity();
+        }
+
+        //TODO:decide what to hash for id
+        Renderable_Entity renderable_entity;
+        renderable_entity.ID = hash_str_uint32(std::string("sky_light_") + std::to_string(m_scene_lights.size()));
+        renderable_entity.entity_name = "Sky Light";
+        renderable_entity.hnd_light = hnd_light;
+        renderable_entity.tag = Entity_Type::LIGHT;
+        renderable_entity.local_world_transf = IDENTITY_TRANSFORM;
+
+        attach_to->children.push_back(new Node<Renderable_Entity>(renderable_entity));
+    }
+
     u16 Scene_Manager::add_diffusion_profile(Diffusion_Profile_Handle hnd_profile)
     {
         for (size_t i = 0; i < scene_dprofiles.size(); i++)
@@ -293,6 +331,15 @@ namespace zorya
                 view_desc.num_spot_lights += 1;
                 break;
             }
+            
+            case Light_Type::SKYLIGHT:
+            {
+                view_desc.skylight = light_info.sky_light;
+                break;
+            }
+
+            default:
+                zassert(false);
 
             }
         }

@@ -560,7 +560,7 @@ namespace zorya
 		return Render_Graph_Resource{in_resource.desc_hnd, in_resource.resource_hnd, gpu_res_hnd , in_resource.ref_count};
 	}
 
-	Render_Graph_Resource Render_Graph_Builder::write(Render_Graph_Resource rg_resource, Bind_Flag bind_flag, u32 slice_index_start, u32 slice_size)
+	Render_Graph_Resource Render_Graph_Builder::write(Render_Graph_Resource rg_resource, Bind_Flag bind_flag, u32 slice_index_start, u32 slice_size, u32 mip_index)
 	{
 		graph_resource_meta.at(rg_resource.desc_hnd).bind_flags |= bind_flag;
 		auto in_resource_hnd = rg_resource.resource_hnd;
@@ -586,7 +586,7 @@ namespace zorya
 
 		auto& render_pass = render_passes.at(current_pass_index);
 		render_pass.input_resources.push_back(in_resource_hnd);
-		render_pass.pass_write_resources.emplace_back(Render_Pass_Resource{ out_resource_hnd, gpu_res_hnd, bind_flag, slice_index_start, slice_size });
+		render_pass.pass_write_resources.emplace_back(Render_Pass_Resource{ out_resource_hnd, gpu_res_hnd, bind_flag, slice_index_start, slice_size, mip_index });
 		render_pass.ref_count += 1;
 
 		return out_resource;

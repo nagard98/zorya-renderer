@@ -246,6 +246,31 @@ namespace zorya
 		return zr;
 	}
 
+	ZRY_Result DX11_Render_Device::create_srv_tex_cubemap(Render_SRV_Handle* srv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int array_size, int first_array_slice, int mipLevels, int most_detailed_mip)
+	{
+		assert(srv_handle);
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+		ZeroMemory(&srv_desc, sizeof(srv_desc));
+
+		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+		srv_desc.Format = format.value;
+		srv_desc.Texture2DArray.MipLevels = mipLevels;
+		srv_desc.Texture2DArray.MostDetailedMip = most_detailed_mip;
+		srv_desc.Texture2DArray.ArraySize = array_size;
+		srv_desc.Texture2DArray.FirstArraySlice = first_array_slice;
+
+		ZRY_Result zr{ S_OK };
+
+		zr.value = m_device->CreateShaderResourceView(get_tex_2d_pointer(*tex_handle), &srv_desc, &m_srv_resources.at(m_srv_count));
+		RETURN_IF_FAILED_ZRY(zr);
+		srv_handle->index = m_srv_count;
+		m_srv_count += 1;
+
+		return zr;
+	}
+
+
 	ZRY_Result DX11_Render_Device::create_dsv_tex_2d_array(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int array_size, int mip_slice, int first_array_slice, bool is_read_only)
 	{
 		assert(dsv_handle != nullptr);

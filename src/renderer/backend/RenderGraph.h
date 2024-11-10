@@ -51,6 +51,8 @@ namespace zorya
         uint32_t width;
         uint32_t height;
         Format format;
+        bool is_cubemap{ false };
+        bool has_mips{ false };
         u32 arr_size{1};
         //TODO: temporary here; in the render graph you shouldn't explicitly define the binding options
         //Bind_Flags bind_flags = 0;
@@ -80,6 +82,7 @@ namespace zorya
         Bind_Flag bind_flag;
         u32 slice_start_index{ 0 };
         u32 slice_size{ 0 };
+        u32 mip_index{ 0 };
         bool is_read_only;
     };
 
@@ -108,7 +111,7 @@ namespace zorya
             : graph_resource_meta(_graph_resource_desc), graph_resources(_graph_resources), graph_resources_producers(_graph_resources_producers), render_passes(_render_passes), num_gpu_resources(0)/*, gpu_resources(_gpu_resources)*/ {}
 
         Render_Graph_Resource read(Render_Graph_Resource rg_resource, Bind_Flag bind_flag, u32 slice_index_start = 0, u32 slice_size = 0);
-        Render_Graph_Resource write(Render_Graph_Resource rg_resource, Bind_Flag bind_flag, u32 slice_index_start = 0, u32 slice_size = 0);
+        Render_Graph_Resource write(Render_Graph_Resource rg_resource, Bind_Flag bind_flag, u32 slice_index_start = 0, u32 slice_size = 0, u32 mip_index = 0);
         Render_Graph_Resource create(const Render_Graph_Resource_Desc& resource_desc/*, Bind_Flag bind_flag*/);
 
         void build(std::vector<Render_Resource_Handle>& gpu_resources);

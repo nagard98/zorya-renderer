@@ -13,12 +13,14 @@
 #include "renderer/passes/DebugViewPass.h"
 #include "renderer/passes/ShadowMappingPass.h"
 #include "renderer/passes/SSSPass.h"
+#include "renderer/passes/EquirectangularToCubemapPass.h"
 
 #include "renderer/frontend/SceneManager.h"
 #include "renderer/frontend/Material.h"
 #include "renderer/frontend/Lights.h"
 #include "renderer/frontend/Camera.h"
 #include "renderer/frontend/Shader.h"
+#include "renderer/frontend/Texture2D.h"
 #include "utils/Arena.h"
 
 #include "ApplicationConfig.h"
@@ -63,6 +65,15 @@ namespace zorya
 		material_cb_desc.Usage = D3D11_USAGE_DEFAULT;
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&m_hnd_object_cb, &material_cb_desc).value);
+		
+		
+		D3D11_BUFFER_DESC build_ibl_per_draw_cb_desc;
+		ZeroMemory(&build_ibl_per_draw_cb_desc, sizeof(build_ibl_per_draw_cb_desc));
+		build_ibl_per_draw_cb_desc.ByteWidth = max(sizeof(float) + sizeof(u32), 16);
+		build_ibl_per_draw_cb_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		build_ibl_per_draw_cb_desc.Usage = D3D11_USAGE_DEFAULT;
+
+		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_ibl_spec_draw_cb, &build_ibl_per_draw_cb_desc).value);
 
 
 		//World transform constant buffer setup---------------------------------------------------
@@ -176,13 +187,34 @@ namespace zorya
 		RETURN_IF_FAILED2(hr, rhi.create_rtv_tex_2d(&hnd_final_rtv, &hnd_final_rt, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_UNORM_SRGB }).value);
 
 		//----------------------------Skybox----------------------
-		wrl::ComPtr<ID3D11Resource> sky_texture;
+		//wrl::ComPtr<ID3D11Resource> sky_texture;
 		ID3D11ShaderResourceView* m_cubemap_view = nullptr;
 		hr = dx::CreateDDSTextureFromFileEx(rhi.m_device.m_device, L"./assets/skybox.dds", 0, D3D11_USAGE_DEFAULT,
-			D3D11_BIND_SHADER_RESOURCE, 0, D3D11_RESOURCE_MISC_TEXTURECUBE, dx::DX11::DDS_LOADER_DEFAULT, sky_texture.GetAddressOf(), &m_cubemap_view);
-		RETURN_IF_FAILED(hr);
+			D3D11_BIND_SHADER_RESOURCE, 0, D3D11_RESOURCE_MISC_TEXTURECUBE, dx::DX11::DDS_LOADER_DEFAULT, nullptr/*sky_texture.GetAddressOf()*/, &m_cubemap_view);
 
+		RETURN_IF_FAILED(hr);
 		hnd_sky_cubemap_srv = rhi.add_srv(std::move(m_cubemap_view));
+
+		//Texture_Import_Config* tex_import_config = static_cast<Texture_Import_Config*>(create_asset_import_config(Asset_Type::TEXTURE, "./assets/fireplace_2k.hdr"));
+		//Texture2D* tex = Texture2D::create(tex_import_config);
+		//tex->load_asset(tex_import_config);
+		//rhi.load_texture2(tex, tex_import_config, &hnd_environment_map_srv);
+		//
+		//RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_skybox_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 512, 512, 6, nullptr, nullptr, false, 1).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&hnd_skybox_map_srv, &hnd_skybox_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_skybox_map_rtv, &hnd_skybox_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+
+		//RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_irradiance_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 64, 64, 6, nullptr, nullptr, false, 1).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&hnd_irradiance_map_srv, &hnd_irradiance_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_irradiance_map_rtv, &hnd_irradiance_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+		//
+		//RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_prefiltered_env_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 64, 64, 6, nullptr, nullptr, true, 0).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&hnd_prefiltered_env_map_srv, &hnd_prefiltered_env_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6, 0, -1).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_prefiltered_env_map_rtv, &hnd_prefiltered_env_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+
+		//RETURN_IF_FAILED2(hr, rhi.create_tex_2d(&hnd_brdf_lut_map, nullptr, ZRY_Usage{ D3D11_USAGE_DEFAULT },  ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 512, 512, 1, nullptr, nullptr, true, 1).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_2d(&hnd_brdf_lut_map_srv, &hnd_brdf_lut_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d(&hnd_brdf_lut_map_rtv, &hnd_brdf_lut_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }).value);
 
 		//load_kernel_file("./assets/Skin1_PreInt_DISCSEP.bn", krn);
 
@@ -206,8 +238,11 @@ namespace zorya
 		static Render_Command_List cmd_list(rhi.m_device);
 		static Arena arena(10 * 1024 * 1024);
 		static Render_Graph render_graph;
+		static Render_Graph render_graph_once;
+		static bool is_first_run = true;
 
 		Render_Scope scope;
+		Render_Scope scope_once;
 
 		render_graph.import_persistent_resource<Final_Render_Graph_Texture>(scope, hnd_final_rtv);
 
@@ -226,14 +261,26 @@ namespace zorya
 			frame_cb.sss_params[i] = resource_cache.m_diffusion_profiles[hnd.index].sss_params;
 		}
 
+		//if (is_first_run)
+		//{
+		//	Equirectangular_To_Cubemap_Pass(render_graph_once, scope_once, &arena, hnd_world_cb, hnd_view_cb, hnd_proj_cb, hnd_ibl_spec_draw_cb, hnd_environment_map_srv,
+		//		hnd_skybox_map_rtv, hnd_irradiance_map_rtv, hnd_prefiltered_env_map_rtv, hnd_brdf_lut_map_rtv);
+		//	render_graph_once.compile();
+		//	render_graph_once.execute(cmd_list);
+		//	cmd_list.clear();
+		//	is_first_run = false;
+		//}
+
 		cmd_list.update_buffer(arena, m_hnd_frame_cb, &frame_cb, sizeof(frame_cb));
 		cmd_list.update_buffer(arena, hnd_view_cb, &tmpVCB, sizeof(tmpVCB));
 		cmd_list.update_buffer(arena, hnd_proj_cb, &tmpPCB, sizeof(tmpPCB));
 
+		const Sky_Light& skylight = view_desc.skylight;
+
 		Shadow_Mapping_Pass(render_graph, scope, &arena, view_desc, hnd_world_cb, hnd_omni_dir_shad_cb, omni_dir_shadow_cb, m_shadow_map_viewport, hnd_light_draw_cb);
-		Skybox_Pass(render_graph, scope, hnd_sky_cubemap_srv, view_desc, &arena, hnd_world_cb, hnd_view_cb, hnd_proj_cb, m_scene_viewport);
+		Skybox_Pass(render_graph, scope, skylight.skybox_srv, view_desc, &arena, hnd_world_cb, hnd_view_cb, hnd_proj_cb, m_scene_viewport);
 		GBuffer_Pass(render_graph, scope, &arena, view_desc, hnd_world_cb, hnd_view_cb, hnd_proj_cb);
-		Lighting_Pass(render_graph, scope, &arena, view_desc, hnd_inv_mat_cb, m_hnd_frame_cb, hnd_omni_dir_shad_cb, hnd_cam_transf_cb, hnd_light_draw_cb);
+		Lighting_Pass(render_graph, scope, &arena, view_desc, hnd_inv_mat_cb, m_hnd_frame_cb, hnd_omni_dir_shad_cb, hnd_cam_transf_cb, hnd_light_draw_cb, skylight.irradiance_map_srv, skylight.prefiltered_env_map_srv, skylight.brdf_lut_srv);
 		SSS_Pass(render_graph, scope, &arena, m_hnd_frame_cb, m_hnd_object_cb, hnd_sss_draw_cb);
 		Debug_View_Pass(render_graph, scope);
 		Present_Pass(render_graph, scope, &arena);
@@ -243,6 +290,52 @@ namespace zorya
 
 		cmd_list.clear();
 		arena.clear();
+	}
+
+	HRESULT Renderer::build_ibl_data(Sky_Light& skylight, Render_SRV_Handle hnd_environment_map)
+	{
+		HRESULT hr = S_OK;
+
+		Render_Texture_Handle hnd_irradiance_map;
+		Render_RTV_Handle hnd_irradiance_map_rtv;
+		Render_Texture_Handle hnd_skybox_map;
+		Render_RTV_Handle hnd_skybox_map_rtv;
+		Render_Texture_Handle hnd_prefiltered_env_map;
+		Render_RTV_Handle hnd_prefiltered_env_map_rtv;
+		Render_Texture_Handle hnd_brdf_lut_map;
+		Render_RTV_Handle hnd_brdf_lut_map_rtv;
+
+		RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_skybox_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 512, 512, 6, nullptr, nullptr, false, 1).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&skylight.skybox_srv, &hnd_skybox_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_skybox_map_rtv, &hnd_skybox_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+
+		RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_irradiance_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 64, 64, 6, nullptr, nullptr, false, 1).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&skylight.irradiance_map_srv, &hnd_irradiance_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_irradiance_map_rtv, &hnd_irradiance_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+
+		RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_prefiltered_env_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 64, 64, 6, nullptr, nullptr, true, 0).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&skylight.prefiltered_env_map_srv, &hnd_prefiltered_env_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6, 0, -1).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_prefiltered_env_map_rtv, &hnd_prefiltered_env_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+
+		RETURN_IF_FAILED2(hr, rhi.create_tex_2d(&hnd_brdf_lut_map, nullptr, ZRY_Usage{ D3D11_USAGE_DEFAULT }, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 512, 512, 1, nullptr, nullptr, true, 1).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_2d(&skylight.brdf_lut_srv, &hnd_brdf_lut_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d(&hnd_brdf_lut_map_rtv, &hnd_brdf_lut_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }).value);
+
+		Render_Command_List cmd_list(rhi.m_device);
+		Arena arena(10 * 1024 * 1024);
+		Render_Graph render_graph;
+		Render_Scope scope;
+
+		Equirectangular_To_Cubemap_Pass(render_graph, scope, &arena, hnd_world_cb, hnd_view_cb, hnd_proj_cb, hnd_ibl_spec_draw_cb, hnd_environment_map,
+			hnd_skybox_map_rtv, hnd_irradiance_map_rtv, hnd_prefiltered_env_map_rtv, hnd_brdf_lut_map_rtv);
+		
+		render_graph.compile();
+		render_graph.execute(cmd_list);
+		
+		cmd_list.clear();
+		arena.clear();
+
+		return hr;
 	}
 
 
@@ -311,4 +404,4 @@ namespace zorya
 		}
 		scene_lights.num_spot_ligthts = view_desc.num_spot_lights;
 	}
-}
+};

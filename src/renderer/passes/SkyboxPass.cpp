@@ -4,6 +4,7 @@
 #include "renderer/frontend/PipelineStateManager.h"
 #include "renderer/passes/PresentPass.h"
 #include "renderer/passes/ShadowMappingPass.h"
+#include "renderer/passes/EquirectangularToCubemapPass.h"
 
 namespace zorya
 {
@@ -37,6 +38,9 @@ namespace zorya
 				scope.set(Skybox_Data{ skybox });
 
 				auto& final_texture = scope.get<Final_Render_Graph_Texture>();
+
+				//auto& irradiance_data = scope.get<Irradiance_Data>();
+				//auto environment_map = builder.read(irradiance_data.irradiance_map, Bind_Flag::SHADER_RESOURCE, 0, 6);
 
 				//TODO: temporary
 				//auto& shadow_mapping_data = scope.get<Shadow_Mapping_Data>();

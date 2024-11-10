@@ -201,9 +201,10 @@ HRESULT init_data()
 {
 	HRESULT hr = S_OK;
 
-	scene_manager.add_light(scene_manager.m_scene_graph.root_node, dx::XMVectorSet(1.0f, 0.0f, 0.0, 0.0f), 1.0f, 8.0f);
-	scene_manager.add_light(scene_manager.m_scene_graph.root_node, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.22f, 0.20f);
-	scene_manager.add_light(scene_manager.m_scene_graph.root_node, dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), dx::XM_PIDIV4);
+	//scene_manager.add_light(scene_manager.m_scene_graph.root_node, dx::XMVectorSet(1.0f, 0.0f, 0.0, 0.0f), 1.0f, 8.0f);
+	//scene_manager.add_light(scene_manager.m_scene_graph.root_node, dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.22f, 0.20f);
+	//scene_manager.add_light(scene_manager.m_scene_graph.root_node, dx::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), dx::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), dx::XM_PIDIV4);
+	scene_manager.add_skylight(scene_manager.m_scene_graph.root_node);
 
 	////Camera setup-------------------------------------------------------------
 	dx::XMVECTOR cam_pos = dx::XMVectorSet(0.0f, 0.0f, -5.0f, 0.0f);

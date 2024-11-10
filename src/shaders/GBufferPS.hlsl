@@ -53,7 +53,7 @@ static const float revPi = 1 / 3.14159f;
 static const float gamma = 1.0f / 2.2f;
 static const float lightDec = -(1 / 16.0f);
 static const float texScale = 1 / 2048.0f;
-static const float ambient_factor = 0.05f;
+static const float ambient_factor = 0.0f;
 
 Texture2D _ObjTexture : register(t0);
 Texture2D _NormalMap : register(t1);

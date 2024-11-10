@@ -19,90 +19,90 @@ namespace zorya
 
     Texture_Import_Config* Texture_Import_Config::deserialize(const char* metafile_path)
     {
-        Texture_Import_Config* tex_import = new Texture_Import_Config;
+        Texture_Import_Config* tex_import = nullptr;
 
         yaml_parser_t parser;
         yaml_event_t event;
 
-        yaml_parser_initialize(&parser);
-
         FILE* file = fopen(metafile_path, "rb");
-        yaml_parser_set_input_file(&parser, file);
 
-        bool is_stream_ended = false;
-
-        do
+        if (file != NULL)
         {
-            int status = yaml_parser_parse(&parser, &event);
-            if (status == 0)
-            {
-                fprintf(stderr, "yaml_parser_parse error\n");
-                is_stream_ended = true;
-            }
+            tex_import = new Texture_Import_Config;
 
-            switch (event.type)
-            {
-            case (YAML_STREAM_END_EVENT):
-            {
-                is_stream_ended = true;
-                break;
-            }
+            yaml_parser_initialize(&parser);
+            yaml_parser_set_input_file(&parser, file);
 
-            case (YAML_SCALAR_EVENT):
+            bool is_stream_ended = false;
+
+            do
             {
-                if (strncmp((const char*)event.data.scalar.value, "asset_path", strnlen_s("asset_path", MAX_PATH)) == 0)
+                int status = yaml_parser_parse(&parser, &event);
+                if (status == 0)
                 {
-                    status = yaml_parser_parse(&parser, &event);
-                    size_t filepath_len = strnlen((char*)event.data.scalar.value, MAX_PATH) + 1;
-                    tex_import->asset_filepath = (char*)malloc(filepath_len);
-                    if (status != 0) memcpy_s(tex_import->asset_filepath, filepath_len, event.data.scalar.value, filepath_len);
-                } 
-                else if (strncmp((const char*)event.data.scalar.value, "guid", strnlen_s("guid", MAX_PATH)) == 0)
-                {
-                    status = yaml_parser_parse(&parser, &event);
-                    if (status != 0) sscanf_s((const char*)event.data.scalar.value, "%" PRIu64, &tex_import->guid);
-                } 
-                else if (strncmp((const char*)event.data.scalar.value, "asset_type", strnlen_s("asset_type", MAX_PATH)) == 0)
-                {
-                    status = yaml_parser_parse(&parser, &event);
-                    if (status != 0) sscanf_s((const char*)event.data.scalar.value, "%d", &tex_import->asset_type);
+                    fprintf(stderr, "yaml_parser_parse error\n");
+                    is_stream_ended = true;
                 }
-                
-                if (strncmp((const char*)event.data.scalar.value, "channels", strnlen_s("channels", MAX_PATH)) == 0)
+
+                switch (event.type)
                 {
-                    status = yaml_parser_parse(&parser, &event);
-                    if (status != 0) sscanf_s((const char*)event.data.scalar.value, "%" PRIu8, &tex_import->channels);
-                } 
-                else if (strncmp((const char*)event.data.scalar.value, "width", strnlen_s("width", MAX_PATH)) == 0)
+                case (YAML_STREAM_END_EVENT):
                 {
-                    status = yaml_parser_parse(&parser, &event);
-                    if (status != 0) sscanf_s((const char*)event.data.scalar.value, "%" PRIu32, &tex_import->max_width);
-                } 
-                else if (strncmp((const char*)event.data.scalar.value, "height", strnlen_s("height", MAX_PATH)) == 0)
-                {
-                    status = yaml_parser_parse(&parser, &event);
-                    if (status != 0) sscanf_s((const char*)event.data.scalar.value, "%" PRIu32, &tex_import->max_height);
+                    is_stream_ended = true;
+                    break;
                 }
-                else if (strncmp((const char*)event.data.scalar.value, "is_normal_map", strnlen_s("is_normal_map", MAX_PATH)) == 0)
+
+                case (YAML_SCALAR_EVENT):
                 {
-                    status = yaml_parser_parse(&parser, &event);
-                    if (status != 0) sscanf_s((const char*)event.data.scalar.value, "%d", &tex_import->is_normal_map);
+                    if (strncmp((const char*)event.data.scalar.value, "asset_path", strnlen_s("asset_path", MAX_PATH)) == 0)
+                    {
+                        status = yaml_parser_parse(&parser, &event);
+                        size_t filepath_len = strnlen((char*)event.data.scalar.value, MAX_PATH) + 1;
+                        tex_import->asset_filepath = (char*)malloc(filepath_len);
+                        if (status != 0) memcpy_s(tex_import->asset_filepath, filepath_len, event.data.scalar.value, filepath_len);
+                    } else if (strncmp((const char*)event.data.scalar.value, "guid", strnlen_s("guid", MAX_PATH)) == 0)
+                    {
+                        status = yaml_parser_parse(&parser, &event);
+                        if (status != 0) sscanf_s((const char*)event.data.scalar.value, "%" PRIu64, &tex_import->guid);
+                    } else if (strncmp((const char*)event.data.scalar.value, "asset_type", strnlen_s("asset_type", MAX_PATH)) == 0)
+                    {
+                        status = yaml_parser_parse(&parser, &event);
+                        if (status != 0) sscanf_s((const char*)event.data.scalar.value, "%d", &tex_import->asset_type);
+                    }
+
+                    if (strncmp((const char*)event.data.scalar.value, "channels", strnlen_s("channels", MAX_PATH)) == 0)
+                    {
+                        status = yaml_parser_parse(&parser, &event);
+                        if (status != 0) sscanf_s((const char*)event.data.scalar.value, "%" PRIu8, &tex_import->channels);
+                    } else if (strncmp((const char*)event.data.scalar.value, "width", strnlen_s("width", MAX_PATH)) == 0)
+                    {
+                        status = yaml_parser_parse(&parser, &event);
+                        if (status != 0) sscanf_s((const char*)event.data.scalar.value, "%" PRIu32, &tex_import->max_width);
+                    } else if (strncmp((const char*)event.data.scalar.value, "height", strnlen_s("height", MAX_PATH)) == 0)
+                    {
+                        status = yaml_parser_parse(&parser, &event);
+                        if (status != 0) sscanf_s((const char*)event.data.scalar.value, "%" PRIu32, &tex_import->max_height);
+                    } else if (strncmp((const char*)event.data.scalar.value, "is_normal_map", strnlen_s("is_normal_map", MAX_PATH)) == 0)
+                    {
+                        status = yaml_parser_parse(&parser, &event);
+                        if (status != 0) sscanf_s((const char*)event.data.scalar.value, "%d", &tex_import->is_normal_map);
+                    }
+                    break;
                 }
-                break;
-            }
-            default:
-            {
-                break;
-            }
+                default:
+                {
+                    break;
+                }
 
-            }
+                }
 
-            yaml_event_delete(&event);
+                yaml_event_delete(&event);
 
-        } while (!is_stream_ended);
+            } while (!is_stream_ended);
 
-        fclose(file);
-        yaml_parser_delete(&parser);
+            fclose(file);
+            yaml_parser_delete(&parser);
+        }
 
         return tex_import;
     }
@@ -121,17 +121,17 @@ namespace zorya
         //strncat_s(metafile_path, metafile_buff_size, tex_imp_conf->asset_filepath, metafile_buff_size);
         //strncat_s(metafile_path, metafile_buff_size, ".metafile", strlen(".metafile"));
 
-        FILE* file = fopen(metafile_path, "r");
-        if (file == nullptr)
-        {
-            Texture2D::load_asset_info(tex_imp_conf);
-        } else
-        {
-            fclose(file);
-        }
+        //FILE* file = fopen(metafile_path, "r");
+        //if (file == nullptr)
+        //{
+        //    Texture2D::load_asset_info(tex_imp_conf);
+        //} else
+        //{
+        //    fclose(file);
+        //}
 
         //TODO: check if failed file open
-        file = fopen(metafile_path, "wb");
+        FILE* file = fopen(metafile_path, "wb");
 
         yaml_emitter_set_output_file(&emitter, file);
 
@@ -196,7 +196,7 @@ namespace zorya
                     yaml_scalar_event_initialize(&event, NULL, (yaml_char_t*)YAML_STR_TAG, (yaml_char_t*)"height", strlen("height"), 1, 0, YAML_PLAIN_SCALAR_STYLE);
                     if (!yaml_emitter_emit(&emitter, &event)) goto error;
 
-                    sprintf(tmp_string, "%d", tex_imp_conf->max_width);
+                    sprintf(tmp_string, "%d", tex_imp_conf->max_height);
                     yaml_scalar_event_initialize(&event, NULL, (yaml_char_t*)YAML_INT_TAG, (yaml_char_t*)tmp_string, strlen(tmp_string), 1, 0, YAML_PLAIN_SCALAR_STYLE);
                     if (!yaml_emitter_emit(&emitter, &event)) goto error;
                 }
@@ -244,6 +244,7 @@ namespace zorya
 
         //TODO: use specific allocator for texture asset; dont use global allocator
         Texture2D* texture = new Texture2D(tex_imp_conf);
+        texture->is_hdr = stbi_is_hdr(tex_imp_conf->asset_filepath);
 
         return texture;
     }
@@ -270,9 +271,18 @@ namespace zorya
         {
             int x, y, components;
 
+            bool is_hdr = stbi_is_hdr(m_file_path.c_str());
+
             //TODO: add functionality to import texture with specified configuration
-            m_data = stbi_load(m_file_path.c_str(), &x, &y, &components, 4);
+            if (is_hdr)
+            {
+                m_data = stbi_loadf(m_file_path.c_str(), &x, &y, &components, 4);
+            }else{
+                m_data = stbi_load(m_file_path.c_str(), &x, &y, &components, 4);
+            }
+            
             const char* fail_reason = stbi_failure_reason();
+            
             if (m_data == nullptr)
             {
                 Logger::add_log(Logger::Channel::ERR, "Failed to import %s image data :: %s", m_file_path.c_str(), fail_reason);
@@ -317,7 +327,13 @@ namespace zorya
             int x, y, components;
 
             //TODO: add functionality to import texture with specified configuration
-            m_data = stbi_load(m_file_path.c_str(), &x, &y, &components, 4);
+            if (stbi_is_hdr(m_file_path.c_str()))
+            {
+                m_data = stbi_loadf(m_file_path.c_str(), &x, &y, &components, 4);
+            } else
+            {
+                m_data = stbi_load(m_file_path.c_str(), &x, &y, &components, 4);
+            }
             //const char* err = stbi_failure_reason();
 
             if ((x < UINT32_MAX) && (y < UINT32_MAX))

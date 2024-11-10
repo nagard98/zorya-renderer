@@ -21,7 +21,8 @@ namespace zorya
 	{
 	public:
 		Lighting_Pass(Render_Graph& render_graph, Render_Scope& scope, Arena* arena, const View_Desc& view_desc, Constant_Buffer_Handle hnd_inv_mat_cb,
-			Constant_Buffer_Handle m_hnd_frame_cb, Constant_Buffer_Handle hnd_omni_dir_shad_cb, Constant_Buffer_Handle hnd_cam_cb, Constant_Buffer_Handle hnd_light_draw_cb);
+			Constant_Buffer_Handle m_hnd_frame_cb, Constant_Buffer_Handle hnd_omni_dir_shad_cb, Constant_Buffer_Handle hnd_cam_cb, Constant_Buffer_Handle hnd_light_draw_cb,
+			Render_SRV_Handle hnd_irradiance_map, Render_SRV_Handle hnd_prefiltered_env_map, Render_SRV_Handle hnd_brdf_lut_map_srv);
 	};
 }
 

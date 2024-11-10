@@ -102,7 +102,10 @@ namespace zorya
 		load_shader_bytecode("./shaders/ShadowMapping.cso"), //ShaderBytecode{ g_ShadowMapping, sizeof(g_ShadowMapping) },
 		load_shader_bytecode("./shaders/Present.cso"), //ShaderBytecode{ g_Present, sizeof(g_Present) }
 		load_shader_bytecode("./shaders/Composit.cso"),
-		load_shader_bytecode("./shaders/ShadowMaskBuild.cso")
+		load_shader_bytecode("./shaders/ShadowMaskBuild.cso"),
+		load_shader_bytecode("./shaders/EquirectangularToCubemap.cso"),
+		load_shader_bytecode("./shaders/Convolve_Cubemap.cso"),
+		load_shader_bytecode("./shaders/BuildPreFilteredMap.cso")
 	};
 
 	Pixel_Shader Pixel_Shader::create(const BYTE* shader_bytecode, size_t bytecode_size)

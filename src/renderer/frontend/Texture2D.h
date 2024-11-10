@@ -31,13 +31,12 @@ namespace zorya
 		Texture2D(const Texture_Import_Config* tex_import_config);
 
 		void load_asset(const Asset_Import_Config* tex_imp_config) override;
-		
 		static int load_asset_info(Texture_Import_Config* tex_imp_config);
 
 		void update_asset(const Texture_Import_Config* tex_imp_config);
 
-		unsigned char* m_data;
-
+		void* m_data;
+		bool is_hdr;
 	};
 }
 

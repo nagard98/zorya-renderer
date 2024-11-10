@@ -92,6 +92,7 @@ namespace zorya
 		void shutdown();
 
 		void render_view(const View_Desc& view_desc);
+		HRESULT build_ibl_data(Sky_Light& skylight, Render_SRV_Handle hnd_environment_map);
 
 		void release_all_resources();
 
@@ -123,6 +124,8 @@ namespace zorya
 		Constant_Buffer_Handle m_hnd_frame_cb;
 		Constant_Buffer_Handle m_hnd_object_cb;
 
+		Constant_Buffer_Handle hnd_ibl_spec_draw_cb;
+
 		Constant_Buffer_Handle hnd_cam_transf_cb;
 		Constant_Buffer_Handle hnd_light_draw_cb;
 		Constant_Buffer_Handle hnd_sss_draw_cb;
@@ -138,6 +141,20 @@ namespace zorya
 		Render_Rect m_shadow_map_viewport;
 
 		Render_SRV_Handle hnd_sky_cubemap_srv;
+		//Render_SRV_Handle hnd_environment_map_srv;
+		//Render_Texture_Handle hnd_irradiance_map;
+		//Render_SRV_Handle hnd_irradiance_map_srv;
+		//Render_RTV_Handle hnd_irradiance_map_rtv;
+		//Render_Texture_Handle hnd_skybox_map;
+		//Render_SRV_Handle hnd_skybox_map_srv;
+		//Render_RTV_Handle hnd_skybox_map_rtv;
+		//Render_Texture_Handle hnd_prefiltered_env_map;
+		//Render_SRV_Handle hnd_prefiltered_env_map_srv;
+		//Render_RTV_Handle hnd_prefiltered_env_map_rtv;
+		//Render_Texture_Handle hnd_brdf_lut_map;
+		//Render_SRV_Handle hnd_brdf_lut_map_srv;
+		//Render_RTV_Handle hnd_brdf_lut_map_rtv;
+
 
 		//PSO_Handle hnd_shadow_map_creation_pso;
 		//PSO_Handle hnd_shadow_mapping_pso;

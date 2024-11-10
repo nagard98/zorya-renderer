@@ -5,6 +5,8 @@
 #include "renderer/frontend/SceneManager.h"
 #include "renderer/frontend/Material.h"
 
+#include "renderer/backend/Renderer.h"
+
 #include "reflection/Reflection.h"
 
 #include "DirectXMath.h"
@@ -285,6 +287,34 @@ namespace zorya
 					}, light_info.point_light);
 				break;
 
+			case Light_Type::SKYLIGHT:
+			{
+				Texture2D* env_tex = light_info.sky_light.environment_texture;
+				u64 null_id = 0;
+				ImGui::InputScalar("Environment Texture", ImGuiDataType_U64, env_tex == nullptr ? &null_id : &env_tex->m_guid);
+				if (ImGui::BeginDragDropTarget())
+				{
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Asset_Type_Names[Asset_Type::TEXTURE]))
+					{
+						auto payload_data = (Asset_With_Config*)payload->Data;
+						Texture2D* dropped_tex = static_cast<Texture2D*>(payload_data->asset);
+						const Texture_Import_Config* dropped_imp_conf = static_cast<Texture_Import_Config*>(payload_data->import_config);
+						dropped_tex->load_asset(dropped_imp_conf);
+						light_info.sky_light.environment_texture = dropped_tex;
+						Render_SRV_Handle environment_map_srv{ 0 };
+						rhi.load_texture2(dropped_tex, dropped_imp_conf, &environment_map_srv);
+						renderer.build_ibl_data(light_info.sky_light, environment_map_srv);
+					}
+
+					ImGui::EndDragDropTarget();
+				}
+
+				break;
+			}
+
+			default : 
+				zassert(false);
+			
 			}
 
 		}

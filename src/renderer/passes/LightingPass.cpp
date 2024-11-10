@@ -11,7 +11,8 @@
 namespace zorya
 {
 	Lighting_Pass::Lighting_Pass(Render_Graph& render_graph, Render_Scope& scope, Arena* arena, const View_Desc& view_desc, Constant_Buffer_Handle hnd_inv_mat_cb,
-		Constant_Buffer_Handle m_hnd_frame_cb, Constant_Buffer_Handle hnd_omni_dir_shad_cb, Constant_Buffer_Handle hnd_cam_transf_cb, Constant_Buffer_Handle hnd_light_draw_cb)
+		Constant_Buffer_Handle m_hnd_frame_cb, Constant_Buffer_Handle hnd_omni_dir_shad_cb, Constant_Buffer_Handle hnd_cam_transf_cb, Constant_Buffer_Handle hnd_light_draw_cb,
+		Render_SRV_Handle hnd_irradiance_map, Render_SRV_Handle hnd_prefiltered_env_map, Render_SRV_Handle hnd_brdf_lut_map_srv)
 	{
 		render_graph.add_pass_callback(L"Lighting Pass", [&](Render_Graph_Builder& builder) 
 			{
@@ -61,6 +62,7 @@ namespace zorya
 
 				return [=](Render_Command_List& cmd_list, Render_Graph_Registry& registry) 
 					{
+						struct Im2 { uint32_t light_index; uint32_t light_type; };
 						struct Im { dx::XMMATRIX invProj; dx::XMMATRIX invView; };
 						Im im;
 						im.invProj = dx::XMMatrixTranspose(dx::XMMatrixInverse(nullptr, view_desc.cam.get_proj_matrix()));
@@ -85,8 +87,6 @@ namespace zorya
 						for(int i=0; i < lights.size(); i++)
 						{
 							auto& light = lights[i];
-
-							struct Im2 { uint32_t light_index; uint32_t light_type; };
 
 							Im2 im2{ 0, (uint32_t)light.tag };
 							switch (light.tag)
@@ -134,7 +134,7 @@ namespace zorya
 
 							Constant_Buffer_Handle vs_cb_hnds[] = { 0 };
 							Render_SRV_Handle vs_srv_hnds[] = { 0 };
-							Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, 0 /*hnd_omni_dir_shad_cb*/, 0, hnd_light_draw_cb, 0, hnd_inv_mat_cb };
+							Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, 0, 0, hnd_light_draw_cb, 0, hnd_inv_mat_cb };
 							Render_SRV_Handle ps_srv_hnds[] = {
 								registry.get<Render_SRV_Handle>(albedo),
 								registry.get<Render_SRV_Handle>(normal),
@@ -161,6 +161,48 @@ namespace zorya
 								Submesh_Handle_t{ 0,0,0,4,0 }
 							);
 						}
+
+						cmd_list.begin_event(L"Environment Indirect Lighting");
+						{
+							Im2 im2;
+							im2.light_type = 3;
+							cmd_list.update_buffer(*arena, hnd_light_draw_cb, &im2, sizeof(im2));
+
+							Render_RTV_Handle render_target_hnds_light_pass[] = { scene, diffuse, specular, transmitted, indirect_light };
+							auto num_rts = sizeof(render_target_hnds_light_pass) / sizeof(render_target_hnds_light_pass[0]);
+
+							Constant_Buffer_Handle vs_cb_hnds[] = { 0 };
+							Render_SRV_Handle vs_srv_hnds[] = { 0 };
+							Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, 0, 0, hnd_light_draw_cb, 0, hnd_inv_mat_cb };
+							Render_SRV_Handle ps_srv_hnds[] = {
+								registry.get<Render_SRV_Handle>(albedo),
+								registry.get<Render_SRV_Handle>(normal),
+								registry.get<Render_SRV_Handle>(rough_metalness),
+								registry.get<Render_SRV_Handle>(depth),
+								registry.get<Render_SRV_Handle>(shadow_mask_consumed),
+								hnd_irradiance_map,
+								hnd_prefiltered_env_map,
+								registry.get<Render_SRV_Handle>(vert_normal),
+								hnd_brdf_lut_map_srv
+							};
+
+							auto as = registry.get<Render_DSV_Handle>(stencil);
+							auto ptr = rhi.get_dsv_pointer(as);
+							D3D11_DEPTH_STENCIL_VIEW_DESC ds_desc;
+							ptr->GetDesc(&ds_desc);
+
+							cmd_list.draw(
+								pipeline_state_manager.get(Pipeline_State::LIGHTING),
+								create_shader_render_targets(*arena, render_target_hnds_light_pass, num_rts, registry.get<Render_DSV_Handle>(stencil)),
+								create_shader_arguments(*arena, vs_cb_hnds, vs_srv_hnds, ps_cb_hnds, ps_srv_hnds),
+								nullptr,
+								0,
+								D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+								Submesh_Handle_t{ 0,0,0,4,0 }
+							);
+						}
+						cmd_list.end_event();
+
 					};
 			}
 		);

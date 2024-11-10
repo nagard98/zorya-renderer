@@ -37,6 +37,9 @@ namespace zorya
 		PRESENT,
 		COMPOSIT,
 		SHADOW_MASK,
+		EQUIRECTANGULAR,
+		CONVOLVE_CUBEMAP,
+		BUILD_PRE_FILTERED_CUBEMAP,
 		NUM_SHADERS
 	};
 
@@ -54,11 +57,6 @@ namespace zorya
 		const BYTE* bytecode;
 		size_t size_in_bytes;
 	};
-
-	//struct Shader_Texture2D
-	//{
-	//	ID3D11ShaderResourceView* resource_view;
-	//};
 
 	using Shader_Texture2D = ID3D11ShaderResourceView;
 	

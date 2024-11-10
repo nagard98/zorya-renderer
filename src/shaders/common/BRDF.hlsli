@@ -24,8 +24,8 @@ brdfOut_t brdf(float VdotN, float LdotN, float LdotH, float NdotH, float linRoug
     brdfOut.diffuse = Fd_Burley(VdotN, LdotN, LdotH, linRoughness);
 
     //float3 specular = (1.0f - INNER_REFLECTANCE) * Fs_BlinnPhong(roughness * MAX_SHININESS, NdotH) * SPECULAR_STRENGTH;
-    float reflectance = 0.35f;
-    float3 f0 = 0.16f * reflectance * reflectance * (1.0f - metalness) + metalness;
+    float3 reflectance = float3(0.04f, 0.04f, 0.04f);
+    float3 f0 = reflectance; //0.16f * reflectance * reflectance * (1.0f - metalness) + metalness;
 
     float D = D_GGX(NdotH, linRoughness);
     float3 F = F_Schlick(f0, 1.0f, LdotH);
