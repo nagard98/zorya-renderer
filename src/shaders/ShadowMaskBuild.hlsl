@@ -195,7 +195,7 @@ float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragV
                 for (float j = -1.5; j <= 1.5; j += 1.0f)
                 {
                     float2 offset = float2(i, j) * texScale;
-                    float sampledDepth = shadow_map.Sample(tex_sampler, shadowMapUVF + offset).r;
+                    float sampledDepth = shadow_map.SampleLevel(tex_sampler, shadowMapUVF + offset, 0).r;
                     shadowingSampled += sampledDepth > currentDepth + correctedBias ? lightDec : 0.0f;
                 }
             }
@@ -236,7 +236,7 @@ float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewS
                 for (float j = -1.5; j <= 1.5; j += 1.0f)
                 {
                     float3 offset = float3(i, j, 0.0f) * texScale;
-                    float sampledDepth = shadow_cubemap.Sample(tex_sampler, shadowMapUVF + offset).r;
+                    float sampledDepth = shadow_cubemap.SampleLevel(tex_sampler, shadowMapUVF + offset, 0).r;
                     shadowingSampled += sampledDepth > currentDepth + correctedBias ? lightDec : 0.0f;
                 }
             }

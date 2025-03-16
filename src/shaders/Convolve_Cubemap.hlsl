@@ -66,7 +66,7 @@ PS_OUTPUT ps(PS_INPUT input)
     float3x3 tnb = transpose(float3x3(tangent, normal, bitangent));
     
     
-    for (uint i = 0; i < num_samples; i++)
+    for (int i = 0; i < num_samples; i++)
     {
         float2 uv = Hammersley(i, num_samples);
         float sample_theta = 2 * PI * uv.x;

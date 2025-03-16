@@ -52,6 +52,7 @@ namespace zorya
 		Asset();
 		Asset(const char* filepath);
 		Asset(const Asset_Import_Config* asset_import_config);
+		virtual ~Asset() {};
 
 		uint64_t m_guid;
 		std::string m_file_path;

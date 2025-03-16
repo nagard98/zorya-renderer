@@ -47,7 +47,7 @@ namespace zorya
 	HRESULT Shaders::build_default_shaders()
 	{
 		ID3DBlob* shader_blob = nullptr;
-		HRESULT h_res;
+		HRESULT h_res = S_OK;
 
 		//h_res = load_shader<ID3D11VertexShader>(L"./shaders/GBufferVS.hlsl", "vs", &shader_blob, &m_vertex_shaders.at((std::uint8_t)VShader_ID::STANDARD), rhi.m_device.m_device);
 		//RETURN_IF_FAILED(h_res);
@@ -82,7 +82,7 @@ namespace zorya
 
 	HRESULT Shaders::load_default_shaders()
 	{
-		HRESULT h_res;
+		HRESULT h_res = S_OK;
 
 		//h_res = rhi.m_device.m_device->CreateVertexShader(g_GBufferVS, sizeof(g_GBufferVS), nullptr, &m_vertex_shaders.at((std::uint8_t)VShader_ID::STANDARD));
 		//RETURN_IF_FAILED(h_res);

@@ -495,7 +495,7 @@ PS_OUT ps(float4 fragPos : SV_Position)
                 }
             
                 finalWidth = scale_factor * sd_gauss_jim * pixelSize * dir;
-                float step = finalWidth / 3.0;
+                float2 step = finalWidth / 3.0;
 
                 float2 offset = uvCoord - finalWidth;            
             

@@ -342,6 +342,8 @@ namespace zorya
 			zassert(false);
 			break;
 		}
+
+		return DXGI_FORMAT_UNKNOWN;
 	}
 
 	static DXGI_FORMAT convert_format(Format format, Bind_Flag bind_flag)
@@ -482,6 +484,8 @@ namespace zorya
 			break;
 		}
 		}
+
+		return DXGI_FORMAT_UNKNOWN;
 	}
 
 

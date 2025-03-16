@@ -57,6 +57,8 @@ namespace zorya
 			zassert(false);
 			break;
 		}
+
+		return DXGI_FORMAT_UNKNOWN;
 	}
 
 	DXGI_FORMAT convert_format(Format format, Bind_Flag bind_flag)
@@ -177,6 +179,8 @@ namespace zorya
 			break;
 		}
 		}
+
+		return DXGI_FORMAT_UNKNOWN;
 	}
 
 	static std::vector<uint8_t> cull_render_passes(std::vector<Render_Graph_Resource>& graph_resources, std::vector<std::vector<u32>>& graph_resource_producers, std::vector<Render_Pass>& render_passes)
@@ -554,7 +558,7 @@ namespace zorya
 
 		u32 current_pass_index = render_passes.size() - 1;
 		auto& render_pass = render_passes.at(current_pass_index);
-		render_pass.pass_read_resources.emplace_back(Render_Pass_Resource{ in_resource_hnd, gpu_res_hnd, bind_flag, slice_index_start, slice_size });
+		render_pass.pass_read_resources.emplace_back(Render_Pass_Resource{ in_resource_hnd, gpu_res_hnd, Render_Graph_View_Desc{bind_flag, slice_index_start, slice_size } });
 		render_pass.input_resources.push_back(in_resource_hnd);
 
 		return Render_Graph_Resource{in_resource.desc_hnd, in_resource.resource_hnd, gpu_res_hnd , in_resource.ref_count};
@@ -586,7 +590,7 @@ namespace zorya
 
 		auto& render_pass = render_passes.at(current_pass_index);
 		render_pass.input_resources.push_back(in_resource_hnd);
-		render_pass.pass_write_resources.emplace_back(Render_Pass_Resource{ out_resource_hnd, gpu_res_hnd, bind_flag, slice_index_start, slice_size, mip_index });
+		render_pass.pass_write_resources.emplace_back(Render_Pass_Resource{ out_resource_hnd, gpu_res_hnd, Render_Graph_View_Desc{bind_flag, slice_index_start, slice_size, mip_index } });
 		render_pass.ref_count += 1;
 
 		return out_resource;
@@ -626,8 +630,6 @@ namespace zorya
 				}
 			}
 		}
-
-		int i = 0;
 	}
 
 	void Render_Graph_Builder::clear()

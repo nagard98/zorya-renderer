@@ -86,7 +86,7 @@ PS_OUT ps(float4 posFragQuad : SV_POSITION) : SV_Target
     float4 ambCol = float4(0.03f, 0.03f, 0.03f, 1.0f); // * gbuffer_albedo.Sample(texSampler, uvCoord);
     float3 trans_irrad = transmitted_irrad.Sample(texSampler, uvCoord).rgb;
     float4 specCol = specular.Sample(texSampler, uvCoord);
-    float sampledDepth = gbuffer_depth.Sample(texSampler, uvCoord);
+    float sampledDepth = gbuffer_depth.Sample(texSampler, uvCoord).r;
     float3 normal = gbuffer_normal.Sample(texSampler, uvCoord).xyz * 2.0f - 1.0f;
     
     float4 posVS = posFromDepth(uvCoord, sampledDepth, invCamProjMat);
@@ -151,7 +151,7 @@ float computeShadowing(float4 posWorldSpace, float bias, float NdotL)
 
 float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragViewSpace, float3 normalViewSpace, float minBias, float maxBias)
 {
-    float3 lightDir = normalize(posSpotLightViewSpace[lightIndex] - posFragViewSpace);
+    float3 lightDir = normalize(posSpotLightViewSpace[lightIndex] - posFragViewSpace).xyz;
     float cosAngle = dot(-lightDir, normalize(dirSpotLightViewSpace[lightIndex].xyz));
     
     float NdotL = dot(normalViewSpace, lightDir);
@@ -192,7 +192,7 @@ float computeSpotShadowing(int lightIndex, float4 posWorldSpace, float4 posFragV
 
 float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewSpace, float3 normalViewSpace, float minBias, float maxBias)
 {
-    float3 lightDir = normalize(posPointLightViewSpace[lightIndex] - posViewSpace);
+    float3 lightDir = normalize(posPointLightViewSpace[lightIndex] - posViewSpace).xyz;
     float LdotN = saturate(dot(lightDir, normalViewSpace));
     float correctedBias = max(minBias, maxBias * (1.0f - LdotN));
 
@@ -221,7 +221,7 @@ float computeOmniShadowing(int lightIndex, float4 posWorldSpace, float4 posViewS
                 for (float j = -1.5; j <= 1.5; j += 1.0f)
                 {
                     float3 offset = float3(i, j, 0.0f) * texScale;
-                    float sampledDepth = ShadowCubeMap.Sample(texSampler, shadowMapUVF + offset).r;
+                    float sampledDepth = ShadowCubeMap.SampleLevel(texSampler, shadowMapUVF + offset, 0).r;
                     shadowingSampled += sampledDepth < currentDepth - correctedBias ? lightDec : 0.0f;
                 }
             }

@@ -116,9 +116,10 @@ namespace zorya
 		ID3D11ShaderReflection* shader_reflection = nullptr;
 		h_res = D3DReflect(shader_bytecode, bytecode_size, IID_ID3D11ShaderReflection, (void**)&shader_reflection);
 
+		zassert(h_res == S_OK);
+
 		D3D11_SHADER_DESC shader_desc;
 		shader_reflection->GetDesc(&shader_desc);
-		int i = 0;
 
 		return Pixel_Shader{ shader, shader_reflection };
 	}
@@ -350,6 +351,8 @@ namespace zorya
 		ID3D11ShaderReflection* shader_reflection = nullptr;
 		hRes = D3DReflect(shader_bytecode, bytecode_size, IID_ID3D11ShaderReflection, (void**)&shader_reflection);
 
+		zassert(hRes == S_OK);
+
 		return Vertex_Shader{ shader, vertex_input_layout, shader_reflection };
 	}
 
@@ -485,10 +488,6 @@ namespace zorya
 	
 	Shader_Arguments create_shader_arguments(Arena& arena, const std::vector<Shader_Resource>& shader_resources)
 	{
-		for (auto resource : shader_resources)
-		{
-
-		}
 
 		return Shader_Arguments{};
 	}

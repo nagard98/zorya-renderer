@@ -239,7 +239,7 @@ namespace zorya
 		static Arena arena(10 * 1024 * 1024);
 		static Render_Graph render_graph;
 		static Render_Graph render_graph_once;
-		static bool is_first_run = true;
+		//static bool is_first_run = true;
 
 		Render_Scope scope;
 		Render_Scope scope_once;

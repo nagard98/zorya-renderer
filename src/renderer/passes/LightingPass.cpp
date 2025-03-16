@@ -111,8 +111,8 @@ namespace zorya
 								Render_RTV_Handle render_target_hnds_light_pass[] = { registry.get<Render_RTV_Handle>(shadow_mask_produced) };
 								auto num_rts = sizeof(render_target_hnds_light_pass) / sizeof(render_target_hnds_light_pass[0]);
 
-								Constant_Buffer_Handle vs_cb_hnds[] = { 0 };
-								Render_SRV_Handle vs_srv_hnds[] = { 0 };
+								Constant_Buffer_Handle vs_cb_hnds[] = { Constant_Buffer_Handle{0} };
+								Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
 								Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, hnd_inv_mat_cb, hnd_omni_dir_shad_cb, hnd_light_draw_cb };
 								Render_SRV_Handle ps_srv_hnds[] = { registry.get<Render_SRV_Handle>(depth), registry.get<Render_SRV_Handle>(normal), registry.get<Render_SRV_Handle>(shadowmap_data.shadow_maps[i]), registry.get<Render_SRV_Handle>(shadowmap_data.shadow_maps[i]) };
 
@@ -132,17 +132,17 @@ namespace zorya
 							Render_RTV_Handle render_target_hnds_light_pass[] = { scene, diffuse, specular, transmitted, indirect_light };
 							auto num_rts = sizeof(render_target_hnds_light_pass) / sizeof(render_target_hnds_light_pass[0]);
 
-							Constant_Buffer_Handle vs_cb_hnds[] = { 0 };
-							Render_SRV_Handle vs_srv_hnds[] = { 0 };
-							Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, 0, 0, hnd_light_draw_cb, 0, hnd_inv_mat_cb };
+							Constant_Buffer_Handle vs_cb_hnds[] = { Constant_Buffer_Handle{0} };
+							Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
+							Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, Constant_Buffer_Handle{0}, Constant_Buffer_Handle{0}, hnd_light_draw_cb, Constant_Buffer_Handle{0}, hnd_inv_mat_cb };
 							Render_SRV_Handle ps_srv_hnds[] = {
 								registry.get<Render_SRV_Handle>(albedo),
 								registry.get<Render_SRV_Handle>(normal),
 								registry.get<Render_SRV_Handle>(rough_metalness),
 								registry.get<Render_SRV_Handle>(depth),
 								registry.get<Render_SRV_Handle>(shadow_mask_consumed),
-								/*hnd_shadow_cubemap_srv*/ 0,
-								/*hnd_spot_shadow_map_srv*/ 0,
+								/*hnd_shadow_cubemap_srv*/ Render_SRV_Handle{0},
+								/*hnd_spot_shadow_map_srv*/ Render_SRV_Handle{0},
 								registry.get<Render_SRV_Handle>(vert_normal),
 							};
 
@@ -171,9 +171,9 @@ namespace zorya
 							Render_RTV_Handle render_target_hnds_light_pass[] = { scene, diffuse, specular, transmitted, indirect_light };
 							auto num_rts = sizeof(render_target_hnds_light_pass) / sizeof(render_target_hnds_light_pass[0]);
 
-							Constant_Buffer_Handle vs_cb_hnds[] = { 0 };
-							Render_SRV_Handle vs_srv_hnds[] = { 0 };
-							Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, 0, 0, hnd_light_draw_cb, 0, hnd_inv_mat_cb };
+							Constant_Buffer_Handle vs_cb_hnds[] = { Constant_Buffer_Handle{0} };
+							Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
+							Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, Constant_Buffer_Handle{0}, Constant_Buffer_Handle{0}, hnd_light_draw_cb, Constant_Buffer_Handle{0}, hnd_inv_mat_cb };
 							Render_SRV_Handle ps_srv_hnds[] = {
 								registry.get<Render_SRV_Handle>(albedo),
 								registry.get<Render_SRV_Handle>(normal),

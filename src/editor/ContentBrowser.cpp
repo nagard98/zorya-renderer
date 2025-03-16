@@ -38,7 +38,7 @@ namespace zorya
 static std::string create_file(const char* folder_path, const char* filename, const char* extension)
 {
 	//strncat_s(folder_path, MAX_PATH, "\\", MAX_PATH);
-	int index_last_char_base_path = strnlen(folder_path, MAX_PATH);
+	//int index_last_char_base_path = strnlen(folder_path, MAX_PATH);
 
 	int file_creation_attempts = 0;
 	char tentative_filename[MAX_PATH];
@@ -186,7 +186,6 @@ void zorya::Content_Browser::render(Asset_Registry& asset_registry)
 			}
 			case(Filesystem_Node_Type::FILE):
 			{
-				int val = 33;
 				strncpy_s(label, "asset", MAX_PATH);
 
 				auto pos = ImGui::GetCursorPos();

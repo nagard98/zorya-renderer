@@ -14,7 +14,7 @@ namespace zorya
 		render_graph.add_pass_callback(L"Present Pass", [&](Render_Graph_Builder& builder)
 			{
 				auto& lighting_data = scope.get<Lighting_Data>();
-				auto& debug_data = scope.get<Debug_View_Data>();
+				//auto& debug_data = scope.get<Debug_View_Data>();
 				auto& final_data = scope.get<Final_Render_Graph_Texture>();
 
 				//builder.read(gbuff_data.albedo, Bind_Flag::RENDER_TARGET);
@@ -29,9 +29,9 @@ namespace zorya
 						
 						Render_RTV_Handle rt_hnds[] = {final_data.texture};
 
-						Constant_Buffer_Handle vs_cb_hnds[] = { 0 };
-						Render_SRV_Handle vs_srv_hnds[] = { 0 };
-						Constant_Buffer_Handle ps_cb_hnds[] = { 0 };
+						Constant_Buffer_Handle vs_cb_hnds[] = { Constant_Buffer_Handle{0} };
+						Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
+						Constant_Buffer_Handle ps_cb_hnds[] = { Constant_Buffer_Handle{0} };
 						Render_SRV_Handle ps_srv_hnds[] = { registry.get<Render_SRV_Handle>(output_texture) };
 
 						//cmd_list.copy_texture(final_data.texture, registry.get<Render_RTV_Handle>(output_texture));

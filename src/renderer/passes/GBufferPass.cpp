@@ -88,7 +88,6 @@ namespace zorya
 						Shader_Resource* cb_resource = nullptr;
 						///
 
-						dx::XMFLOAT4 clear_stencil_color = { 0.0f,0.0f,0.0f,0.0f };
 						/*cmd_list.clear_rtv(hnd_gbuff_rtv[G_Buffer::NORMAL], &clear_color.x);
 						cmd_list.clear_rtv(hnd_gbuff_rtv[G_Buffer::ROUGH_MET], &clear_color.x);*/
 						//cmd_list.clear_rtv(registry.get<Render_RTV_Handle>(gbuff_data.stencil), &clear_stencil_color.x);
@@ -104,17 +103,14 @@ namespace zorya
 
 						Constant_Buffer_Handle vs_cb_hnds[] = { hnd_world_cb, hnd_view_cb, hnd_proj_cb };
 
-						int sss_submesh_count = 0;
 						for (Submesh_Render_Data const& submesh_info : view_desc.submeshes_info)
 						{
 							World_CB tmpOCB{ dx::XMMatrixTranspose(submesh_info.final_world_transform) };
 
 							Material& mat = resource_cache.m_material_cache.at(submesh_info.submesh_desc.hnd_material_cache.index);
 								
-							Render_SRV_Handle nil_srv{ 0 };
-
-							Constant_Buffer_Handle ps_cb_hnds[128] = { 0 };
-							Render_SRV_Handle ps_srv_hnds[128] = { 0 };
+							Constant_Buffer_Handle ps_cb_hnds[128] = { Constant_Buffer_Handle{0} };
+							Render_SRV_Handle ps_srv_hnds[128] = { Render_SRV_Handle{0} };
 							uint32_t num_ps_srv_hnds = 0, num_ps_cb_hnds = 0;
 
 							for (auto resource : mat.get_material_editor_resources())
@@ -169,7 +165,7 @@ namespace zorya
 								
 							cmd_list.update_buffer(*arena, hnd_world_cb, &tmpOCB, sizeof(tmpOCB));
 								
-							Render_SRV_Handle vs_srv_hnds[] = { 0 };
+							Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
 								
 							cmd_list.draw_indexed(
 								pipeline_state_manager.get(mat.shading_model),

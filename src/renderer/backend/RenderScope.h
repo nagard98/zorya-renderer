@@ -15,7 +15,7 @@ namespace zorya
         template <typename T>
         void set(T&& val)
         {
-            using DecayedT = std::decay<T>::type;
+            using DecayedT = typename std::decay<T>::type;
             resources[std::type_index(typeid(T))] = new DecayedT(std::forward<T>(val));
         }
 

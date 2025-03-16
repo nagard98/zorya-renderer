@@ -211,7 +211,7 @@ namespace zorya
 		assert(hnd_material_cache.is_cached);
 		assert(smoothness >= 0.0f && smoothness <= 1.0f);
 		//Material& cached_material = m_material_cache.at(hnd_material_cache.index);
-		Material& cached_material = m_material_cache.at(hnd_material_cache.index);
+		//Material& cached_material = m_material_cache.at(hnd_material_cache.index);
 		//cached_material.mat_prms.roughness = smoothness;
 	}
 

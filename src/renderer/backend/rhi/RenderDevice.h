@@ -63,77 +63,76 @@ namespace zorya
 		false
 	};
 
-	const D3D11_BLEND_DESC default_bl_desc{ 
+	const D3D11_BLEND_DESC default_bl_desc{
 		false,
 		false,
-		false,
+		{ D3D11_RENDER_TARGET_BLEND_DESC{false} }
 	};
 
 	constexpr D3D11_BLEND_DESC create_default_blend_desc()
 	{
-		return D3D11_BLEND_DESC
-		{
-			false,
-			false,
-			D3D11_RENDER_TARGET_BLEND_DESC
-			{
-				false,
-				D3D11_BLEND_ONE,
-				D3D11_BLEND_ZERO,
-				D3D11_BLEND_OP_ADD,
-				D3D11_BLEND_ONE,
-				D3D11_BLEND_ZERO,
-				D3D11_BLEND_OP_ADD,
-				D3D11_COLOR_WRITE_ENABLE_ALL
-			},
-			D3D11_RENDER_TARGET_BLEND_DESC{false},
-			D3D11_RENDER_TARGET_BLEND_DESC{false},
-			D3D11_RENDER_TARGET_BLEND_DESC{false},
-			D3D11_RENDER_TARGET_BLEND_DESC{false},
-			D3D11_RENDER_TARGET_BLEND_DESC{false},
-			D3D11_RENDER_TARGET_BLEND_DESC{false},
-			D3D11_RENDER_TARGET_BLEND_DESC{false}
-		};
+		D3D11_BLEND_DESC desc{};
+		desc.AlphaToCoverageEnable = false;
+		desc.IndependentBlendEnable = false;
 		
+		desc.RenderTarget[0].BlendEnable = false;
+		desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+		desc.RenderTarget[0].DestBlend = D3D11_BLEND_ZERO;
+		desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+		desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+		desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+		desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+		desc.RenderTarget[1].BlendEnable = false;
+		desc.RenderTarget[2].BlendEnable = false;
+		desc.RenderTarget[3].BlendEnable = false;
+		desc.RenderTarget[4].BlendEnable = false;
+		desc.RenderTarget[5].BlendEnable = false;
+		desc.RenderTarget[6].BlendEnable = false;
+		desc.RenderTarget[7].BlendEnable = false;
+
+		return desc;	
 	}
 
-	static PSO_Desc create_default_gbuff_desc()
-	{
-		PSO_Desc pso_desc{};
-		pso_desc.pixel_shader_bytecode = Pixel_Shader::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::STANDARD];
-		pso_desc.vertex_shader_bytecode = Vertex_Shader::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::STANDARD];
+	PSO_Desc create_default_gbuff_desc();
+	//static PSO_Desc create_default_gbuff_desc()
+	//{
+	//	PSO_Desc pso_desc{};
+	//	pso_desc.pixel_shader_bytecode = Pixel_Shader::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::STANDARD];
+	//	pso_desc.vertex_shader_bytecode = Vertex_Shader::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::STANDARD];
 
-		pso_desc.rasterizer_desc.CullMode = D3D11_CULL_BACK;
-		pso_desc.rasterizer_desc.FillMode = D3D11_FILL_SOLID;
-		pso_desc.rasterizer_desc.FrontCounterClockwise = false;
-		pso_desc.rasterizer_desc.DepthClipEnable = true;
+	//	pso_desc.rasterizer_desc.CullMode = D3D11_CULL_BACK;
+	//	pso_desc.rasterizer_desc.FillMode = D3D11_FILL_SOLID;
+	//	pso_desc.rasterizer_desc.FrontCounterClockwise = false;
+	//	pso_desc.rasterizer_desc.DepthClipEnable = true;
 
-		pso_desc.depth_stencil_desc.DepthEnable = true;
-		pso_desc.depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-		pso_desc.depth_stencil_desc.DepthFunc = D3D11_COMPARISON_GREATER;
+	//	pso_desc.depth_stencil_desc.DepthEnable = true;
+	//	pso_desc.depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	//	pso_desc.depth_stencil_desc.DepthFunc = D3D11_COMPARISON_GREATER;
 
-		pso_desc.depth_stencil_desc.StencilEnable = true;
-		pso_desc.depth_stencil_desc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
-		pso_desc.depth_stencil_desc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
-		pso_desc.depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-		pso_desc.depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-		pso_desc.depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-		pso_desc.depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+	//	pso_desc.depth_stencil_desc.StencilEnable = true;
+	//	pso_desc.depth_stencil_desc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
+	//	pso_desc.depth_stencil_desc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
+	//	pso_desc.depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	//	pso_desc.depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	//	pso_desc.depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	//	pso_desc.depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
 
-		pso_desc.depth_stencil_desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-		pso_desc.depth_stencil_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-		pso_desc.depth_stencil_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-		pso_desc.depth_stencil_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+	//	pso_desc.depth_stencil_desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	//	pso_desc.depth_stencil_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	//	pso_desc.depth_stencil_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	//	pso_desc.depth_stencil_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
 
-		pso_desc.stencil_ref_value = 1;
+	//	pso_desc.stencil_ref_value = 1;
 
-		pso_desc.input_elements_desc = s_vertex_layout_desc;
-		pso_desc.num_elements = sizeof(s_vertex_layout_desc) / sizeof(s_vertex_layout_desc[0]);
+	//	pso_desc.input_elements_desc = s_vertex_layout_desc;
+	//	pso_desc.num_elements = sizeof(s_vertex_layout_desc) / sizeof(s_vertex_layout_desc[0]);
 
-		pso_desc.blend_desc = create_default_blend_desc();
+	//	pso_desc.blend_desc = create_default_blend_desc();
 
-		return pso_desc;
-	}
+	//	return pso_desc;
+	//}
 
 	template <class T>
 	class Render_Device
@@ -264,7 +263,8 @@ namespace zorya
 		std::vector<ID3D11BlendState*> m_bl_state_resources;
 		std::vector<ID3D11InputLayout*> m_input_layout_resources;
 
-		int m_tex_2d_count, m_rtv_count, m_srv_count, m_dsv_count, m_const_buff_count, m_pso_count, m_ps_count, m_vs_count, m_ds_state_count, m_rs_state_count, m_bl_state_count, m_input_layout_count;
+		int m_tex_2d_count{1}, m_rtv_count{1}, m_srv_count{1}, m_dsv_count{1}, m_const_buff_count{1}, m_pso_count{1}, m_ps_count{1},
+			m_vs_count{ 1 }, m_ds_state_count{ 1 }, m_rs_state_count{ 1 }, m_bl_state_count{ 1 }, m_input_layout_count{ 1 };
 
 	};
 

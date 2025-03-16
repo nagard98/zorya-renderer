@@ -46,18 +46,18 @@ namespace zorya
 				auto jim_gauss_biggest_blur1_srv = builder.read(jim_gauss_biggest_blur1_rtv, Bind_Flag::SHADER_RESOURCE);
 				auto jim_gauss_biggest_blur2_srv = builder.read(jim_gauss_biggest_blur2_rtv, Bind_Flag::SHADER_RESOURCE);
 				
-				auto jim_gauss_final_composit1_srv = builder.read(jim_gauss_final_composit1_rtv, Bind_Flag::SHADER_RESOURCE);
-				auto jim_gauss_final_composit2_srv = builder.read(jim_gauss_final_composit2_rtv, Bind_Flag::SHADER_RESOURCE);
+				builder.read(jim_gauss_final_composit1_rtv, Bind_Flag::SHADER_RESOURCE);
+				builder.read(jim_gauss_final_composit2_rtv, Bind_Flag::SHADER_RESOURCE);
 
 				return [=](Render_Command_List& cmd_list, Render_Graph_Registry& registry)
 					{
 						cmd_list.begin_event(L"Golubev SSS");
 						{
-							Render_RTV_Handle render_target_hnds_golubev_sss_pass[] = { registry.get<Render_RTV_Handle>(scene_lighted) , 0};
+							Render_RTV_Handle render_target_hnds_golubev_sss_pass[] = { registry.get<Render_RTV_Handle>(scene_lighted) , Render_RTV_Handle{0} };
 							u32 num_rts = sizeof(render_target_hnds_golubev_sss_pass) / sizeof(render_target_hnds_golubev_sss_pass[0]);
 
-							Constant_Buffer_Handle vs_cb_hnds[] = { 0 };
-							Render_SRV_Handle vs_srv_hnds[] = { 0 };
+							Constant_Buffer_Handle vs_cb_hnds[] = { Constant_Buffer_Handle{0} };
+							Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
 
 							Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, m_hnd_object_cb };
 							Render_SRV_Handle ps_srv_hnds[] = { 
@@ -86,7 +86,7 @@ namespace zorya
 						{
 							cmd_list.begin_event(L"Horizontal Pass");
 							{
-								Render_RTV_Handle rt_hnds[] = { registry.get<Render_RTV_Handle>(jim_intermediate_rtv), 0};
+								Render_RTV_Handle rt_hnds[] = { registry.get<Render_RTV_Handle>(jim_intermediate_rtv), Render_RTV_Handle{0} };
 								u32 num_rts = sizeof(rt_hnds) / sizeof(rt_hnds[0]);
 
 								dx::XMFLOAT4 clear_col = { 0.0f,0.0f,0.0f,1.0f };
@@ -95,8 +95,8 @@ namespace zorya
 								float val[2] = { 1.0f, 0.0f };
 								cmd_list.update_buffer(*arena, hnd_sss_draw_constants, val, sizeof(val));
 
-								Constant_Buffer_Handle vs_cb_hnds[] = { 0 };
-								Render_SRV_Handle vs_srv_hnds[] = { 0 };
+								Constant_Buffer_Handle vs_cb_hnds[] = { Constant_Buffer_Handle{0} };
+								Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
 
 								Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, hnd_sss_draw_constants };
 								Render_SRV_Handle ps_srv_hnds[] = {
@@ -121,14 +121,14 @@ namespace zorya
 
 							cmd_list.begin_event(L"Vertical Pass");
 							{
-								Render_RTV_Handle rt_hnds[] = { registry.get<Render_RTV_Handle>(scene_lighted), 0 };
+								Render_RTV_Handle rt_hnds[] = { registry.get<Render_RTV_Handle>(scene_lighted), Render_RTV_Handle{0} };
 								u32 num_rts = sizeof(rt_hnds) / sizeof(rt_hnds[0]);
 
 								float val[2] = { 0.0f, 1.0f };
 								cmd_list.update_buffer(*arena, hnd_sss_draw_constants, val, sizeof(val));
 
-								Constant_Buffer_Handle vs_cb_hnds[] = { 0 };
-								Render_SRV_Handle vs_srv_hnds[] = { 0 };
+								Constant_Buffer_Handle vs_cb_hnds[] = { Constant_Buffer_Handle{0} };
+								Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
 
 								Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, hnd_sss_draw_constants };
 								Render_SRV_Handle ps_srv_hnds[] = {
@@ -158,7 +158,7 @@ namespace zorya
 
 							Render_RTV_Handle rt_hnds[4] = {
 								registry.get<Render_RTV_Handle>(jim_gauss_biggest_blur1_rtv),
-								0,//registry.get<Render_RTV_Handle>(jim_gauss_biggest_blur1_rtv),//hnd_skin_rtv[1],
+								Render_RTV_Handle{0},//registry.get<Render_RTV_Handle>(jim_gauss_biggest_blur1_rtv),//hnd_skin_rtv[1],
 
 								registry.get<Render_RTV_Handle>(scene_lighted),
 								registry.get<Render_RTV_Handle>(jim_gauss_biggest_blur2_rtv)
@@ -184,8 +184,8 @@ namespace zorya
 									draw_constants.dir = { 1.0f, 0.0f };
 									cmd_list.update_buffer(*arena, hnd_sss_draw_constants, &draw_constants, sizeof(draw_constants));
 
-									Constant_Buffer_Handle vs_cb_hnds[] = { 0 };
-									Render_SRV_Handle vs_srv_hnds[] = { 0 };
+									Constant_Buffer_Handle vs_cb_hnds[] = { Constant_Buffer_Handle{0} };
+									Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
 
 									Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, hnd_sss_draw_constants };
 									Render_SRV_Handle ps_srv_hnds[] = {
@@ -214,8 +214,8 @@ namespace zorya
 									draw_constants.dir = { 0.0f, 1.0f };
 									cmd_list.update_buffer(*arena, hnd_sss_draw_constants, &draw_constants, sizeof(draw_constants));
 
-									Constant_Buffer_Handle vs_cb_hnds[] = { 0 };
-									Render_SRV_Handle vs_srv_hnds[] = { 0 };
+									Constant_Buffer_Handle vs_cb_hnds[] = { Constant_Buffer_Handle{0} };
+									Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{ 0 } };
 
 									Constant_Buffer_Handle ps_cb_hnds[] = { m_hnd_frame_cb, hnd_sss_draw_constants };
 									Render_SRV_Handle ps_srv_hnds[] = {

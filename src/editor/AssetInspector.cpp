@@ -103,7 +103,7 @@ void zorya::Asset_Inspector::render(Scene_Manager& scene_manager, Asset_With_Con
 							Texture2D* tex_asset = static_cast<Texture2D*>(payload_data->asset);
 							Texture_Import_Config* tex_imp_conf = static_cast<Texture_Import_Config*>(payload_data->import_config);
 							tex_asset->load_asset(tex_imp_conf);
-							Shader_Texture2D* res = &(*rhi.get_srv_pointer(resource->m_hnd_gpu_srv));
+							//Shader_Texture2D* res = &(*rhi.get_srv_pointer(resource->m_hnd_gpu_srv));
 							rhi.load_texture2(tex_asset, tex_imp_conf, &resource->m_hnd_gpu_srv);
 							resource->m_texture = tex_asset;
 							is_edited |= true;
@@ -203,7 +203,7 @@ void zorya::Asset_Inspector::render(Scene_Manager& scene_manager, Asset_With_Con
 				{
 					srand(42);
 
-					std::random_device rd;
+					//std::random_device rd;
 					std::mt19937 gen(6.0f);
 					std::uniform_real_distribution<> dis(0, 1.0);//uniform distribution between 0 and 1
 

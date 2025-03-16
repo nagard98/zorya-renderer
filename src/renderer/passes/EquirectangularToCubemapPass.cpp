@@ -65,8 +65,8 @@ namespace zorya
 							Render_RTV_Handle rts[] = { registry.get<Render_RTV_Handle>(environment_map_rts[i])};
 
 							Constant_Buffer_Handle vs_cb_hnds[] = { hnd_world_cb, hnd_view_cb, hnd_proj_cb };
-							Render_SRV_Handle vs_srv_hnds[] = { 0 };
-							Constant_Buffer_Handle ps_cb_hnds[] = { 0 };
+							Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
+							Constant_Buffer_Handle ps_cb_hnds[] = { Constant_Buffer_Handle{0} };
 							Render_SRV_Handle ps_srv_hnds[] = { hnd_environment_map_srv };
 							Buffer_Handle_t* nil_buff_hnd = {};
 							Submesh_Handle_t hnd_submesh;
@@ -201,7 +201,7 @@ namespace zorya
 								Render_RTV_Handle rts[] = { registry.get<Render_RTV_Handle>(pre_filtered_env_map_rts[mip][i]) };
 
 								Constant_Buffer_Handle vs_cb_hnds[] = { hnd_world_cb, hnd_view_cb, hnd_proj_cb };
-								Render_SRV_Handle vs_srv_hnds[] = { 0 };
+								Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
 								Constant_Buffer_Handle ps_cb_hnds[] = { hnd_ibl_spec_draw_cb };
 								Render_SRV_Handle ps_srv_hnds[] = { registry.get<Render_SRV_Handle>(env_map_srv) };
 								Buffer_Handle_t* nil_buff_hnd = {};
@@ -232,7 +232,7 @@ namespace zorya
 							Render_RTV_Handle rts[] = { registry.get<Render_RTV_Handle>(irradiance_map_rts[i]) };
 
 							Constant_Buffer_Handle vs_cb_hnds[] = { hnd_world_cb, hnd_view_cb, hnd_proj_cb };
-							Render_SRV_Handle vs_srv_hnds[] = { 0 };
+							Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
 							Constant_Buffer_Handle ps_cb_hnds[] = { hnd_ibl_spec_draw_cb };
 							Render_SRV_Handle ps_srv_hnds[] = { registry.get<Render_SRV_Handle>(env_map_srv) };
 							Buffer_Handle_t* nil_buff_hnd = {};
@@ -260,10 +260,10 @@ namespace zorya
 
 						Render_RTV_Handle rts[] = { registry.get<Render_RTV_Handle>(brdf_lut_map_rt) };
 
-						Constant_Buffer_Handle vs_cb_hnds[] = { 0 };
-						Render_SRV_Handle vs_srv_hnds[] = { 0 };
+						Constant_Buffer_Handle vs_cb_hnds[] = { Constant_Buffer_Handle{0} };
+						Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
 						Constant_Buffer_Handle ps_cb_hnds[] = { hnd_ibl_spec_draw_cb };
-						Render_SRV_Handle ps_srv_hnds[] = { 0/*registry.get<Render_SRV_Handle>(src_map)*/ };
+						Render_SRV_Handle ps_srv_hnds[] = { Render_SRV_Handle{0} /*registry.get<Render_SRV_Handle>(src_map)*/ };
 						Buffer_Handle_t* nil_buff_hnd = {};
 						Submesh_Handle_t hnd_submesh;
 						hnd_submesh.num_vertices = 4;
@@ -294,7 +294,7 @@ namespace zorya
 		Render_RTV_Handle rts[] = { registry.get<Render_RTV_Handle>(dest_face_rtv) };
 
 		Constant_Buffer_Handle vs_cb_hnds[] = { hnd_world_cb, hnd_view_cb, hnd_proj_cb };
-		Render_SRV_Handle vs_srv_hnds[] = { 0 };
+		Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
 		Constant_Buffer_Handle ps_cb_hnds[] = { hnd_ibl_spec_draw_cb };
 		Render_SRV_Handle ps_srv_hnds[] = { registry.get<Render_SRV_Handle>(src_map) };
 		Buffer_Handle_t* nil_buff_hnd = {};

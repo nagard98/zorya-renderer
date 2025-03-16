@@ -125,7 +125,7 @@ namespace zorya
 		bool is_editing_complete = ImGui::IsItemDeactivatedAfterEdit();
 
 		ImGui::PushID((void*)field_addr);
-		ImGuiID id_current_dialog = ImGui::GetItemID();
+		//ImGuiID id_current_dialog = ImGui::GetItemID();
 
 		//TODO: fix
 		//if (ImGui::Button("Import"))
@@ -376,10 +376,7 @@ namespace zorya
 		//TODO: better check if entity has mesh; probably move check to callee of this function
 		if (entity.submesh_desc != nullptr)
 		{
-			Material_Cache_Handle_t hnd_material = entity.submesh_desc->hnd_material_cache;
-			Material& material = resource_cache.m_material_cache.at(hnd_material.index);
-
-			bool is_edited = false;
+			//Material_Cache_Handle_t hnd_material = entity.submesh_desc->hnd_material_cache;
 
 			ImGui::SeparatorText("Rendering");
 			{
@@ -395,7 +392,6 @@ namespace zorya
 						Asset_Import_Config* dropped_imp_conf = payload_data->import_config;
 						dropped_mat->load_asset(dropped_imp_conf);
 						entity.submesh_desc->hnd_material_cache = dropped_mat->material_hnd;
-						is_edited |= true;
 					}
 
 					ImGui::EndDragDropTarget();

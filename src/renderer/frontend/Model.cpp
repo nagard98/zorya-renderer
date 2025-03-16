@@ -183,7 +183,7 @@ namespace zorya
 
     std::vector<int> Model3D::load_node_meshes(const aiScene* scene, unsigned int* meshes_indices, unsigned int num_meshes, Transform_t local_transform)
     {
-        aiReturn success;
+        //aiReturn success;
 
         Submesh_Handle_t hnd_submesh{ 0,0,0,0 };
         Renderable_Entity renderable_entity{};
@@ -209,7 +209,7 @@ namespace zorya
 
         std::vector<int> submesh_indices;
 
-        size_t num_char_converted = 0;
+        //size_t num_char_converted = 0;
         for (int j = 0; j < num_meshes; j++)
         {
             aiMesh* mesh = scene->mMeshes[meshes_indices[j]];

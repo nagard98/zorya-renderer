@@ -265,7 +265,7 @@ namespace zorya
     void Texture2D::load_asset(const Asset_Import_Config* asset_import_conf)
     {
         assert(asset_import_conf->asset_type == Asset_Type::TEXTURE);
-        const Texture_Import_Config* tex_import_conf = static_cast<const Texture_Import_Config*>(asset_import_conf);
+        //const Texture_Import_Config* tex_import_conf = static_cast<const Texture_Import_Config*>(asset_import_conf);
 
         if (!m_is_loaded)
         {
@@ -316,7 +316,7 @@ namespace zorya
     void Texture2D::update_asset(const Texture_Import_Config* tex_imp_config)
     {
         assert(tex_imp_config->asset_type == Asset_Type::TEXTURE);
-        const Texture_Import_Config* tex_import_conf = static_cast<const Texture_Import_Config*>(tex_imp_config);
+        //const Texture_Import_Config* tex_import_conf = static_cast<const Texture_Import_Config*>(tex_imp_config);
 
         if (m_is_loaded)
         {

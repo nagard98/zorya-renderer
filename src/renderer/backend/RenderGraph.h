@@ -184,8 +184,8 @@ namespace zorya
 
         bool is_recompile_required = true;
 
-        Render_Graph_Registry registry;
         Render_Graph_Builder builder;
+        Render_Graph_Registry registry;
 
 	};
 

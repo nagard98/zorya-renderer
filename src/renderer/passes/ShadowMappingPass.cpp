@@ -105,10 +105,10 @@ namespace zorya
 									auto world_matrix = dx::XMMatrixTranspose(submesh_info.final_world_transform);
 									cmd_list.update_buffer(*arena, hnd_world_cb, &world_matrix, sizeof(world_matrix));
 
-									Constant_Buffer_Handle vs_cb_hnds[] = { hnd_world_cb, 0, hnd_shadow_map_cb, hnd_light_draw_cb };
-									Render_SRV_Handle vs_srv_hnds[] = { 0 };
-									Constant_Buffer_Handle ps_cb_hnds[] = { 0 };
-									Render_SRV_Handle ps_srv_hnds[] = { 0 };
+									Constant_Buffer_Handle vs_cb_hnds[] = { hnd_world_cb, Constant_Buffer_Handle{0}, hnd_shadow_map_cb, hnd_light_draw_cb };
+									Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
+									Constant_Buffer_Handle ps_cb_hnds[] = { Constant_Buffer_Handle{0} };
+									Render_SRV_Handle ps_srv_hnds[] = { Render_SRV_Handle{0} };
 
 									cmd_list.draw_indexed(
 										pipeline_state_manager.get(Pipeline_State::SHADOW_MAPPING),
@@ -140,10 +140,10 @@ namespace zorya
 										draw_constants.face = face;
 										cmd_list.update_buffer(*arena, hnd_light_draw_cb, &draw_constants, sizeof(draw_constants));
 
-										Constant_Buffer_Handle vs_cb_hnds[] = { hnd_world_cb, 0, hnd_shadow_map_cb, hnd_light_draw_cb };
-										Render_SRV_Handle vs_srv_hnds[] = { 0 };
-										Constant_Buffer_Handle ps_cb_hnds[] = { 0 };
-										Render_SRV_Handle ps_srv_hnds[] = { 0 };
+										Constant_Buffer_Handle vs_cb_hnds[] = { hnd_world_cb, Constant_Buffer_Handle{0}, hnd_shadow_map_cb, hnd_light_draw_cb };
+										Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
+										Constant_Buffer_Handle ps_cb_hnds[] = { Constant_Buffer_Handle{0} };
+										Render_SRV_Handle ps_srv_hnds[] = { Render_SRV_Handle{0} };
 
 										cmd_list.draw_indexed(
 											pipeline_state_manager.get(Pipeline_State::SHADOW_MAPPING),

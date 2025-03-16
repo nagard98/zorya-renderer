@@ -39,8 +39,8 @@ namespace zorya
     Scene_Manager scene_manager;
 
     Scene_Manager::Scene_Manager() : 
-        m_scene_graph(Renderable_Entity{ 0, Entity_Type::COLLECTION, nullptr, "scene", IDENTITY_TRANSFORM }), 
-        hnd_default_material(Material_Cache_Handle_t{ 0,IS_FIRST_MAT_ALLOC }) {}
+        hnd_default_material(Material_Cache_Handle_t{ 0,IS_FIRST_MAT_ALLOC }),
+        m_scene_graph(Renderable_Entity{ 0, Entity_Type::COLLECTION, nullptr, "scene", IDENTITY_TRANSFORM }) {}
 
 
     HRESULT Scene_Manager::init()

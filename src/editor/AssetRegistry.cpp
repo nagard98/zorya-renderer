@@ -229,7 +229,7 @@ void zorya::Asset_Registry::recursive_build(const char* project_current_path, st
 					char* extension = PathFindExtension(current_path);
 					if (strncmp(extension, ".metafile", strnlen(".metafile", MAX_PATH)) == 0)
 					{
-						Node2<Filesystem_Node>& file_node = folder_nodes.emplace_back(Filesystem_Node(Filesystem_Node_Type::FILE, current_path, found_file_info.cFileName), current_node);
+						folder_nodes.emplace_back(Filesystem_Node(Filesystem_Node_Type::FILE, current_path, found_file_info.cFileName), current_node);
 					}
 				}
 

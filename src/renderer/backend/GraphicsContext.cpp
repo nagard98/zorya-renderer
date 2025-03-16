@@ -330,8 +330,8 @@ void zorya::Render_Command_List::clear()
 
 ID3D11CommandList* zorya::Render_Command_List::finish_command_list()
 {
-	Render_RTV_Handle null_rtvs[8] = { 0 };
-	Render_SRV_Handle null_srvs[10] = { 0 };
+	Render_RTV_Handle null_rtvs[8] = { Render_RTV_Handle{0} };
+	Render_SRV_Handle null_srvs[10] = { Render_SRV_Handle{0} };
 
 	for (auto cmd : cmd_list)
 	{

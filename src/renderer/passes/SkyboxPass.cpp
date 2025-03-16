@@ -37,7 +37,7 @@ namespace zorya
 				skybox = builder.write(skybox, Bind_Flag::RENDER_TARGET);
 				scope.set(Skybox_Data{ skybox });
 
-				auto& final_texture = scope.get<Final_Render_Graph_Texture>();
+				//auto& final_texture = scope.get<Final_Render_Graph_Texture>();
 
 				//auto& irradiance_data = scope.get<Irradiance_Data>();
 				//auto environment_map = builder.read(irradiance_data.irradiance_map, Bind_Flag::SHADER_RESOURCE, 0, 6);
@@ -63,8 +63,8 @@ namespace zorya
 						cmd_list.update_buffer(*arena, hnd_proj_cb, &tmpPCB, sizeof(tmpPCB));
 
 						Constant_Buffer_Handle vs_cb_hnds[] = { hnd_world_cb, hnd_view_cb, hnd_proj_cb };
-						Render_SRV_Handle vs_srv_hnds[] = { 0 };
-						Constant_Buffer_Handle ps_cb_hnds[] = { 0 };
+						Render_SRV_Handle vs_srv_hnds[] = { Render_SRV_Handle{0} };
+						Constant_Buffer_Handle ps_cb_hnds[] = { Constant_Buffer_Handle{0} };
 						Render_SRV_Handle ps_srv_hnds[] = { hnd_sky_cubemap_srv };
 						Buffer_Handle_t* nil_buff_hnd = {};
 						Submesh_Handle_t hnd_submesh;

@@ -153,6 +153,7 @@ namespace zorya
 	struct Material : public Asset
 	{
 		Material() : Asset() {};
+		~Material() {};
 		
 		static Material* create(const Asset_Import_Config* import_config);
 

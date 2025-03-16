@@ -67,7 +67,10 @@ VS_OUTPUT vs(VS_INPUT input)
                 output.lightSpacePos = mul(input.vPosition, mul(worldMatrix, mul(lightViewMat[light_index * 6 + face], lightProjMat)));
                 break;
             }
-
+        default:{
+                output.lightSpacePos = float4(0.0f, 0.0f, 0.0f, 1.0f);
+                break;
+            }
     };
     
     return output;
