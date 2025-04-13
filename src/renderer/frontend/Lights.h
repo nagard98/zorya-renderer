@@ -18,8 +18,6 @@ namespace zorya
     using float3 = dx::XMFLOAT3;
     using float2 = dx::XMFLOAT2;
 
-#else
-
 #endif
 
 struct Directional_Light
@@ -71,6 +69,8 @@ struct Spot_Light
     float pad;
 };
 
+#ifdef __cplusplus
+
 struct Sky_Light
 {
     Texture2D* environment_texture;
@@ -79,8 +79,6 @@ struct Sky_Light
     Render_SRV_Handle prefiltered_env_map_srv;
     Render_SRV_Handle brdf_lut_srv;
 };
-
-#ifdef __cplusplus
 
 enum class Light_Type : uint8_t
 {
