@@ -544,7 +544,7 @@ namespace zorya
 		
 		Texture_Format format = texture_asset->is_hdr ? Texture_Format::R32G32B32A32_FLOAT : (tex_config->is_normal_map ? Texture_Format::R8G8B8A8_UNORM : Texture_Format::R8G8B8A8_UNORM_SRGB);
 
-		Result_Code res = m_device.create_tex_2d(&hnd_staging_tex, nullptr, Resource_Usage::DEFAULT, Resource_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, format,
+		Result_Code res = m_device.create_tex_2d(&hnd_staging_tex, nullptr, Resource_Usage::DEFAULT, Resource_Bind_Flags::SHADER_RESOURCE | Resource_Bind_Flags::RENDER_TARGET, format,
 			tex_config->max_width, tex_config->max_height, 1,
 			&hnd_staging_srv, nullptr, true, 0, 1, 0);
 		assert(res.value == S_OK);
@@ -555,7 +555,7 @@ namespace zorya
 		ID3D11ShaderResourceView* stag_srv = m_device.get_srv_pointer(hnd_staging_srv);
 		m_context->GenerateMips(stag_srv);
 
-		res = m_device.create_tex_2d(&hnd_final_tex, nullptr, Resource_Usage::DEFAULT, Resource_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE }, format,
+		res = m_device.create_tex_2d(&hnd_final_tex, nullptr, Resource_Usage::DEFAULT, Resource_Bind_Flags::SHADER_RESOURCE , format,
 			tex_config->max_width, tex_config->max_height, 1,
 			hnd_srv, nullptr, false, 0, 1, 0);
 		assert(res.value == S_OK);
@@ -579,11 +579,10 @@ namespace zorya
 
 	Result_Code Render_Hardware_Interface::create_tex(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta)
 	{
-		Resource_Bind_Flags bind_flags{ 0 };
-		bind_flags.value |= (meta.bind_flags & Bind_Flag::RENDER_TARGET) != 0 ? D3D11_BIND_RENDER_TARGET : 0;
-		bind_flags.value |= (meta.bind_flags & Bind_Flag::SHADER_RESOURCE) != 0 ? D3D11_BIND_SHADER_RESOURCE : 0;
-		bind_flags.value |= (meta.bind_flags & Bind_Flag::UNORDERED_ACCESS) != 0 ? D3D11_BIND_UNORDERED_ACCESS : 0;
-		bind_flags.value |= (meta.bind_flags & Bind_Flag::DEPTH_STENCIL) != 0 ? D3D11_BIND_DEPTH_STENCIL : 0;
+		Resource_Bind_Flags bind_flags = (meta.bind_flags & Bind_Flag::RENDER_TARGET) != 0 ? Resource_Bind_Flags::RENDER_TARGET : Resource_Bind_Flags::NONE;
+		bind_flags |= (meta.bind_flags & Bind_Flag::SHADER_RESOURCE) != 0 ? Resource_Bind_Flags::SHADER_RESOURCE : Resource_Bind_Flags::NONE;
+		bind_flags |= (meta.bind_flags & Bind_Flag::UNORDERED_ACCESS) != 0 ? Resource_Bind_Flags::UNORDERED_ACCESS : Resource_Bind_Flags::NONE;
+		bind_flags |= (meta.bind_flags & Bind_Flag::DEPTH_STENCIL) != 0 ? Resource_Bind_Flags::DEPTH_STENCIL : Resource_Bind_Flags::NONE;
 
 		Result_Code zr{ S_OK };
 

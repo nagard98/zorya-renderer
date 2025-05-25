@@ -41,10 +41,43 @@ namespace zorya
 		R32G32B32A32_FLOAT = DXGI_FORMAT_R32G32B32A32_FLOAT
 	};
 
-	struct Resource_Bind_Flags
+	enum class Resource_Bind_Flags : uint8_t
 	{
-		UINT value;
+		NONE = 0,
+		RENDER_TARGET = D3D11_BIND_RENDER_TARGET,
+		DEPTH_STENCIL = D3D11_BIND_DEPTH_STENCIL,
+		SHADER_RESOURCE = D3D11_BIND_SHADER_RESOURCE,
+		CONSTANT_BUFFER = D3D11_BIND_CONSTANT_BUFFER,
+		INDEX_BUFFER = D3D11_BIND_INDEX_BUFFER,
+		VERTEX_BUFFER = D3D11_BIND_VERTEX_BUFFER,
+		UNORDERED_ACCESS = D3D11_BIND_UNORDERED_ACCESS,
 	};
+
+	inline Resource_Bind_Flags operator|(Resource_Bind_Flags lhs, Resource_Bind_Flags rhs)
+	{
+		using T = std::underlying_type_t<Resource_Bind_Flags>;
+		return static_cast<Resource_Bind_Flags>(static_cast<T>(lhs) | static_cast<T>(rhs));
+	}
+
+	inline Resource_Bind_Flags operator&(Resource_Bind_Flags lhs, Resource_Bind_Flags rhs)
+	{
+		using T = std::underlying_type_t<Resource_Bind_Flags>;
+		return static_cast<Resource_Bind_Flags>(static_cast<T>(lhs) & static_cast<T>(rhs));
+	}
+
+
+	inline Resource_Bind_Flags& operator|=(Resource_Bind_Flags& lhs, Resource_Bind_Flags rhs)
+	{
+		lhs = lhs | rhs;
+		return lhs;
+	}
+
+	inline Resource_Bind_Flags& operator&=(Resource_Bind_Flags& lhs, Resource_Bind_Flags rhs)
+	{
+		lhs = lhs & rhs;
+		return lhs;
+	}
+
 
 	enum class Resource_Usage : uint8_t
 	{
