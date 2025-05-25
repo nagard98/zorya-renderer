@@ -37,7 +37,7 @@ namespace zorya
 				skybox = builder.write(skybox, Bind_Flag::RENDER_TARGET);
 				scope.set(Skybox_Data{ skybox });
 
-				auto& final_texture = scope.get<Final_Render_Graph_Texture>();
+				//auto& final_texture = scope.get<Final_Render_Graph_Texture>();
 
 				//auto& irradiance_data = scope.get<Irradiance_Data>();
 				//auto environment_map = builder.read(irradiance_data.irradiance_map, Bind_Flag::SHADER_RESOURCE, 0, 6);

@@ -14,7 +14,7 @@ namespace zorya
 		render_graph.add_pass_callback(L"Present Pass", [&](Render_Graph_Builder& builder)
 			{
 				auto& lighting_data = scope.get<Lighting_Data>();
-				auto& debug_data = scope.get<Debug_View_Data>();
+				//auto& debug_data = scope.get<Debug_View_Data>();
 				auto& final_data = scope.get<Final_Render_Graph_Texture>();
 
 				//builder.read(gbuff_data.albedo, Bind_Flag::RENDER_TARGET);

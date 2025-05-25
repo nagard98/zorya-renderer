@@ -55,6 +55,7 @@ namespace zorya
 		}
 		default:
 			zassert(false);
+			return DXGI_FORMAT_UNKNOWN;
 			break;
 		}
 	}
@@ -627,8 +628,6 @@ namespace zorya
 				}
 			}
 		}
-
-		int i = 0;
 	}
 
 	void Render_Graph_Builder::clear()

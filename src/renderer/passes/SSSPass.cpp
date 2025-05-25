@@ -38,16 +38,16 @@ namespace zorya
 				auto jim_gauss_biggest_blur1 = builder.create(jim_intermediate_tex_desc);
 				auto jim_gauss_biggest_blur2 = builder.create(jim_intermediate_tex_desc);
 
-				auto jim_gauss_final_composit1_rtv = builder.write(jim_gauss_final_composit1, Bind_Flag::RENDER_TARGET);
-				auto jim_gauss_final_composit2_rtv = builder.write(jim_gauss_final_composit2, Bind_Flag::RENDER_TARGET);
+				//auto jim_gauss_final_composit1_rtv = builder.write(jim_gauss_final_composit1, Bind_Flag::RENDER_TARGET);
+				//auto jim_gauss_final_composit2_rtv = builder.write(jim_gauss_final_composit2, Bind_Flag::RENDER_TARGET);
 				auto jim_gauss_biggest_blur1_rtv = builder.write(jim_gauss_biggest_blur1, Bind_Flag::RENDER_TARGET);
 				auto jim_gauss_biggest_blur2_rtv = builder.write(jim_gauss_biggest_blur2, Bind_Flag::RENDER_TARGET);
 
 				auto jim_gauss_biggest_blur1_srv = builder.read(jim_gauss_biggest_blur1_rtv, Bind_Flag::SHADER_RESOURCE);
 				auto jim_gauss_biggest_blur2_srv = builder.read(jim_gauss_biggest_blur2_rtv, Bind_Flag::SHADER_RESOURCE);
 				
-				auto jim_gauss_final_composit1_srv = builder.read(jim_gauss_final_composit1_rtv, Bind_Flag::SHADER_RESOURCE);
-				auto jim_gauss_final_composit2_srv = builder.read(jim_gauss_final_composit2_rtv, Bind_Flag::SHADER_RESOURCE);
+				//auto jim_gauss_final_composit1_srv = builder.read(jim_gauss_final_composit1_rtv, Bind_Flag::SHADER_RESOURCE);
+				//auto jim_gauss_final_composit2_srv = builder.read(jim_gauss_final_composit2_rtv , Bind_Flag::SHADER_RESOURCE);
 
 				return [=](Render_Command_List& cmd_list, Render_Graph_Registry& registry)
 					{

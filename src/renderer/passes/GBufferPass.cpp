@@ -88,7 +88,7 @@ namespace zorya
 						Shader_Resource* cb_resource = nullptr;
 						///
 
-						dx::XMFLOAT4 clear_stencil_color = { 0.0f,0.0f,0.0f,0.0f };
+						//dx::XMFLOAT4 clear_stencil_color = { 0.0f,0.0f,0.0f,0.0f };
 						/*cmd_list.clear_rtv(hnd_gbuff_rtv[G_Buffer::NORMAL], &clear_color.x);
 						cmd_list.clear_rtv(hnd_gbuff_rtv[G_Buffer::ROUGH_MET], &clear_color.x);*/
 						//cmd_list.clear_rtv(registry.get<Render_RTV_Handle>(gbuff_data.stencil), &clear_stencil_color.x);

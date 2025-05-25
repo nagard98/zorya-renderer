@@ -128,10 +128,6 @@ namespace zorya
 
 		Root_Signature gfx_root_signature;
 
-	private:
-		D3D11_RASTERIZER_DESC m_tmp_rast_desc;
-		D3D11_DEPTH_STENCIL_DESC m_tmp_depth_sten_desc;
-
 	};
 
 	extern Render_Hardware_Interface rhi;

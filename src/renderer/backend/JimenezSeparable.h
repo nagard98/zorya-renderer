@@ -274,8 +274,6 @@ namespace zorya
 
 	std::vector<float4> separable_sss_calculate_kernel()
 	{
-		HRESULT hr;
-
 		const float RANGE = 9.9f;//num_samples > 20 ? 3.0f : 2.0f;
 		const float EXPONENT = 2.0f;
 

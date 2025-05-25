@@ -186,7 +186,6 @@ void zorya::Content_Browser::render(Asset_Registry& asset_registry)
 			}
 			case(Filesystem_Node_Type::FILE):
 			{
-				int val = 33;
 				strncpy_s(label, "asset", MAX_PATH);
 
 				auto pos = ImGui::GetCursorPos();

@@ -73,11 +73,6 @@ namespace zorya
 
 	struct Renderable_Entity
 	{
-		~Renderable_Entity()
-		{
-			int i = 0;
-		}
-
 		bool operator==(const Renderable_Entity& r)
 		{
 			return ID == r.ID;
