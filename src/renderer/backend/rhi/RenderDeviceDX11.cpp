@@ -54,13 +54,13 @@ namespace zorya
 		m_rs_state_handles.insert({XXH64(&default_rs_desc, sizeof(default_rs_desc), 0) , rs_state_hnd});
 	}
 
-	ZRY_Result DX11_Render_Device::create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, ZRY_Usage usage, ZRY_Bind_Flags bind_flags, ZRY_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
-	{
+	Result_Code DX11_Render_Device::create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, Resource_Usage usage, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
+	{ 
 		assert(tex_handle != nullptr);
 
 		D3D11_TEXTURE2D_DESC tex_2d_desc;
 		ZeroMemory(&tex_2d_desc, sizeof(tex_2d_desc));
-		tex_2d_desc.Format = format.value;
+		tex_2d_desc.Format = static_cast<DXGI_FORMAT>(format);
 		tex_2d_desc.MipLevels = mip_levels;
 		tex_2d_desc.ArraySize = array_size;
 		tex_2d_desc.BindFlags = bind_flags.value; //(srv_handle != nullptr ? D3D11_BIND_SHADER_RESOURCE : 0) | (rtv_handle != nullptr ? D3D11_BIND_RENDER_TARGET : 0);
@@ -71,11 +71,11 @@ namespace zorya
 		tex_2d_desc.SampleDesc.Quality = sample_quality;
 
 		//TODO:usage/access_flags/misc_flags
-		tex_2d_desc.Usage = usage.value;
+		tex_2d_desc.Usage = static_cast<D3D11_USAGE>(usage);
 		tex_2d_desc.CPUAccessFlags = 0;
 		tex_2d_desc.MiscFlags = generate_mips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0;
 
-		ZRY_Result zr{ S_OK };
+		Result_Code zr{ S_OK };
 		zr.value = m_device->CreateTexture2D(&tex_2d_desc, init_data, &m_tex_2d_resources.at(m_tex_2d_count));
 		RETURN_IF_FAILED_ZRY(zr);
 
@@ -106,7 +106,7 @@ namespace zorya
 		return zr;
 	}
 
-	ZRY_Result DX11_Render_Device::create_srv_tex_2d(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, ZRY_Format format, int mip_levels, int most_detailed_map)
+	Result_Code DX11_Render_Device::create_srv_tex_2d(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels, int most_detailed_map)
 	{
 		assert(srv_handle != nullptr);
 
@@ -114,11 +114,11 @@ namespace zorya
 		ZeroMemory(&srv_desc, sizeof(srv_desc));
 
 		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srv_desc.Format = format.value;
+		srv_desc.Format = static_cast<DXGI_FORMAT>(format);
 		srv_desc.Texture2D.MipLevels = mip_levels;
 		srv_desc.Texture2D.MostDetailedMip = most_detailed_map;
 
-		ZRY_Result zr{ S_OK };
+		Result_Code zr{ S_OK };
 
 		zr.value = m_device->CreateShaderResourceView(get_tex_2d_pointer(tex_handle), &srv_desc, &m_srv_resources.at(m_srv_count));
 		RETURN_IF_FAILED_ZRY(zr);
@@ -129,7 +129,7 @@ namespace zorya
 		return zr;
 	}
 
-	ZRY_Result DX11_Render_Device::create_rtv_tex_2d(Render_RTV_Handle* rtv_handle, const Render_Texture_Handle tex_handle, ZRY_Format format, int mip_slice)
+	Result_Code DX11_Render_Device::create_rtv_tex_2d(Render_RTV_Handle* rtv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice)
 	{
 		assert(rtv_handle != nullptr);
 
@@ -137,10 +137,10 @@ namespace zorya
 		ZeroMemory(&rtv_desc, sizeof(rtv_desc));
 
 		rtv_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-		rtv_desc.Format = format.value;
+		rtv_desc.Format = static_cast<DXGI_FORMAT>(format);
 		rtv_desc.Texture2D.MipSlice = mip_slice;
 
-		ZRY_Result zr{ S_OK };
+		Result_Code zr{ S_OK };
 		zr.value = m_device->CreateRenderTargetView(get_tex_2d_pointer(tex_handle), &rtv_desc, &m_rtv_resources.at(m_rtv_count));
 		RETURN_IF_FAILED_ZRY(zr);
 		rtv_handle->index = m_rtv_count;
@@ -149,7 +149,7 @@ namespace zorya
 		return zr;
 	}
 
-	ZRY_Result DX11_Render_Device::create_dsv_tex_2d(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle tex_handle, ZRY_Format format, int mip_slice, bool is_read_only)
+	Result_Code DX11_Render_Device::create_dsv_tex_2d(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice, bool is_read_only)
 	{
 		assert(dsv_handle != nullptr);
 
@@ -157,11 +157,11 @@ namespace zorya
 		ZeroMemory(&dsv_desc, sizeof(dsv_desc));
 
 		dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-		dsv_desc.Format = format.value;
+		dsv_desc.Format = static_cast<DXGI_FORMAT>(format);
 		dsv_desc.Texture2D.MipSlice = mip_slice;
 		dsv_desc.Flags = is_read_only ? D3D11_DSV_READ_ONLY_DEPTH : 0;
 
-		ZRY_Result zr{ S_OK };
+		Result_Code zr{ S_OK };
 		zr.value = m_device->CreateDepthStencilView(get_tex_2d_pointer(tex_handle), &dsv_desc, &m_dsv_resources.at(m_dsv_count));
 		RETURN_IF_FAILED_ZRY(zr);
 		dsv_handle->index = m_dsv_count;
@@ -171,13 +171,13 @@ namespace zorya
 		return zr;
 	}
 
-	ZRY_Result DX11_Render_Device::create_tex_cubemap(Render_Texture_Handle* tex_handle, ZRY_Bind_Flags bind_flags, ZRY_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
+	Result_Code DX11_Render_Device::create_tex_cubemap(Render_Texture_Handle* tex_handle, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
 	{
 		assert(tex_handle != nullptr);
 
 		D3D11_TEXTURE2D_DESC tex_2d_desc;
 		ZeroMemory(&tex_2d_desc, sizeof(tex_2d_desc));
-		tex_2d_desc.Format = format.value;
+		tex_2d_desc.Format = static_cast<DXGI_FORMAT>(format);
 		tex_2d_desc.MipLevels = mip_levels;
 		tex_2d_desc.ArraySize = array_size;
 		tex_2d_desc.BindFlags = bind_flags.value; //(srv_handle != nullptr ? D3D11_BIND_SHADER_RESOURCE : 0) | (rtv_handle != nullptr ? D3D11_BIND_RENDER_TARGET : 0);
@@ -192,7 +192,7 @@ namespace zorya
 		tex_2d_desc.CPUAccessFlags = 0;
 		tex_2d_desc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE | (generate_mips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0);
 
-		ZRY_Result zr{ S_OK };
+		Result_Code zr{ S_OK };
 
 		zr.value = m_device->CreateTexture2D(&tex_2d_desc, nullptr, &m_tex_2d_resources.at(m_tex_2d_count));
 		RETURN_IF_FAILED_ZRY(zr);
@@ -222,7 +222,7 @@ namespace zorya
 		return zr;
 	}
 
-	ZRY_Result DX11_Render_Device::create_srv_tex_2d_array(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, ZRY_Format format, int array_size, int first_array_slice, int mip_levels, int most_detailed_map)
+	Result_Code DX11_Render_Device::create_srv_tex_2d_array(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int array_size, int first_array_slice, int mip_levels, int most_detailed_map)
 	{
 		assert(srv_handle);
 
@@ -230,13 +230,13 @@ namespace zorya
 		ZeroMemory(&srv_desc, sizeof(srv_desc));
 
 		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-		srv_desc.Format = format.value;
+		srv_desc.Format = static_cast<DXGI_FORMAT>(format);
 		srv_desc.Texture2DArray.MipLevels = mip_levels;
 		srv_desc.Texture2DArray.MostDetailedMip = most_detailed_map;
 		srv_desc.Texture2DArray.ArraySize = array_size;
 		srv_desc.Texture2DArray.FirstArraySlice = first_array_slice;
 
-		ZRY_Result zr{ S_OK };
+		Result_Code zr{ S_OK };
 
 		zr.value = m_device->CreateShaderResourceView(get_tex_2d_pointer(tex_handle), &srv_desc, &m_srv_resources.at(m_srv_count));
 		RETURN_IF_FAILED_ZRY(zr);
@@ -246,7 +246,7 @@ namespace zorya
 		return zr;
 	}
 
-	ZRY_Result DX11_Render_Device::create_srv_tex_cubemap(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, ZRY_Format format, int array_size, int first_array_slice, int mipLevels, int most_detailed_mip)
+	Result_Code DX11_Render_Device::create_srv_tex_cubemap(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int array_size, int first_array_slice, int mipLevels, int most_detailed_mip)
 	{
 		assert(srv_handle);
 
@@ -254,13 +254,13 @@ namespace zorya
 		ZeroMemory(&srv_desc, sizeof(srv_desc));
 
 		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-		srv_desc.Format = format.value;
+		srv_desc.Format = static_cast<DXGI_FORMAT>(format);
 		srv_desc.Texture2DArray.MipLevels = mipLevels;
 		srv_desc.Texture2DArray.MostDetailedMip = most_detailed_mip;
 		srv_desc.Texture2DArray.ArraySize = array_size;
 		srv_desc.Texture2DArray.FirstArraySlice = first_array_slice;
 
-		ZRY_Result zr{ S_OK };
+		Result_Code zr{ S_OK };
 
 		zr.value = m_device->CreateShaderResourceView(get_tex_2d_pointer(tex_handle), &srv_desc, &m_srv_resources.at(m_srv_count));
 		RETURN_IF_FAILED_ZRY(zr);
@@ -271,7 +271,7 @@ namespace zorya
 	}
 
 
-	ZRY_Result DX11_Render_Device::create_dsv_tex_2d_array(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle tex_handle, ZRY_Format format, int array_size, int mip_slice, int first_array_slice, bool is_read_only)
+	Result_Code DX11_Render_Device::create_dsv_tex_2d_array(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int array_size, int mip_slice, int first_array_slice, bool is_read_only)
 	{
 		assert(dsv_handle != nullptr);
 
@@ -279,13 +279,13 @@ namespace zorya
 		ZeroMemory(&dsv_desc, sizeof(dsv_desc));
 
 		dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-		dsv_desc.Format = format.value;
+		dsv_desc.Format = static_cast<DXGI_FORMAT>(format);
 		dsv_desc.Texture2DArray.ArraySize = array_size;
 		dsv_desc.Texture2DArray.FirstArraySlice = first_array_slice;
 		dsv_desc.Texture2DArray.MipSlice = mip_slice;
 		dsv_desc.Flags = is_read_only ? D3D11_DSV_READ_ONLY_DEPTH : 0;
 
-		ZRY_Result zr{ S_OK };
+		Result_Code zr{ S_OK };
 
 		zr.value = m_device->CreateDepthStencilView(get_tex_2d_pointer(tex_handle), &dsv_desc, &m_dsv_resources.at(m_dsv_count));
 		RETURN_IF_FAILED_ZRY(zr);
@@ -295,7 +295,7 @@ namespace zorya
 		return zr;
 	}
 
-	ZRY_Result DX11_Render_Device::create_rtv_tex_2d_array(Render_RTV_Handle* rtv_handle, const Render_Texture_Handle tex_handle, ZRY_Format format, int array_size, int mip_slice, int first_array_slice)
+	Result_Code DX11_Render_Device::create_rtv_tex_2d_array(Render_RTV_Handle* rtv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int array_size, int mip_slice, int first_array_slice)
 	{
 		assert(rtv_handle != nullptr);
 
@@ -303,12 +303,12 @@ namespace zorya
 		ZeroMemory(&rtv_desc, sizeof(rtv_desc));
 
 		rtv_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-		rtv_desc.Format = format.value;
+		rtv_desc.Format = static_cast<DXGI_FORMAT>(format);
 		rtv_desc.Texture2DArray.ArraySize = array_size;
 		rtv_desc.Texture2DArray.FirstArraySlice = first_array_slice;
 		rtv_desc.Texture2DArray.MipSlice = mip_slice;
 
-		ZRY_Result zr{ S_OK };
+		Result_Code zr{ S_OK };
 		zr.value = m_device->CreateRenderTargetView(get_tex_2d_pointer(tex_handle), &rtv_desc, &m_rtv_resources.at(m_rtv_count));
 		RETURN_IF_FAILED_ZRY(zr);
 		rtv_handle->index = m_rtv_count;
@@ -317,7 +317,7 @@ namespace zorya
 		return zr;
 	}
 
-	ZRY_Result DX11_Render_Device::create_constant_buffer(Constant_Buffer_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc)
+	Result_Code DX11_Render_Device::create_constant_buffer(Constant_Buffer_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc)
 	{
 		zassert((buffer_desc->BindFlags & D3D11_BIND_CONSTANT_BUFFER) != 0);
 		Constant_Buffer& const_buffer = m_cb_resources.at(m_const_buff_count);
@@ -326,10 +326,10 @@ namespace zorya
 
 		HRESULT hr = m_device->CreateBuffer(buffer_desc, nullptr, &const_buffer.buffer);
 
-		return ZRY_Result{ hr };
+		return Result_Code{ hr };
 	}
 
-	ZRY_Result DX11_Render_Device::create_pso(PSO_Handle* pso_hnd, const PSO_Desc& pso_desc)
+	Result_Code DX11_Render_Device::create_pso(PSO_Handle* pso_hnd, const PSO_Desc& pso_desc)
 	{
 		uint64_t pso_hash = hash(pso_desc);
 		if (m_pso_handles.find(pso_hash) == m_pso_handles.end())
@@ -370,10 +370,10 @@ namespace zorya
 			*pso_hnd = m_pso_handles.at(pso_hash);
 		}
 
-		return ZRY_Result{S_OK};
+		return Result_Code{S_OK};
 	}
 
-	ZRY_Result DX11_Render_Device::create_pixel_shader(Pixel_Shader_Handle* ps_hnd, const Shader_Bytecode& bytecode)
+	Result_Code DX11_Render_Device::create_pixel_shader(Pixel_Shader_Handle* ps_hnd, const Shader_Bytecode& bytecode)
 	{
 		HRESULT hr = m_device->CreatePixelShader(bytecode.bytecode, bytecode.size_in_bytes, nullptr, &m_ps_resources.at(m_ps_count));
 		if (!FAILED(hr))
@@ -386,10 +386,10 @@ namespace zorya
 			ps_hnd->index = 0;
 		}
 
-		return ZRY_Result{ hr };
+		return Result_Code{ hr };
 	}
 
-	ZRY_Result DX11_Render_Device::create_vertex_shader(Vertex_Shader_Handle* vs_hnd, const Shader_Bytecode& bytecode)
+	Result_Code DX11_Render_Device::create_vertex_shader(Vertex_Shader_Handle* vs_hnd, const Shader_Bytecode& bytecode)
 	{
 		HRESULT hr = m_device->CreateVertexShader(bytecode.bytecode, bytecode.size_in_bytes, nullptr, &m_vs_resources.at(m_vs_count));
 		if (!FAILED(hr))
@@ -401,10 +401,10 @@ namespace zorya
 			vs_hnd->index = 0;
 		}
 
-		return ZRY_Result{ hr };
+		return Result_Code{ hr };
 	}
 
-	ZRY_Result DX11_Render_Device::create_ds_state(DS_State_Handle* ds_state_hnd, const D3D11_DEPTH_STENCIL_DESC& ds_state_desc)
+	Result_Code DX11_Render_Device::create_ds_state(DS_State_Handle* ds_state_hnd, const D3D11_DEPTH_STENCIL_DESC& ds_state_desc)
 	{
 		HRESULT hr = m_device->CreateDepthStencilState(&ds_state_desc, &m_ds_state_resources.at(m_ds_state_count));
 		if (!FAILED(hr))
@@ -416,10 +416,10 @@ namespace zorya
 			ds_state_hnd->index = 0;
 		}
 
-		return ZRY_Result{ hr };
+		return Result_Code{ hr };
 	}
 
-	ZRY_Result DX11_Render_Device::create_rs_state(RS_State_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc)
+	Result_Code DX11_Render_Device::create_rs_state(RS_State_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc)
 	{
 		HRESULT hr = m_device->CreateRasterizerState(&rs_state_desc, &m_rs_state_resources.at(m_rs_state_count));
 		if (!FAILED(hr))
@@ -431,10 +431,10 @@ namespace zorya
 			rs_state_hnd->index = 0;
 		}
 
-		return ZRY_Result{ hr };
+		return Result_Code{ hr };
 	}
 
-	ZRY_Result DX11_Render_Device::create_bl_state(BL_State_Handle* bl_state_hnd, const D3D11_BLEND_DESC& bl_state_desc)
+	Result_Code DX11_Render_Device::create_bl_state(BL_State_Handle* bl_state_hnd, const D3D11_BLEND_DESC& bl_state_desc)
 	{
 		HRESULT hr = m_device->CreateBlendState(&bl_state_desc, &m_bl_state_resources.at(m_bl_state_count));
 		if (!FAILED(hr))
@@ -446,7 +446,7 @@ namespace zorya
 			bl_state_hnd->index = 0;
 		}
 
-		return ZRY_Result{ hr };
+		return Result_Code{ hr };
 	}
 
 	Render_SRV_Handle DX11_Render_Device::add_srv(ID3D11ShaderResourceView*&& srv_resource)
