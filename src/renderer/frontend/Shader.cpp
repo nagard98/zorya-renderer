@@ -287,13 +287,13 @@ namespace zorya
 						rhi.m_context->UpdateSubresource(rhi.get_cb_pointer(hnd_cb_resource), 0, nullptr, cb_data->cb_start, 0, 0);
 
 					}
-					shader_resources.emplace_back(desc.Name, desc.BindPoint, desc.BindCount, to_zry_resource_type(desc.Type), Render_Resource_Handle{ hnd_cb_resource.index }, cb_data);
+					shader_resources.emplace_back(desc.Name, desc.BindPoint, desc.BindCount, to_zry_resource_type(desc.Type), Constant_Buffer_Handle{ hnd_cb_resource.index }, cb_data);
 					break;
 				}
 
 				default:
 				{
-					shader_resources.emplace_back(desc.Name, desc.BindPoint, desc.BindCount, to_zry_resource_type(desc.Type), Render_Resource_Handle{ 0 }, nullptr);
+					shader_resources.emplace_back(desc.Name, desc.BindPoint, desc.BindCount, to_zry_resource_type(desc.Type), Render_Resource_Handle{}, nullptr);
 					break;
 				}
 

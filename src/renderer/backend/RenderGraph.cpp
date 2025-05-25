@@ -259,6 +259,7 @@ namespace zorya
 			allocated_resources.resize(graph_resource_meta.size());
 			std::unordered_map<uint64_t, Free_Render_Resource*> free_transient_resources;
 
+			// Why the fuck do I multiply by the size of Render_Pass_Index?
 			auto buff_size = graph_resource_meta.size() * sizeof(Render_Pass_Index);
 
 			Render_Pass_Index* resource_first_use = (Render_Pass_Index*)_alloca(buff_size);
@@ -380,7 +381,7 @@ namespace zorya
 
 								if (is_new_resource_required)
 								{
-									zassert(rhi.create_tex((Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, nullptr, resource_meta).value == S_OK);
+									zassert(rhi.create_tex(&gpu_resource.hnd_gpu_resource, nullptr, resource_meta).value == S_OK);
 								}
 
 							}
@@ -391,17 +392,17 @@ namespace zorya
 							{
 							case zorya::SHADER_RESOURCE:
 							{					
-								zassert(rhi.create_srv((Render_SRV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
+								zassert(rhi.create_srv(&hnd_view, gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
 								break;
 							}
 							case zorya::RENDER_TARGET:
 							{
-								zassert(rhi.create_rtv((Render_RTV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
+								zassert(rhi.create_rtv(&hnd_view, gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
 								break;
 							}
 							case zorya::DEPTH_STENCIL:
 							{
-								zassert(rhi.create_dsv((Render_DSV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
+								zassert(rhi.create_dsv(&hnd_view, gpu_resource.hnd_gpu_resource, resource_meta, read_resource.view_desc).value == S_OK);
 								break;
 							}
 							case zorya::UNORDERED_ACCESS:
@@ -464,7 +465,7 @@ namespace zorya
 
 								if (is_new_resource_required)
 								{
-									zassert(rhi.create_tex((Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, nullptr, resource_meta).value == S_OK);
+									zassert(rhi.create_tex(&gpu_resource.hnd_gpu_resource, nullptr, resource_meta).value == S_OK);
 								}
 							}
 
@@ -476,12 +477,12 @@ namespace zorya
 							{
 							case zorya::RENDER_TARGET:
 							{
-								zassert(rhi.create_rtv((Render_RTV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, write_resource.view_desc).value == S_OK);
+								zassert(rhi.create_rtv(&hnd_view, gpu_resource.hnd_gpu_resource, resource_meta, write_resource.view_desc).value == S_OK);
 								break;
 							}
 							case zorya::DEPTH_STENCIL:
 							{
-								zassert(rhi.create_dsv((Render_DSV_Handle*)&hnd_view, (Render_Texture_Handle*)&gpu_resource.hnd_gpu_resource, resource_meta, write_resource.view_desc).value == S_OK);
+								zassert(rhi.create_dsv(&hnd_view, gpu_resource.hnd_gpu_resource, resource_meta, write_resource.view_desc).value == S_OK);
 								break;
 							}
 							case zorya::UNORDERED_ACCESS:
