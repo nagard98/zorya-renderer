@@ -63,7 +63,7 @@ namespace zorya
 		tex_2d_desc.Format = static_cast<DXGI_FORMAT>(format);
 		tex_2d_desc.MipLevels = mip_levels;
 		tex_2d_desc.ArraySize = array_size;
-		tex_2d_desc.BindFlags = bind_flags.value; //(srv_handle != nullptr ? D3D11_BIND_SHADER_RESOURCE : 0) | (rtv_handle != nullptr ? D3D11_BIND_RENDER_TARGET : 0);
+		tex_2d_desc.BindFlags = static_cast<D3D11_BIND_FLAG>(bind_flags); //(srv_handle != nullptr ? D3D11_BIND_SHADER_RESOURCE : 0) | (rtv_handle != nullptr ? D3D11_BIND_RENDER_TARGET : 0);
 
 		tex_2d_desc.Width = width;
 		tex_2d_desc.Height = height;
@@ -180,7 +180,7 @@ namespace zorya
 		tex_2d_desc.Format = static_cast<DXGI_FORMAT>(format);
 		tex_2d_desc.MipLevels = mip_levels;
 		tex_2d_desc.ArraySize = array_size;
-		tex_2d_desc.BindFlags = bind_flags.value; //(srv_handle != nullptr ? D3D11_BIND_SHADER_RESOURCE : 0) | (rtv_handle != nullptr ? D3D11_BIND_RENDER_TARGET : 0);
+		tex_2d_desc.BindFlags = static_cast<D3D11_BIND_FLAG>(bind_flags); //(srv_handle != nullptr ? D3D11_BIND_SHADER_RESOURCE : 0) | (rtv_handle != nullptr ? D3D11_BIND_RENDER_TARGET : 0);
 
 		tex_2d_desc.Width = width;
 		tex_2d_desc.Height = height;
