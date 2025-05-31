@@ -1,4 +1,5 @@
 #include "PipelineStateObject.h"
+
 #include "xxhash.h"
 
 uint64_t zorya::hash(const PSO_Desc& pso_desc)

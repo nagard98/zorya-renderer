@@ -308,34 +308,34 @@ namespace zorya
 		if (m_device.m_device) m_device.m_device->Release();
 	}
 
-	static DXGI_FORMAT convert_format(Format format)
+	static Texture_Format convert_format(Format format)
 	{
 		switch (format)
 		{
 		case zorya::Format::FORMAT_R8G8B8A8_UNORM:
 		case zorya::Format::FORMAT_R8G8B8A8_UNORM_SRGB:
 		{
-			return DXGI_FORMAT_R8G8B8A8_TYPELESS;
+			return Texture_Format::R8G8B8A8_TYPELESS;
 			break;
 		}
 		case zorya::Format::FORMAT_D32_FLOAT:
 		{
-			return DXGI_FORMAT_R32_TYPELESS;
+			return Texture_Format::R32_TYPELESS;
 			break;
 		}
 		case zorya::Format::FORMAT_D24_UNORM_S8_UINT:
 		{
-			return DXGI_FORMAT_R24G8_TYPELESS;
+			return Texture_Format::R24G8_TYPELESS;
 			break;
 		}
 		case zorya::Format::FORMAT_R16G16_UNORM:
 		{
-			return DXGI_FORMAT_R16G16_TYPELESS;
+			return Texture_Format::R16G16_TYPELESS;
 			break;
 		}
 		case zorya::Format::FORMAT_R11G11B10_FLOAT:
 		{
-			return DXGI_FORMAT_R11G11B10_FLOAT;
+			return Texture_Format::R11G11B10_FLOAT;
 			break;
 		}
 		default:
@@ -346,7 +346,7 @@ namespace zorya
 		return DXGI_FORMAT_UNKNOWN;
 	}
 
-	static DXGI_FORMAT convert_format(Format format, Bind_Flag bind_flag)
+	static Texture_Format convert_format(Format format, Bind_Flag bind_flag)
 	{
 		switch (format)
 		{
@@ -358,7 +358,7 @@ namespace zorya
 			case zorya::UNORDERED_ACCESS:
 			case zorya::RENDER_TARGET:
 			{
-				return DXGI_FORMAT_R8G8B8A8_UNORM;
+				return Texture_Format::R8G8B8A8_UNORM;
 				break;
 			}
 			case zorya::DEPTH_STENCIL:
@@ -378,7 +378,7 @@ namespace zorya
 			case zorya::UNORDERED_ACCESS:
 			case zorya::RENDER_TARGET:
 			{
-				return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+				return Texture_Format::R8G8B8A8_UNORM_SRGB;
 				break;
 			}
 			case zorya::DEPTH_STENCIL:
@@ -398,12 +398,12 @@ namespace zorya
 			case zorya::UNORDERED_ACCESS:
 			case zorya::RENDER_TARGET:
 			{
-				return DXGI_FORMAT_R32_FLOAT;
+				return Texture_Format::R32_FLOAT;
 				break;
 			}
 			case zorya::DEPTH_STENCIL:
 			{
-				return DXGI_FORMAT_D32_FLOAT;
+				return Texture_Format::D32_FLOAT;
 				break;
 			}
 			default:
@@ -422,12 +422,12 @@ namespace zorya
 			case zorya::UNORDERED_ACCESS:
 			case zorya::RENDER_TARGET:
 			{
-				return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+				return Texture_Format::R24_UNORM_X8_TYPELESS;
 				break;
 			}
 			case zorya::DEPTH_STENCIL:
 			{
-				return DXGI_FORMAT_D24_UNORM_S8_UINT;
+				return Texture_Format::D24_UNORM_S8_UINT;
 				break;
 			}
 			default:
@@ -446,7 +446,7 @@ namespace zorya
 			case zorya::UNORDERED_ACCESS:
 			case zorya::RENDER_TARGET:
 			{
-				return DXGI_FORMAT_R11G11B10_FLOAT;
+				return Texture_Format::R11G11B10_FLOAT;
 				break;
 			}
 			case zorya::DEPTH_STENCIL:
@@ -466,7 +466,7 @@ namespace zorya
 			case zorya::UNORDERED_ACCESS:
 			case zorya::RENDER_TARGET:
 			{
-				return DXGI_FORMAT_R16G16_UNORM;
+				return Texture_Format::R16G16_UNORM;
 				break;
 			}
 			case zorya::DEPTH_STENCIL:
@@ -546,9 +546,9 @@ namespace zorya
 		//TODO: fix number of channels on import
 		init_data.SysMemPitch = tex_config->max_width * 4/*tex_config->channels*/ * (texture_asset->is_hdr ? 4 : 1);
 		
-		DXGI_FORMAT format = texture_asset->is_hdr ? DXGI_FORMAT_R32G32B32A32_FLOAT : (tex_config->is_normal_map ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
+		Texture_Format format = texture_asset->is_hdr ? Texture_Format::R32G32B32A32_FLOAT : (tex_config->is_normal_map ? Texture_Format::R8G8B8A8_UNORM : Texture_Format::R8G8B8A8_UNORM_SRGB);
 
-		ZRY_Result res = m_device.create_tex_2d(&hnd_staging_tex, nullptr, ZRY_Usage{ D3D11_USAGE_DEFAULT }, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ format },
+		Result_Code res = m_device.create_tex_2d(&hnd_staging_tex, nullptr, Resource_Usage::DEFAULT, Resource_Bind_Flags::SHADER_RESOURCE | Resource_Bind_Flags::RENDER_TARGET, format,
 			tex_config->max_width, tex_config->max_height, 1,
 			&hnd_staging_srv, nullptr, true, 0, 1, 0);
 		assert(res.value == S_OK);
@@ -559,7 +559,7 @@ namespace zorya
 		ID3D11ShaderResourceView* stag_srv = m_device.get_srv_pointer(hnd_staging_srv);
 		m_context->GenerateMips(stag_srv);
 
-		res = m_device.create_tex_2d(&hnd_final_tex, nullptr, ZRY_Usage{ D3D11_USAGE_DEFAULT}, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE }, ZRY_Format{ format },
+		res = m_device.create_tex_2d(&hnd_final_tex, nullptr, Resource_Usage::DEFAULT, Resource_Bind_Flags::SHADER_RESOURCE , format,
 			tex_config->max_width, tex_config->max_height, 1,
 			hnd_srv, nullptr, false, 0, 1, 0);
 		assert(res.value == S_OK);
@@ -575,24 +575,29 @@ namespace zorya
 	}
 
 
-	ZRY_Result Render_Hardware_Interface::create_tex(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta)
+	Result_Code Render_Hardware_Interface::create_tex(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta)
 	{
-		ZRY_Bind_Flags bind_flags{ 0 };
-		bind_flags.value |= (meta.bind_flags & Bind_Flag::RENDER_TARGET) != 0 ? D3D11_BIND_RENDER_TARGET : 0;
-		bind_flags.value |= (meta.bind_flags & Bind_Flag::SHADER_RESOURCE) != 0 ? D3D11_BIND_SHADER_RESOURCE : 0;
-		bind_flags.value |= (meta.bind_flags & Bind_Flag::UNORDERED_ACCESS) != 0 ? D3D11_BIND_UNORDERED_ACCESS : 0;
-		bind_flags.value |= (meta.bind_flags & Bind_Flag::DEPTH_STENCIL) != 0 ? D3D11_BIND_DEPTH_STENCIL : 0;
+		tex_handle->type = Render_Resource_Type::Texture;
+		return create_tex(reinterpret_cast<Render_Texture_Handle*>(tex_handle), init_data, meta);
+	}
 
-		ZRY_Result zr{ S_OK };
+	Result_Code Render_Hardware_Interface::create_tex(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta)
+	{
+		Resource_Bind_Flags bind_flags = (meta.bind_flags & Bind_Flag::RENDER_TARGET) != 0 ? Resource_Bind_Flags::RENDER_TARGET : Resource_Bind_Flags::NONE;
+		bind_flags |= (meta.bind_flags & Bind_Flag::SHADER_RESOURCE) != 0 ? Resource_Bind_Flags::SHADER_RESOURCE : Resource_Bind_Flags::NONE;
+		bind_flags |= (meta.bind_flags & Bind_Flag::UNORDERED_ACCESS) != 0 ? Resource_Bind_Flags::UNORDERED_ACCESS : Resource_Bind_Flags::NONE;
+		bind_flags |= (meta.bind_flags & Bind_Flag::DEPTH_STENCIL) != 0 ? Resource_Bind_Flags::DEPTH_STENCIL : Resource_Bind_Flags::NONE;
+
+		Result_Code zr{ S_OK };
 
 		if (!meta.desc.is_cubemap)
 		{
 			zr = m_device.create_tex_2d(
 				tex_handle,
 				init_data,
-				ZRY_Usage{ D3D11_USAGE_DEFAULT },
+				Resource_Usage::DEFAULT,
 				bind_flags,
-				ZRY_Format{ convert_format(meta.desc.format) },
+				convert_format(meta.desc.format),
 				meta.desc.width,
 				meta.desc.height,
 				meta.desc.arr_size,
@@ -605,7 +610,7 @@ namespace zorya
 			zr = m_device.create_tex_cubemap(
 				tex_handle,
 				bind_flags,
-				ZRY_Format{ convert_format(meta.desc.format) },
+				convert_format(meta.desc.format),
 				meta.desc.width,
 				meta.desc.height,
 				meta.desc.arr_size,
@@ -617,7 +622,13 @@ namespace zorya
 		return zr;
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_srv(Render_SRV_Handle* srv_handle, Render_Texture_Handle* tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc)
+	Result_Code Render_Hardware_Interface::create_srv(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc)
+	{
+		srv_handle->type = Render_Resource_Type::SRV;
+		return create_srv(reinterpret_cast<Render_SRV_Handle*>(srv_handle), tex_handle, meta, view_desc);
+	}
+
+	Result_Code Render_Hardware_Interface::create_srv(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc)
 	{
 		u32 slice_size = view_desc.slice_size == 0 ? meta.desc.arr_size : view_desc.slice_size;
 
@@ -626,7 +637,7 @@ namespace zorya
 			return m_device.create_srv_tex_2d_array(
 				srv_handle,
 				tex_handle,
-				ZRY_Format{ convert_format(meta.desc.format, Bind_Flag::SHADER_RESOURCE) },
+				convert_format(meta.desc.format, Bind_Flag::SHADER_RESOURCE),
 				slice_size, view_desc.slice_start_index
 			);
 		} else
@@ -634,7 +645,7 @@ namespace zorya
 			return m_device.create_srv_tex_cubemap(
 				srv_handle,
 				tex_handle,
-				ZRY_Format{ convert_format(meta.desc.format, Bind_Flag::SHADER_RESOURCE) },
+				convert_format(meta.desc.format, Bind_Flag::SHADER_RESOURCE),
 				slice_size, view_desc.slice_start_index
 			);
 		}
@@ -642,105 +653,184 @@ namespace zorya
 
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_dsv(Render_DSV_Handle* dsv_handle, Render_Texture_Handle* tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc)
+	Result_Code Render_Hardware_Interface::create_dsv(Render_Resource_Handle* dsv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc)
+	{
+		dsv_handle->type = Render_Resource_Type::DSV;
+		return create_dsv(reinterpret_cast<Render_DSV_Handle*>(dsv_handle), tex_handle, meta, view_desc);
+	}
+
+	Result_Code Render_Hardware_Interface::create_dsv(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc)
 	{
 		u32 slice_size = view_desc.slice_size == 0 ? meta.desc.arr_size : view_desc.slice_size;
 
 		return m_device.create_dsv_tex_2d_array(
 			dsv_handle,
 			tex_handle,
-			ZRY_Format{ convert_format(meta.desc.format, Bind_Flag::DEPTH_STENCIL) },
+			convert_format(meta.desc.format, Bind_Flag::DEPTH_STENCIL),
 			slice_size, 0, view_desc.slice_start_index, view_desc.is_read_only
 		);
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_rtv(Render_RTV_Handle* rtv_handle, Render_Texture_Handle* tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc)
+	Result_Code Render_Hardware_Interface::create_rtv(Render_Resource_Handle* rtv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc)
+	{
+		rtv_handle->type = Render_Resource_Type::DSV;
+		return create_rtv(reinterpret_cast<Render_RTV_Handle*>(rtv_handle), tex_handle, meta, view_desc);
+	}
+
+	Result_Code Render_Hardware_Interface::create_rtv(Render_RTV_Handle* rtv_handle, const Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc)
 	{
 		u32 slice_size = view_desc.slice_size == 0 ? meta.desc.arr_size : view_desc.slice_size;
 
 		return m_device.create_rtv_tex_2d_array(
 			rtv_handle,
 			tex_handle,
-			ZRY_Format{ convert_format(meta.desc.format, Bind_Flag::RENDER_TARGET) },
+			convert_format(meta.desc.format, Bind_Flag::RENDER_TARGET),
 			slice_size, view_desc.mip_index, view_desc.slice_start_index
 		);
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, ZRY_Usage usage, ZRY_Bind_Flags bind_flags, ZRY_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
+	Result_Code Render_Hardware_Interface::create_tex_2d(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, Resource_Usage usage, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
 	{
-		ZRY_Result zr = m_device.create_tex_2d(tex_handle, init_data, usage, bind_flags, format, width, height, array_size, srv_handle, rtv_handle, generate_mips, mip_levels, sample_count, sample_quality);
+		tex_handle->type = Render_Resource_Type::Texture;
+		return create_tex_2d(reinterpret_cast<Render_Texture_Handle*>(tex_handle), init_data, usage, bind_flags, format, width, height, array_size, srv_handle, rtv_handle, generate_mips, mip_levels, sample_count, sample_quality);
+	}
+
+	Result_Code Render_Hardware_Interface::create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, Resource_Usage usage, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
+	{
+		Result_Code zr = m_device.create_tex_2d(tex_handle, init_data, usage, bind_flags, format, width, height, array_size, srv_handle, rtv_handle, generate_mips, mip_levels, sample_count, sample_quality);
 		return zr;
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_srv_tex_2d(Render_SRV_Handle* srv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int mip_levels, int most_detailed_mip)
+	Result_Code Render_Hardware_Interface::create_srv_tex_2d(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels, int most_detailed_mip)
 	{
-		ZRY_Result zr = m_device.create_srv_tex_2d(srv_handle, tex_handle, format, mip_levels, most_detailed_mip);
+		srv_handle->type = Render_Resource_Type::SRV;
+		return create_srv_tex_2d(reinterpret_cast<Render_SRV_Handle*>(srv_handle), tex_handle, format, mip_levels, most_detailed_mip);
+	}
+
+	Result_Code Render_Hardware_Interface::create_srv_tex_2d(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels, int most_detailed_mip)
+	{
+		Result_Code zr = m_device.create_srv_tex_2d(srv_handle, tex_handle, format, mip_levels, most_detailed_mip);
 		return zr;
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_rtv_tex_2d(Render_RTV_Handle* rtv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int mip_slice)
+	Result_Code Render_Hardware_Interface::create_rtv_tex_2d(Render_Resource_Handle* rtv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice)
 	{
-		ZRY_Result zr = m_device.create_rtv_tex_2d(rtv_handle, tex_handle, format, mip_slice);
+		rtv_handle->type = Render_Resource_Type::RTV;
+		return create_rtv_tex_2d(reinterpret_cast<Render_RTV_Handle*>(rtv_handle), tex_handle, format, mip_slice);
+	}
+
+	Result_Code Render_Hardware_Interface::create_rtv_tex_2d(Render_RTV_Handle* rtv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice)
+	{
+		Result_Code zr = m_device.create_rtv_tex_2d(rtv_handle, tex_handle, format, mip_slice);
 		return zr;
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_dsv_tex_2d(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int mip_slice, bool is_read_only)
+	Result_Code Render_Hardware_Interface::create_dsv_tex_2d(Render_Resource_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice, bool is_read_only)
 	{
-		ZRY_Result zr = m_device.create_dsv_tex_2d(dsv_handle, tex_handle, format, mip_slice, is_read_only);
+		dsv_handle->type = Render_Resource_Type::DSV;
+		return create_dsv_tex_2d(reinterpret_cast<Render_DSV_Handle*>(dsv_handle), tex_handle, format, mip_slice, is_read_only);
+	}
+
+	Result_Code Render_Hardware_Interface::create_dsv_tex_2d(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice, bool is_read_only)
+	{
+		Result_Code zr = m_device.create_dsv_tex_2d(dsv_handle, tex_handle, format, mip_slice, is_read_only);
 		return zr;
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_tex_cubemap(Render_Texture_Handle* tex_handle, ZRY_Bind_Flags bind_flags, ZRY_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
+	Result_Code Render_Hardware_Interface::create_tex_cubemap(Render_Resource_Handle* tex_handle, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
 	{
-		ZRY_Result zr = m_device.create_tex_cubemap(tex_handle, bind_flags, format, width, height, array_size, srv_handle, rtv_handle, generate_mips, mip_levels, sample_count, sample_quality);
+		tex_handle->type = Render_Resource_Type::Texture;
+		return create_tex_cubemap(reinterpret_cast<Render_Texture_Handle*>(tex_handle), bind_flags, format, width, height, array_size, srv_handle, rtv_handle, generate_mips, mip_levels, sample_count, sample_quality);
+	}
+
+	Result_Code Render_Hardware_Interface::create_tex_cubemap(Render_Texture_Handle* tex_handle, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
+	{
+		Result_Code zr = m_device.create_tex_cubemap(tex_handle, bind_flags, format, width, height, array_size, srv_handle, rtv_handle, generate_mips, mip_levels, sample_count, sample_quality);
 		return zr;
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_srv_tex_2d_array(Render_SRV_Handle* srv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int array_size, int first_array_slice, int mipLevels, int most_detailed_mip)
+	Result_Code Render_Hardware_Interface::create_srv_tex_2d_array(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size, int first_array_slice, int mipLevels, int most_detailed_mip)
 	{
-		ZRY_Result zr = m_device.create_srv_tex_2d_array(srv_handle, tex_handle, format, array_size, first_array_slice, mipLevels, most_detailed_mip );
+
+		srv_handle->type = Render_Resource_Type::SRV;
+		return create_srv_tex_2d_array(reinterpret_cast<Render_SRV_Handle*>(srv_handle), tex_handle, format, array_size, first_array_slice, mipLevels, most_detailed_mip);
+	}
+
+	Result_Code Render_Hardware_Interface::create_srv_tex_2d_array(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int array_size, int first_array_slice, int mipLevels, int most_detailed_mip)
+	{
+		Result_Code zr = m_device.create_srv_tex_2d_array(srv_handle, tex_handle, format, array_size, first_array_slice, mipLevels, most_detailed_mip );
 		return zr;
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_dsv_tex_2d_array(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int array_size, int mip_slice, int first_array_slice)
+	Result_Code Render_Hardware_Interface::create_dsv_tex_2d_array(Render_Resource_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size, int mip_slice, int first_array_slice)
 	{
-		ZRY_Result zr = m_device.create_dsv_tex_2d_array(dsv_handle, tex_handle, format, array_size, mip_slice, first_array_slice);
+		dsv_handle->type = Render_Resource_Type::DSV;
+		return create_dsv_tex_2d_array(reinterpret_cast<Render_DSV_Handle*>(dsv_handle), tex_handle, format, array_size, mip_slice, first_array_slice);
+	}
+
+	Result_Code Render_Hardware_Interface::create_dsv_tex_2d_array(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int array_size, int mip_slice, int first_array_slice)
+	{
+		Result_Code zr = m_device.create_dsv_tex_2d_array(dsv_handle, tex_handle, format, array_size, mip_slice, first_array_slice);
 		return zr;
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_constant_buffer(Constant_Buffer_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc)
+	Result_Code Render_Hardware_Interface::create_constant_buffer(Render_Resource_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc)
 	{
-		ZRY_Result zr = m_device.create_constant_buffer(hnd, buffer_desc);
+		hnd->type = Render_Resource_Type::Constant_Buffer;
+		return create_constant_buffer(reinterpret_cast<Constant_Buffer_Handle*>(hnd), buffer_desc);
+	}
+
+	Result_Code Render_Hardware_Interface::create_constant_buffer(Constant_Buffer_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc)
+	{
+		Result_Code zr = m_device.create_constant_buffer(hnd, buffer_desc);
 		return zr;
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_pso(PSO_Handle* pso_hnd, const PSO_Desc& pso_desc)
+	Result_Code Render_Hardware_Interface::create_pso(Render_Resource_Handle* pso_hnd, const PSO_Desc& pso_desc)
 	{
-		ZRY_Result zr = m_device.create_pso(pso_hnd, pso_desc);
+		pso_hnd->type = Render_Resource_Type::PSO;
+		return create_pso(reinterpret_cast<PSO_Handle*>(pso_hnd), pso_desc);
+	}
+
+	Result_Code Render_Hardware_Interface::create_pso(PSO_Handle* pso_hnd, const PSO_Desc& pso_desc)
+	{
+		Result_Code zr = m_device.create_pso(pso_hnd, pso_desc);
 		return zr;
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_pixel_shader(Pixel_Shader_Handle* ps_hnd, const Shader_Bytecode& bytecode)
+	Result_Code Render_Hardware_Interface::create_pixel_shader(Pixel_Shader_Handle* ps_hnd, const Shader_Bytecode& bytecode)
 	{
-		ZRY_Result zr = m_device.create_pixel_shader(ps_hnd, bytecode);
+		Result_Code zr = m_device.create_pixel_shader(ps_hnd, bytecode);
 		return zr;
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_vertex_shader(Vertex_Shader_Handle* vs_hnd, const Shader_Bytecode& bytecode)
+	Result_Code Render_Hardware_Interface::create_vertex_shader(Vertex_Shader_Handle* vs_hnd, const Shader_Bytecode& bytecode)
 	{
-		ZRY_Result zr = m_device.create_vertex_shader(vs_hnd, bytecode);
+		Result_Code zr = m_device.create_vertex_shader(vs_hnd, bytecode);
 		return zr;
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_ds_state(DS_State_Handle* ds_state_hnd, const D3D11_DEPTH_STENCIL_DESC& ds_state_desc)
+	Result_Code Render_Hardware_Interface::create_ds_state(Render_Resource_Handle* ds_state_hnd, const Depth_Stencil_State_Desc& ds_state_desc)
 	{
-		ZRY_Result zr = m_device.create_ds_state(ds_state_hnd, ds_state_desc);
+		ds_state_hnd->type = Render_Resource_Type::Depth_Stencil_State;
+		return create_ds_state(reinterpret_cast<DS_State_Handle*>(ds_state_hnd), ds_state_desc);
+	}
+
+	Result_Code Render_Hardware_Interface::create_ds_state(DS_State_Handle* ds_state_hnd, const Depth_Stencil_State_Desc& ds_state_desc)
+	{
+		Result_Code zr = m_device.create_ds_state(ds_state_hnd, ds_state_desc);
 		return zr;
 	}
 
-	ZRY_Result Render_Hardware_Interface::create_rs_state(RS_State_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc)
+	Result_Code Render_Hardware_Interface::create_rs_state(Render_Resource_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc)
 	{
-		ZRY_Result zr = m_device.create_rs_state(rs_state_hnd, rs_state_desc);
+		rs_state_hnd->type = Render_Resource_Type::Rasterizer_State;
+		return create_rs_state(reinterpret_cast<RS_State_Handle*>(rs_state_hnd), rs_state_desc);
+	}
+
+	Result_Code Render_Hardware_Interface::create_rs_state(RS_State_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc)
+	{
+		Result_Code zr = m_device.create_rs_state(rs_state_hnd, rs_state_desc);
 		return zr;
 	}
 
@@ -800,7 +890,7 @@ namespace zorya
 		return m_device.get_pso_pointer(pso_hnd);
 	}
 
-	DS_State_Handle Render_Hardware_Interface::ds_state_hnd_from_desc(const D3D11_DEPTH_STENCIL_DESC& ds_state_desc)
+	DS_State_Handle Render_Hardware_Interface::ds_state_hnd_from_desc(const Depth_Stencil_State_Desc& ds_state_desc)
 	{
 		return m_device.ds_state_hnd_from_desc(ds_state_desc);
 	}

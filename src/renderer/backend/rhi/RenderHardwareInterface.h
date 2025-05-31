@@ -51,27 +51,42 @@ namespace zorya
 		RHI_RESULT load_texture(const wchar_t* path, Shader_Texture2D** shader_texture, bool is_srgb, size_t max_size = 0);
 		RHI_RESULT load_texture2(const Texture2D* const texture_asset, const Texture_Import_Config* const tex_config, Render_SRV_Handle* hnd_srv, size_t max_size = 0);
 
-		ZRY_Result create_tex(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta);
-		ZRY_Result create_srv(Render_SRV_Handle* srv_handle, Render_Texture_Handle* tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
-		ZRY_Result create_dsv(Render_DSV_Handle* dsv_handle, Render_Texture_Handle* tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
-		ZRY_Result create_rtv(Render_RTV_Handle* rtv_handle, Render_Texture_Handle* tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
+		Result_Code create_tex(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta);
+		Result_Code create_tex(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta);
+		Result_Code create_srv(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
+		Result_Code create_srv(Render_SRV_Handle* srv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
+		Result_Code create_dsv(Render_Resource_Handle* dsv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
+		Result_Code create_dsv(Render_DSV_Handle* dsv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
+		Result_Code create_rtv(Render_Resource_Handle* rtv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
+		Result_Code create_rtv(Render_RTV_Handle* rtv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
 
-		ZRY_Result create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, ZRY_Usage usage, ZRY_Bind_Flags bind_flags, ZRY_Format format, float width, float height, int array_size=1, Render_SRV_Handle* srv_handle = nullptr, Render_RTV_Handle* rtv_handle = nullptr, bool generate_mips = false, int mip_levels = 0, int sample_count = 1, int sample_quality = 0);
-		ZRY_Result create_srv_tex_2d(Render_SRV_Handle* srv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int mip_levels = 1, int most_detailed_mip = 0);
-		ZRY_Result create_rtv_tex_2d(Render_RTV_Handle* rtv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int mip_slice = 0);
-		ZRY_Result create_dsv_tex_2d(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int mip_slice = 0, bool is_read_only = false);
+		Result_Code create_tex_2d(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, Resource_Usage usage, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size=1, Render_SRV_Handle* srv_handle = nullptr, Render_RTV_Handle* rtv_handle = nullptr, bool generate_mips = false, int mip_levels = 0, int sample_count = 1, int sample_quality = 0);
+		Result_Code create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, Resource_Usage usage, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size=1, Render_SRV_Handle* srv_handle = nullptr, Render_RTV_Handle* rtv_handle = nullptr, bool generate_mips = false, int mip_levels = 0, int sample_count = 1, int sample_quality = 0);
+		Result_Code create_srv_tex_2d(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels = 1, int most_detailed_mip = 0);
+		Result_Code create_srv_tex_2d(Render_SRV_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels = 1, int most_detailed_mip = 0);
+		Result_Code create_rtv_tex_2d(Render_Resource_Handle* rtv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0);
+		Result_Code create_rtv_tex_2d(Render_RTV_Handle* rtv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0);
+		Result_Code create_dsv_tex_2d(Render_Resource_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0, bool is_read_only = false);
+		Result_Code create_dsv_tex_2d(Render_DSV_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0, bool is_read_only = false);
 
-		ZRY_Result create_tex_cubemap(Render_Texture_Handle* tex_handle, ZRY_Bind_Flags bind_flags, ZRY_Format format, float width, float height, int array_size = 1, Render_SRV_Handle* srv_handle = nullptr, Render_RTV_Handle* rtv_handle = nullptr, bool generate_mips = false, int mip_levels = 0,  int sample_count = 1, int sample_quality = 0);
-		ZRY_Result create_srv_tex_2d_array(Render_SRV_Handle* srv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int array_size = 1, int first_array_slice = 0, int mipLevels = 1, int most_detailed_mip = 0);
-		ZRY_Result create_dsv_tex_2d_array(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle* tex_handle, ZRY_Format format, int array_size = 1, int mip_slice = 0, int first_array_slice = 0);
+		Result_Code create_tex_cubemap(Render_Resource_Handle* tex_handle, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size = 1, Render_SRV_Handle* srv_handle = nullptr, Render_RTV_Handle* rtv_handle = nullptr, bool generate_mips = false, int mip_levels = 0,  int sample_count = 1, int sample_quality = 0);
+		Result_Code create_tex_cubemap(Render_Texture_Handle* tex_handle, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size = 1, Render_SRV_Handle* srv_handle = nullptr, Render_RTV_Handle* rtv_handle = nullptr, bool generate_mips = false, int mip_levels = 0,  int sample_count = 1, int sample_quality = 0);
+		Result_Code create_srv_tex_2d_array(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int first_array_slice = 0, int mipLevels = 1, int most_detailed_mip = 0);
+		Result_Code create_srv_tex_2d_array(Render_SRV_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int first_array_slice = 0, int mipLevels = 1, int most_detailed_mip = 0);
+		Result_Code create_dsv_tex_2d_array(Render_Resource_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int mip_slice = 0, int first_array_slice = 0);
+		Result_Code create_dsv_tex_2d_array(Render_DSV_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int mip_slice = 0, int first_array_slice = 0);
 
-		ZRY_Result create_constant_buffer(Constant_Buffer_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc);
+		Result_Code create_constant_buffer(Render_Resource_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc);
+		Result_Code create_constant_buffer(Constant_Buffer_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc);
 
-		ZRY_Result create_pso(PSO_Handle* pso_hnd, const PSO_Desc& pso_desc);
-		ZRY_Result create_pixel_shader(Pixel_Shader_Handle* ps_hnd, const Shader_Bytecode& bytecode);
-		ZRY_Result create_vertex_shader(Vertex_Shader_Handle* vs_hnd, const Shader_Bytecode& bytecode);
-		ZRY_Result create_ds_state(DS_State_Handle* ds_state_hnd, const D3D11_DEPTH_STENCIL_DESC& ds_state_desc);
-		ZRY_Result create_rs_state(RS_State_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc);
+		Result_Code create_pso(Render_Resource_Handle* pso_hnd, const PSO_Desc& pso_desc);
+		Result_Code create_pso(PSO_Handle* pso_hnd, const PSO_Desc& pso_desc);
+		Result_Code create_pixel_shader(Pixel_Shader_Handle* ps_hnd, const Shader_Bytecode& bytecode);
+		Result_Code create_vertex_shader(Vertex_Shader_Handle* vs_hnd, const Shader_Bytecode& bytecode);
+		Result_Code create_ds_state(Render_Resource_Handle* ds_state_hnd, const Depth_Stencil_State_Desc& ds_state_desc);
+		Result_Code create_ds_state(DS_State_Handle* ds_state_hnd, const Depth_Stencil_State_Desc& ds_state_desc);
+		Result_Code create_rs_state(Render_Resource_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc);
+		Result_Code create_rs_state(RS_State_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc);
 
 		Render_SRV_Handle add_srv(ID3D11ShaderResourceView*&& srv_resource);
 
@@ -87,7 +102,7 @@ namespace zorya
 		ID3D11RasterizerState* get_rs_state_pointer(const RS_State_Handle rs_hnd) const;
 		const Pipeline_State_Object* get_pso_pointer(const PSO_Handle pso_hnd) const;
 
-		DS_State_Handle ds_state_hnd_from_desc(const D3D11_DEPTH_STENCIL_DESC& ds_state_desc);
+		DS_State_Handle ds_state_hnd_from_desc(const Depth_Stencil_State_Desc& ds_state_desc);
 		RS_State_Handle rs_state_hnd_from_desc(const D3D11_RASTERIZER_DESC& rs_state_desc);
 
 		HRESULT resize_window(uint32_t width, uint32_t height);
@@ -112,10 +127,6 @@ namespace zorya
 		DX11_Render_Device m_device;
 
 		Root_Signature gfx_root_signature;
-
-	private:
-		//D3D11_RASTERIZER_DESC m_tmp_rast_desc;
-		//D3D11_DEPTH_STENCIL_DESC m_tmp_depth_sten_desc;
 
 	};
 
