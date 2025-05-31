@@ -83,8 +83,8 @@ namespace zorya
 		Result_Code create_pso(PSO_Handle* pso_hnd, const PSO_Desc& pso_desc);
 		Result_Code create_pixel_shader(Pixel_Shader_Handle* ps_hnd, const Shader_Bytecode& bytecode);
 		Result_Code create_vertex_shader(Vertex_Shader_Handle* vs_hnd, const Shader_Bytecode& bytecode);
-		Result_Code create_ds_state(Render_Resource_Handle* ds_state_hnd, const D3D11_DEPTH_STENCIL_DESC& ds_state_desc);
-		Result_Code create_ds_state(DS_State_Handle* ds_state_hnd, const D3D11_DEPTH_STENCIL_DESC& ds_state_desc);
+		Result_Code create_ds_state(Render_Resource_Handle* ds_state_hnd, const Depth_Stencil_State_Desc& ds_state_desc);
+		Result_Code create_ds_state(DS_State_Handle* ds_state_hnd, const Depth_Stencil_State_Desc& ds_state_desc);
 		Result_Code create_rs_state(Render_Resource_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc);
 		Result_Code create_rs_state(RS_State_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc);
 
@@ -102,7 +102,7 @@ namespace zorya
 		ID3D11RasterizerState* get_rs_state_pointer(const RS_State_Handle rs_hnd) const;
 		const Pipeline_State_Object* get_pso_pointer(const PSO_Handle pso_hnd) const;
 
-		DS_State_Handle ds_state_hnd_from_desc(const D3D11_DEPTH_STENCIL_DESC& ds_state_desc);
+		DS_State_Handle ds_state_hnd_from_desc(const Depth_Stencil_State_Desc& ds_state_desc);
 		RS_State_Handle rs_state_hnd_from_desc(const D3D11_RASTERIZER_DESC& rs_state_desc);
 
 		HRESULT resize_window(uint32_t width, uint32_t height);

@@ -11,11 +11,16 @@
 #include "Platform.h"
 
 #include <renderer/backend/ConstantBuffer.h>
-#include <renderer/backend/PipelineStateObject.h>
 #include <renderer/backend/rhi/RenderDeviceHandles.h>
 
 namespace zorya
 {
+	struct PSO_Desc;
+	struct Pipeline_State_Object;
+	struct Pixel_Shader_Handle;
+	struct Vertex_Shader_Handle;
+	struct Shader_Bytecode;
+	
 	namespace wrl = Microsoft::WRL;
 
 	//TODO: correct types for all these structs
@@ -65,7 +70,6 @@ namespace zorya
 		return static_cast<Resource_Bind_Flags>(static_cast<T>(lhs) & static_cast<T>(rhs));
 	}
 
-
 	inline Resource_Bind_Flags& operator|=(Resource_Bind_Flags& lhs, Resource_Bind_Flags rhs)
 	{
 		lhs = lhs | rhs;
@@ -87,15 +91,70 @@ namespace zorya
 		STAGING = D3D11_USAGE::D3D11_USAGE_STAGING,
 	};
 
-	const D3D11_DEPTH_STENCIL_DESC default_ds_desc{ 
-		true, 
-		D3D11_DEPTH_WRITE_MASK_ALL, 
-		D3D11_COMPARISON_LESS, 
-		false, 
-		D3D11_DEFAULT_STENCIL_READ_MASK, 
-		D3D11_DEFAULT_STENCIL_WRITE_MASK, 
-		D3D11_DEPTH_STENCILOP_DESC{D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS}, 
-		D3D11_DEPTH_STENCILOP_DESC{D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS} 
+	enum class Comparison_Func
+	{
+		NEVER = D3D11_COMPARISON_NEVER,
+		LESS = D3D11_COMPARISON_LESS,
+		EQUAL = D3D11_COMPARISON_EQUAL,
+		LESS_EQUAL = D3D11_COMPARISON_LESS_EQUAL,
+		GREATER = D3D11_COMPARISON_GREATER,
+		NOT_EQUAL = D3D11_COMPARISON_NOT_EQUAL,
+		GREATER_EQUAL = D3D11_COMPARISON_GREATER_EQUAL,
+		ALWAYS = D3D11_COMPARISON_ALWAYS
+	};
+
+	enum class Stencil_Op : uint8_t
+	{
+		KEEP = D3D11_STENCIL_OP_KEEP,
+		ZERO = D3D11_STENCIL_OP_ZERO,
+		REPLACE = D3D11_STENCIL_OP_REPLACE,
+		INVERT = D3D11_STENCIL_OP_INVERT,
+		INCR = D3D11_STENCIL_OP_INCR,
+		DECR = D3D11_STENCIL_OP_DECR
+	};
+
+	struct Stencil_Op_Desc
+	{
+		Stencil_Op stencil_fail_op;
+		Stencil_Op stencil_pass_depth_fail_op;
+		Stencil_Op stencil_depth_pass_op;
+		Comparison_Func stencil_test_func;
+	};
+
+	struct Depth_Stencil_State_Desc
+	{
+		static Depth_Stencil_State_Desc create()
+		{
+			Depth_Stencil_State_Desc desc;
+			desc.depth_enable = true;
+			desc.depth_write_mask = 1;
+			desc.depth_test_func = Comparison_Func::LESS;
+			desc.stencil_enable = false;
+			desc.stencil_read_mask = 0xff;
+			desc.stencil_write_mask = 0xff;
+			desc.front_face.stencil_fail_op = Stencil_Op::KEEP;
+			desc.front_face.stencil_depth_pass_op = Stencil_Op::KEEP;
+			desc.front_face.stencil_pass_depth_fail_op = Stencil_Op::KEEP;
+			desc.front_face.stencil_test_func = Comparison_Func::ALWAYS;
+
+			desc.back_face.stencil_fail_op = Stencil_Op::KEEP;
+			desc.back_face.stencil_depth_pass_op = Stencil_Op::KEEP;
+			desc.back_face.stencil_pass_depth_fail_op = Stencil_Op::KEEP;
+			desc.back_face.stencil_test_func = Comparison_Func::ALWAYS;
+
+			return desc;
+		}
+
+		bool depth_enable;
+		uint8_t depth_write_mask;
+		Comparison_Func depth_test_func;
+
+		bool stencil_enable;
+		uint8_t stencil_read_mask;
+		uint8_t stencil_write_mask;
+		
+		Stencil_Op_Desc front_face;
+		Stencil_Op_Desc back_face;
 	};
 	
 	const D3D11_RASTERIZER_DESC default_rs_desc{ 
@@ -141,43 +200,6 @@ namespace zorya
 		return blend_desc;
 	}
 
-	static PSO_Desc create_default_gbuff_desc()
-	{
-		PSO_Desc pso_desc{};
-		pso_desc.pixel_shader_bytecode = Pixel_Shader::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::STANDARD];
-		pso_desc.vertex_shader_bytecode = Vertex_Shader::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::STANDARD];
-
-		pso_desc.rasterizer_desc.CullMode = D3D11_CULL_BACK;
-		pso_desc.rasterizer_desc.FillMode = D3D11_FILL_SOLID;
-		pso_desc.rasterizer_desc.FrontCounterClockwise = false;
-		pso_desc.rasterizer_desc.DepthClipEnable = true;
-
-		pso_desc.depth_stencil_desc.DepthEnable = true;
-		pso_desc.depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-		pso_desc.depth_stencil_desc.DepthFunc = D3D11_COMPARISON_GREATER;
-
-		pso_desc.depth_stencil_desc.StencilEnable = true;
-		pso_desc.depth_stencil_desc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
-		pso_desc.depth_stencil_desc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
-		pso_desc.depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-		pso_desc.depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-		pso_desc.depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-		pso_desc.depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-
-		pso_desc.depth_stencil_desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-		pso_desc.depth_stencil_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-		pso_desc.depth_stencil_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-		pso_desc.depth_stencil_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-
-		pso_desc.stencil_ref_value = 1;
-
-		pso_desc.input_elements_desc = s_vertex_layout_desc;
-		pso_desc.num_elements = sizeof(s_vertex_layout_desc) / sizeof(s_vertex_layout_desc[0]);
-
-		pso_desc.blend_desc = create_default_blend_desc();
-
-		return pso_desc;
-	}
 
 	template <class T>
 	class Render_Device
@@ -245,7 +267,7 @@ namespace zorya
 		Result_Code create_pso(PSO_Handle* pso_hnd, const PSO_Desc& pso_desc);
 		Result_Code create_pixel_shader(Pixel_Shader_Handle* ps_hnd, const Shader_Bytecode& bytecode);
 		Result_Code create_vertex_shader(Vertex_Shader_Handle* vs_hnd, const Shader_Bytecode& bytecode);
-		Result_Code create_ds_state(DS_State_Handle* ds_state_hnd, const D3D11_DEPTH_STENCIL_DESC& ds_state_desc);
+		Result_Code create_ds_state(DS_State_Handle* ds_state_hnd, const Depth_Stencil_State_Desc& ds_state_desc);
 		Result_Code create_rs_state(RS_State_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc);
 		Result_Code create_bl_state(BL_State_Handle* bl_state_hnd, const D3D11_BLEND_DESC& bl_state_desc);
 
@@ -271,7 +293,7 @@ namespace zorya
 		ID3D11BlendState* get_bl_state_pointer(const BL_State_Handle bl_hnd) const;
 		const Pipeline_State_Object* get_pso_pointer(const PSO_Handle pso_hnd) const;
 
-		DS_State_Handle ds_state_hnd_from_desc(const D3D11_DEPTH_STENCIL_DESC&  ds_state_desc);
+		DS_State_Handle ds_state_hnd_from_desc(const Depth_Stencil_State_Desc&  ds_state_desc);
 		RS_State_Handle rs_state_hnd_from_desc(const D3D11_RASTERIZER_DESC&  rs_state_desc);
 		BL_State_Handle bl_state_hnd_from_desc(const D3D11_BLEND_DESC& bl_state_desc);
 

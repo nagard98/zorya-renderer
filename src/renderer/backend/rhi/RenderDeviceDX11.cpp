@@ -1,4 +1,7 @@
 #include "RenderDevice.h"
+#include <renderer/backend/PipelineStateObject.h>
+#include <renderer/frontend/Shader.h>
+
 #include "xxhash.h"
 
 #include <wrl/client.h>
@@ -9,6 +12,29 @@
 
 namespace zorya
 {
+	static D3D11_DEPTH_STENCIL_DESC internal_translate(const Depth_Stencil_State_Desc& ds_state_desc)
+	{
+		D3D11_DEPTH_STENCIL_DESC d3d11_desc;
+		d3d11_desc.DepthEnable = ds_state_desc.depth_enable;
+		d3d11_desc.DepthWriteMask = static_cast<D3D11_DEPTH_WRITE_MASK>(ds_state_desc.depth_write_mask);
+		d3d11_desc.DepthFunc = static_cast<D3D11_COMPARISON_FUNC>(ds_state_desc.depth_test_func);
+		d3d11_desc.StencilEnable = ds_state_desc.stencil_enable;
+		d3d11_desc.StencilReadMask = ds_state_desc.stencil_read_mask;
+		d3d11_desc.StencilWriteMask = ds_state_desc.stencil_write_mask;
+		
+		d3d11_desc.FrontFace.StencilFailOp = static_cast<D3D11_STENCIL_OP>(ds_state_desc.front_face.stencil_fail_op);
+		d3d11_desc.FrontFace.StencilDepthFailOp = static_cast<D3D11_STENCIL_OP>(ds_state_desc.front_face.stencil_pass_depth_fail_op);
+		d3d11_desc.FrontFace.StencilPassOp = static_cast<D3D11_STENCIL_OP>(ds_state_desc.front_face.stencil_depth_pass_op);
+		d3d11_desc.FrontFace.StencilFunc = static_cast<D3D11_COMPARISON_FUNC>(ds_state_desc.front_face.stencil_test_func);
+		
+		d3d11_desc.BackFace.StencilFailOp = static_cast<D3D11_STENCIL_OP>(ds_state_desc.back_face.stencil_fail_op);
+		d3d11_desc.BackFace.StencilDepthFailOp = static_cast<D3D11_STENCIL_OP>(ds_state_desc.back_face.stencil_pass_depth_fail_op);
+		d3d11_desc.BackFace.StencilPassOp = static_cast<D3D11_STENCIL_OP>(ds_state_desc.back_face.stencil_depth_pass_op);
+		d3d11_desc.BackFace.StencilFunc = static_cast<D3D11_COMPARISON_FUNC>(ds_state_desc.back_face.stencil_test_func);
+
+		return d3d11_desc;
+	}
+
 	namespace wrl = Microsoft::WRL;
 
 	#define SOFT_LIMIT_RESOURCE_TYPE 256
@@ -46,8 +72,9 @@ namespace zorya
 	void DX11_Render_Device::init()
 	{
 		DS_State_Handle ds_state_hnd;
+		const auto default_ds_desc = Depth_Stencil_State_Desc::create();
 		create_ds_state(&ds_state_hnd, default_ds_desc);
-		m_ds_state_handles.insert({XXH64(&default_ds_desc, sizeof(default_ds_desc), 0) , ds_state_hnd});
+		m_ds_state_handles.insert({XXH64(&default_ds_desc, sizeof(Depth_Stencil_State_Desc), 0) , ds_state_hnd});
 		
 		RS_State_Handle rs_state_hnd;
 		create_rs_state(&rs_state_hnd, default_rs_desc);
@@ -404,9 +431,10 @@ namespace zorya
 		return Result_Code{ hr };
 	}
 
-	Result_Code DX11_Render_Device::create_ds_state(DS_State_Handle* ds_state_hnd, const D3D11_DEPTH_STENCIL_DESC& ds_state_desc)
+	Result_Code DX11_Render_Device::create_ds_state(DS_State_Handle* ds_state_hnd, const Depth_Stencil_State_Desc& ds_state_desc)
 	{
-		HRESULT hr = m_device->CreateDepthStencilState(&ds_state_desc, &m_ds_state_resources.at(m_ds_state_count));
+		D3D11_DEPTH_STENCIL_DESC d3d11_ds_state_desc = internal_translate(ds_state_desc);
+		HRESULT hr = m_device->CreateDepthStencilState(&d3d11_ds_state_desc, &m_ds_state_resources.at(m_ds_state_count));
 		if (!FAILED(hr))
 		{
 			ds_state_hnd->index = m_ds_state_count;
@@ -525,7 +553,7 @@ namespace zorya
 		return pso;
 	}
 
-	DS_State_Handle DX11_Render_Device::ds_state_hnd_from_desc(const D3D11_DEPTH_STENCIL_DESC& ds_state_desc)
+	DS_State_Handle DX11_Render_Device::ds_state_hnd_from_desc(const Depth_Stencil_State_Desc& ds_state_desc)
 	{
 		uint64_t ds_hash = XXH64(&ds_state_desc, sizeof(ds_state_desc), 0);
 		auto found_it = m_ds_state_handles.find(ds_hash);

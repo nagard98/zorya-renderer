@@ -806,13 +806,13 @@ namespace zorya
 		return zr;
 	}
 
-	Result_Code Render_Hardware_Interface::create_ds_state(Render_Resource_Handle* ds_state_hnd, const D3D11_DEPTH_STENCIL_DESC& ds_state_desc)
+	Result_Code Render_Hardware_Interface::create_ds_state(Render_Resource_Handle* ds_state_hnd, const Depth_Stencil_State_Desc& ds_state_desc)
 	{
 		ds_state_hnd->type = Render_Resource_Type::Depth_Stencil_State;
 		return create_ds_state(reinterpret_cast<DS_State_Handle*>(ds_state_hnd), ds_state_desc);
 	}
 
-	Result_Code Render_Hardware_Interface::create_ds_state(DS_State_Handle* ds_state_hnd, const D3D11_DEPTH_STENCIL_DESC& ds_state_desc)
+	Result_Code Render_Hardware_Interface::create_ds_state(DS_State_Handle* ds_state_hnd, const Depth_Stencil_State_Desc& ds_state_desc)
 	{
 		Result_Code zr = m_device.create_ds_state(ds_state_hnd, ds_state_desc);
 		return zr;
@@ -886,7 +886,7 @@ namespace zorya
 		return m_device.get_pso_pointer(pso_hnd);
 	}
 
-	DS_State_Handle Render_Hardware_Interface::ds_state_hnd_from_desc(const D3D11_DEPTH_STENCIL_DESC& ds_state_desc)
+	DS_State_Handle Render_Hardware_Interface::ds_state_hnd_from_desc(const Depth_Stencil_State_Desc& ds_state_desc)
 	{
 		return m_device.ds_state_hnd_from_desc(ds_state_desc);
 	}
