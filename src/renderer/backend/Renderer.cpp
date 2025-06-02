@@ -58,70 +58,115 @@ namespace zorya
 		m_shadow_map_viewport.width = 4096.0f;
 		m_shadow_map_viewport.height = 4096.f;
 
-		D3D11_BUFFER_DESC material_cb_desc;
+		//D3D11_BUFFER_DESC material_cb_desc;
+		//ZeroMemory(&material_cb_desc, sizeof(material_cb_desc));
+		//material_cb_desc.ByteWidth = sizeof(Material_Params);
+		//material_cb_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		//material_cb_desc.Usage = D3D11_USAGE_DEFAULT;
+
+		Buffer_Desc material_cb_desc;
 		ZeroMemory(&material_cb_desc, sizeof(material_cb_desc));
-		material_cb_desc.ByteWidth = sizeof(Material_Params);
-		material_cb_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		material_cb_desc.Usage = D3D11_USAGE_DEFAULT;
+		material_cb_desc.byte_width = sizeof(Material_Params);
+		material_cb_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		material_cb_desc.usage = Resource_Usage::DEFAULT;
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&m_hnd_object_cb, &material_cb_desc).value);
 		
-		
-		D3D11_BUFFER_DESC build_ibl_per_draw_cb_desc;
+		//
+		//D3D11_BUFFER_DESC build_ibl_per_draw_cb_desc;
+		//ZeroMemory(&build_ibl_per_draw_cb_desc, sizeof(build_ibl_per_draw_cb_desc));
+		//build_ibl_per_draw_cb_desc.ByteWidth = max(sizeof(float) + sizeof(u32), 16);
+		//build_ibl_per_draw_cb_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		//build_ibl_per_draw_cb_desc.Usage = D3D11_USAGE_DEFAULT;
+
+		Buffer_Desc build_ibl_per_draw_cb_desc;
 		ZeroMemory(&build_ibl_per_draw_cb_desc, sizeof(build_ibl_per_draw_cb_desc));
-		build_ibl_per_draw_cb_desc.ByteWidth = max(sizeof(float) + sizeof(u32), 16);
-		build_ibl_per_draw_cb_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		build_ibl_per_draw_cb_desc.Usage = D3D11_USAGE_DEFAULT;
+		build_ibl_per_draw_cb_desc.byte_width = max(sizeof(float) + sizeof(u32), 16);
+		build_ibl_per_draw_cb_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		build_ibl_per_draw_cb_desc.usage = Resource_Usage::DEFAULT;
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_ibl_spec_draw_cb, &build_ibl_per_draw_cb_desc).value);
 
 
 		//World transform constant buffer setup---------------------------------------------------
-		D3D11_BUFFER_DESC cb_world_desc;
-		cb_world_desc.Usage = D3D11_USAGE_DEFAULT;
-		cb_world_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		cb_world_desc.CPUAccessFlags = 0;
-		cb_world_desc.MiscFlags = 0;
-		cb_world_desc.ByteWidth = sizeof(World_CB);
+		//D3D11_BUFFER_DESC cb_world_desc;
+		//cb_world_desc.Usage = D3D11_USAGE_DEFAULT;
+		//cb_world_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		//cb_world_desc.CPUAccessFlags = 0;
+		//cb_world_desc.MiscFlags = 0;
+		//cb_world_desc.ByteWidth = sizeof(World_CB);
+		Buffer_Desc cb_world_desc;
+		cb_world_desc.usage = Resource_Usage::DEFAULT;
+		cb_world_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		cb_world_desc.access_flags = CPU_Access_Flags::NONE;
+		cb_world_desc.misc_flags = Resource_Misc_Flags::NONE;
+		cb_world_desc.byte_width = sizeof(World_CB);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_world_cb, &cb_world_desc).value);
 				
 		//---------------------------------------------------
 
-		D3D11_BUFFER_DESC cb_cam_transf_desc;
+		/*D3D11_BUFFER_DESC cb_cam_transf_desc;
 		cb_cam_transf_desc.Usage = D3D11_USAGE_DEFAULT;
 		cb_cam_transf_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 		cb_cam_transf_desc.CPUAccessFlags = 0;
 		cb_cam_transf_desc.MiscFlags = 0;
-		cb_cam_transf_desc.ByteWidth = sizeof(Cam_Transformation);
+		cb_cam_transf_desc.ByteWidth = sizeof(Cam_Transformation);*/
+
+		Buffer_Desc cb_cam_transf_desc;
+		cb_cam_transf_desc.usage = Resource_Usage::DEFAULT;
+		cb_cam_transf_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		cb_cam_transf_desc.access_flags = CPU_Access_Flags::NONE;
+		cb_cam_transf_desc.misc_flags = Resource_Misc_Flags::NONE;
+		cb_cam_transf_desc.byte_width = sizeof(Cam_Transformation);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_cam_transf_cb, &cb_cam_transf_desc).value);
 
-		D3D11_BUFFER_DESC cb_light_draw_desc;
-		cb_light_draw_desc.Usage = D3D11_USAGE_DEFAULT;
-		cb_light_draw_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		cb_light_draw_desc.CPUAccessFlags = 0;
-		cb_light_draw_desc.MiscFlags = 0;
-		cb_light_draw_desc.ByteWidth = sizeof(Light_Draw_Constants);
+		//D3D11_BUFFER_DESC cb_light_draw_desc;
+		//cb_light_draw_desc.Usage = D3D11_USAGE_DEFAULT;
+		//cb_light_draw_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		//cb_light_draw_desc.CPUAccessFlags = 0;
+		//cb_light_draw_desc.MiscFlags = 0;
+		//cb_light_draw_desc.ByteWidth = sizeof(Light_Draw_Constants);
+		
+		Buffer_Desc cb_light_draw_desc;
+		cb_light_draw_desc.usage = Resource_Usage::DEFAULT;
+		cb_light_draw_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		cb_light_draw_desc.access_flags = CPU_Access_Flags::NONE;
+		cb_light_draw_desc.misc_flags = Resource_Misc_Flags::NONE;
+		cb_light_draw_desc.byte_width = sizeof(Light_Draw_Constants);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_light_draw_cb, &cb_light_draw_desc).value);
 
-		D3D11_BUFFER_DESC cb_sss_draw_desc;
-		cb_sss_draw_desc.Usage = D3D11_USAGE_DEFAULT;
-		cb_sss_draw_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		cb_sss_draw_desc.CPUAccessFlags = 0;
-		cb_sss_draw_desc.MiscFlags = 0;
-		cb_sss_draw_desc.ByteWidth = sizeof(SSS_Draw_Constants);
+		//D3D11_BUFFER_DESC cb_sss_draw_desc;
+		//cb_sss_draw_desc.Usage = D3D11_USAGE_DEFAULT;
+		//cb_sss_draw_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		//cb_sss_draw_desc.CPUAccessFlags = 0;
+		//cb_sss_draw_desc.MiscFlags = 0;
+		//cb_sss_draw_desc.ByteWidth = sizeof(SSS_Draw_Constants);
+		Buffer_Desc cb_sss_draw_desc;
+		cb_sss_draw_desc.usage = Resource_Usage::DEFAULT;
+		cb_sss_draw_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		cb_sss_draw_desc.access_flags = CPU_Access_Flags::NONE;
+		cb_sss_draw_desc.misc_flags = Resource_Misc_Flags::NONE;
+		cb_sss_draw_desc.byte_width = sizeof(SSS_Draw_Constants);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_sss_draw_cb, &cb_sss_draw_desc).value);
 
 		//View matrix constant buffer setup-------------------------------------------------------------
-		D3D11_BUFFER_DESC cb_cam_desc;
+		/*D3D11_BUFFER_DESC cb_cam_desc;
 		cb_cam_desc.Usage = D3D11_USAGE_DEFAULT;
 		cb_cam_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 		cb_cam_desc.CPUAccessFlags = 0;
 		cb_cam_desc.MiscFlags = 0;
-		cb_cam_desc.ByteWidth = sizeof(View_CB);
+		cb_cam_desc.ByteWidth = sizeof(View_CB);*/
+
+		Buffer_Desc cb_cam_desc;
+		cb_cam_desc.usage = Resource_Usage::DEFAULT;
+		cb_cam_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		cb_cam_desc.access_flags = CPU_Access_Flags::NONE;
+		cb_cam_desc.misc_flags = Resource_Misc_Flags::NONE;
+		cb_cam_desc.byte_width = sizeof(View_CB);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_view_cb, &cb_cam_desc).value);
 
@@ -129,12 +174,12 @@ namespace zorya
 		//----------------------------------------------------------------
 
 		//Projection matrix constant buffer setup--------------------------------------
-		D3D11_BUFFER_DESC cb_proj_desc;
-		cb_proj_desc.Usage = D3D11_USAGE_DEFAULT;
-		cb_proj_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		cb_proj_desc.CPUAccessFlags = 0;
-		cb_proj_desc.MiscFlags = 0;
-		cb_proj_desc.ByteWidth = sizeof(Proj_CB);
+		Buffer_Desc cb_proj_desc;
+		cb_proj_desc.usage= Resource_Usage::DEFAULT;
+		cb_proj_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		cb_proj_desc.access_flags = CPU_Access_Flags::NONE;
+		cb_proj_desc.misc_flags = Resource_Misc_Flags::NONE;
+		cb_proj_desc.byte_width = sizeof(Proj_CB);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_proj_cb, &cb_proj_desc).value);
 
@@ -142,39 +187,57 @@ namespace zorya
 		//------------------------------------------------------------------
 
 		//Light constant buffer setup---------------------------------------
-		D3D11_BUFFER_DESC light_buff_desc;
+		/*D3D11_BUFFER_DESC light_buff_desc;
 		ZeroMemory(&light_buff_desc, sizeof(light_buff_desc));
 		light_buff_desc.Usage = D3D11_USAGE_DEFAULT;
 		light_buff_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		light_buff_desc.ByteWidth = sizeof(Frame_Constant_Buff);
+		light_buff_desc.ByteWidth = sizeof(Frame_Constant_Buff);*/
+
+		Buffer_Desc light_buff_desc;
+		ZeroMemory(&light_buff_desc, sizeof(light_buff_desc));
+		light_buff_desc.usage = Resource_Usage::DEFAULT;
+		light_buff_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		light_buff_desc.byte_width = sizeof(Frame_Constant_Buff);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&m_hnd_frame_cb, &light_buff_desc).value);
 
 		//---------------------------------------------------------
 
-		D3D11_BUFFER_DESC inv_matrix_cb_desc;
+		/*D3D11_BUFFER_DESC inv_matrix_cb_desc;
 		ZeroMemory(&inv_matrix_cb_desc, sizeof(inv_matrix_cb_desc));
 		inv_matrix_cb_desc.ByteWidth = sizeof(dx::XMMatrixIdentity()) * 2;
 		inv_matrix_cb_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		inv_matrix_cb_desc.Usage = D3D11_USAGE_DEFAULT;
+		inv_matrix_cb_desc.Usage = D3D11_USAGE_DEFAULT;*/
+
+		Buffer_Desc inv_matrix_cb_desc;
+		ZeroMemory(&inv_matrix_cb_desc, sizeof(inv_matrix_cb_desc));
+		inv_matrix_cb_desc.byte_width = sizeof(dx::XMMatrixIdentity()) * 2;
+		inv_matrix_cb_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		inv_matrix_cb_desc.usage = Resource_Usage::DEFAULT;
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_inv_mat_cb, &inv_matrix_cb_desc).value);
 
 		//---------------------------------------------------------
 
-		D3D11_BUFFER_DESC dir_shadow_map_buff_desc;
+		/*D3D11_BUFFER_DESC dir_shadow_map_buff_desc;
 		ZeroMemory(&dir_shadow_map_buff_desc, sizeof(D3D11_BUFFER_DESC));
 		dir_shadow_map_buff_desc.Usage = D3D11_USAGE_DEFAULT;
 		dir_shadow_map_buff_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		dir_shadow_map_buff_desc.ByteWidth = sizeof(Dir_Shadow_CB);
+		dir_shadow_map_buff_desc.ByteWidth = sizeof(Dir_Shadow_CB);*/
+
+		Buffer_Desc dir_shadow_map_buff_desc;
+		ZeroMemory(&dir_shadow_map_buff_desc, sizeof(D3D11_BUFFER_DESC));
+		dir_shadow_map_buff_desc.usage = Resource_Usage::DEFAULT;
+		dir_shadow_map_buff_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		dir_shadow_map_buff_desc.byte_width = sizeof(Dir_Shadow_CB);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_dir_shad_cb, &dir_shadow_map_buff_desc).value);
 
-		D3D11_BUFFER_DESC omni_dir_shadow_map_buff_desc;
+		Buffer_Desc omni_dir_shadow_map_buff_desc;
 		ZeroMemory(&omni_dir_shadow_map_buff_desc, sizeof(D3D11_BUFFER_DESC));
-		omni_dir_shadow_map_buff_desc.Usage = D3D11_USAGE_DEFAULT;
-		omni_dir_shadow_map_buff_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		omni_dir_shadow_map_buff_desc.ByteWidth = sizeof(Omni_Dir_Shadow_CB);
+		omni_dir_shadow_map_buff_desc.usage = Resource_Usage::DEFAULT;
+		omni_dir_shadow_map_buff_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		omni_dir_shadow_map_buff_desc.byte_width = sizeof(Omni_Dir_Shadow_CB);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_omni_dir_shad_cb, &omni_dir_shadow_map_buff_desc).value);
 

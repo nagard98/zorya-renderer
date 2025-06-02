@@ -343,7 +343,7 @@ namespace zorya
 			break;
 		}
 
-		return DXGI_FORMAT_UNKNOWN;
+		return Texture_Format::UNKNOWN;
 	}
 
 	static Texture_Format convert_format(Format format, Bind_Flag bind_flag)
@@ -485,7 +485,7 @@ namespace zorya
 		}
 		}
 
-		return DXGI_FORMAT_UNKNOWN;
+		return Texture_Format::UNKNOWN;
 	}
 
 
@@ -673,7 +673,7 @@ namespace zorya
 
 	Result_Code Render_Hardware_Interface::create_rtv(Render_Resource_Handle* rtv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc)
 	{
-		rtv_handle->type = Render_Resource_Type::DSV;
+		rtv_handle->type = Render_Resource_Type::RTV;
 		return create_rtv(reinterpret_cast<Render_RTV_Handle*>(rtv_handle), tex_handle, meta, view_desc);
 	}
 
@@ -774,13 +774,13 @@ namespace zorya
 		return zr;
 	}
 
-	Result_Code Render_Hardware_Interface::create_constant_buffer(Render_Resource_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc)
+	Result_Code Render_Hardware_Interface::create_constant_buffer(Render_Resource_Handle* hnd, const Buffer_Desc* buffer_desc)
 	{
 		hnd->type = Render_Resource_Type::Constant_Buffer;
 		return create_constant_buffer(reinterpret_cast<Constant_Buffer_Handle*>(hnd), buffer_desc);
 	}
 
-	Result_Code Render_Hardware_Interface::create_constant_buffer(Constant_Buffer_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc)
+	Result_Code Render_Hardware_Interface::create_constant_buffer(Constant_Buffer_Handle* hnd, const Buffer_Desc* buffer_desc)
 	{
 		Result_Code zr = m_device.create_constant_buffer(hnd, buffer_desc);
 		return zr;

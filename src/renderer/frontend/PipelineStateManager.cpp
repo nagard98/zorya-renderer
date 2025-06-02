@@ -6,7 +6,7 @@
 
 namespace zorya
 {
-
+	static D3D11_BLEND_DESC create_default_blend_desc();
 	static PSO_Desc create_default_gbuff_desc();
 
 	Pipeline_State_Manager pipeline_state_manager;
@@ -334,6 +334,29 @@ namespace zorya
 		return m_pipeline_states[pipeline_state_id];
 	}
 
+	static D3D11_BLEND_DESC create_default_blend_desc()
+	{
+		D3D11_BLEND_DESC blend_desc;
+		blend_desc.AlphaToCoverageEnable = false;
+		blend_desc.IndependentBlendEnable = false;
+		blend_desc.RenderTarget[0].BlendEnable = false;
+		blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+		blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_ZERO;
+		blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+		blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+		blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+		blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		blend_desc.RenderTarget[1].BlendEnable = false;
+		blend_desc.RenderTarget[2].BlendEnable = false;
+		blend_desc.RenderTarget[3].BlendEnable = false;
+		blend_desc.RenderTarget[4].BlendEnable = false;
+		blend_desc.RenderTarget[5].BlendEnable = false;
+		blend_desc.RenderTarget[6].BlendEnable = false;
+		blend_desc.RenderTarget[7].BlendEnable = false;
+
+		return blend_desc;
+	}
 
 	static PSO_Desc create_default_gbuff_desc()
 	{

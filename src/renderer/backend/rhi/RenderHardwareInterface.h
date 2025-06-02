@@ -76,8 +76,8 @@ namespace zorya
 		Result_Code create_dsv_tex_2d_array(Render_Resource_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int mip_slice = 0, int first_array_slice = 0);
 		Result_Code create_dsv_tex_2d_array(Render_DSV_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int mip_slice = 0, int first_array_slice = 0);
 
-		Result_Code create_constant_buffer(Render_Resource_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc);
-		Result_Code create_constant_buffer(Constant_Buffer_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc);
+		Result_Code create_constant_buffer(Render_Resource_Handle* hnd, const Buffer_Desc* buffer_desc);
+		Result_Code create_constant_buffer(Constant_Buffer_Handle* hnd, const Buffer_Desc* buffer_desc);
 
 		Result_Code create_pso(Render_Resource_Handle* pso_hnd, const PSO_Desc& pso_desc);
 		Result_Code create_pso(PSO_Handle* pso_hnd, const PSO_Desc& pso_desc);

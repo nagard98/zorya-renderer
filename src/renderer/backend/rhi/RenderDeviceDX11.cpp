@@ -35,6 +35,19 @@ namespace zorya
 		return d3d11_desc;
 	}
 
+	static D3D11_BUFFER_DESC internal_translate(const Buffer_Desc& buffer_desc)
+	{
+		D3D11_BUFFER_DESC d3d11_desc;
+		d3d11_desc.ByteWidth = buffer_desc.byte_width;
+		d3d11_desc.Usage = static_cast<D3D11_USAGE>(buffer_desc.usage);
+		d3d11_desc.BindFlags = static_cast<UINT>(buffer_desc.bind_flags);
+		d3d11_desc.MiscFlags = static_cast<UINT>(buffer_desc.misc_flags);
+		d3d11_desc.CPUAccessFlags = static_cast<UINT>(buffer_desc.access_flags);
+		d3d11_desc.StructureByteStride = buffer_desc.byte_stride_structured_buff;
+
+		return d3d11_desc;
+	}
+
 	namespace wrl = Microsoft::WRL;
 
 	#define SOFT_LIMIT_RESOURCE_TYPE 256
@@ -330,14 +343,16 @@ namespace zorya
 		return zr;
 	}
 
-	Result_Code DX11_Render_Device::create_constant_buffer(Constant_Buffer_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc)
+	Result_Code DX11_Render_Device::create_constant_buffer(Constant_Buffer_Handle* hnd, const Buffer_Desc* buffer_desc)
 	{
-		zassert((buffer_desc->BindFlags & D3D11_BIND_CONSTANT_BUFFER) != 0);
+		zassert(buffer_desc != nullptr);
+		D3D11_BUFFER_DESC d3d11_buffer_desc = internal_translate(*buffer_desc);
+		zassert((d3d11_buffer_desc.BindFlags & D3D11_BIND_CONSTANT_BUFFER) != 0);
 		Constant_Buffer& const_buffer = m_cb_resources.at(m_const_buff_count);
 		hnd->index = m_const_buff_count;
 		m_const_buff_count += 1;
 
-		HRESULT hr = m_device->CreateBuffer(buffer_desc, nullptr, &const_buffer.buffer);
+		HRESULT hr = m_device->CreateBuffer(&d3d11_buffer_desc, nullptr, &const_buffer.buffer);
 
 		return Result_Code{ hr };
 	}
@@ -675,46 +690,6 @@ namespace zorya
 		}
 		m_input_layout_count = 0;
 
-	}
-
-
-
-	PSO_Desc create_default_gbuff_desc()
-	{
-		PSO_Desc pso_desc{};
-		pso_desc.pixel_shader_bytecode = Pixel_Shader::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::STANDARD];
-		pso_desc.vertex_shader_bytecode = Vertex_Shader::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::STANDARD];
-
-		pso_desc.rasterizer_desc.CullMode = D3D11_CULL_BACK;
-		pso_desc.rasterizer_desc.FillMode = D3D11_FILL_SOLID;
-		pso_desc.rasterizer_desc.FrontCounterClockwise = false;
-		pso_desc.rasterizer_desc.DepthClipEnable = true;
-
-		pso_desc.depth_stencil_desc.DepthEnable = true;
-		pso_desc.depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-		pso_desc.depth_stencil_desc.DepthFunc = D3D11_COMPARISON_GREATER;
-
-		pso_desc.depth_stencil_desc.StencilEnable = true;
-		pso_desc.depth_stencil_desc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
-		pso_desc.depth_stencil_desc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
-		pso_desc.depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-		pso_desc.depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-		pso_desc.depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-		pso_desc.depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-
-		pso_desc.depth_stencil_desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-		pso_desc.depth_stencil_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-		pso_desc.depth_stencil_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-		pso_desc.depth_stencil_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-
-		pso_desc.stencil_ref_value = 1;
-
-		pso_desc.input_elements_desc = s_vertex_layout_desc;
-		pso_desc.num_elements = sizeof(s_vertex_layout_desc) / sizeof(s_vertex_layout_desc[0]);
-
-		pso_desc.blend_desc = create_default_blend_desc();
-
-		return pso_desc;
 	}
 
 

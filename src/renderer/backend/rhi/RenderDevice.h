@@ -31,6 +31,7 @@ namespace zorya
 
 	enum class Texture_Format : uint8_t
 	{
+		UNKNOWN,
 		R8G8B8A8_TYPELESS = DXGI_FORMAT_R8G8B8A8_TYPELESS,
 		R8G8B8A8_UNORM = DXGI_FORMAT_R8G8B8A8_UNORM,
 		R8G8B8A8_UNORM_SRGB = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
@@ -44,6 +45,20 @@ namespace zorya
 		R16G16_UNORM = DXGI_FORMAT_R16G16_UNORM,
 		R16G16_TYPELESS = DXGI_FORMAT_R16G16_TYPELESS,
 		R32G32B32A32_FLOAT = DXGI_FORMAT_R32G32B32A32_FLOAT
+	};
+
+	enum class CPU_Access_Flags : uint8_t
+	{
+		NONE = 0,
+		WRITE = 1,
+		READ = 2
+	};
+
+	enum class Resource_Misc_Flags : uint16_t
+	{
+		NONE = 0,
+		GENERATE_MIPS = D3D11_RESOURCE_MISC_GENERATE_MIPS,
+		TEXTURE_CUBE = D3D11_RESOURCE_MISC_TEXTURECUBE
 	};
 
 	enum class Resource_Bind_Flags : uint8_t
@@ -157,6 +172,29 @@ namespace zorya
 		Stencil_Op_Desc back_face;
 	};
 	
+	struct Buffer_Desc
+	{
+		static Buffer_Desc create()
+		{
+			Buffer_Desc desc;
+			desc.byte_width = 0;
+			desc.usage = Resource_Usage::DEFAULT;
+			desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+			desc.misc_flags = Resource_Misc_Flags::NONE;
+			desc.access_flags = CPU_Access_Flags::NONE;
+			desc.byte_stride_structured_buff = 0;
+
+			return desc;
+		}
+
+		uint32_t byte_width;
+		Resource_Usage usage;
+		Resource_Bind_Flags bind_flags;
+		Resource_Misc_Flags misc_flags;
+		CPU_Access_Flags access_flags;
+		uint32_t byte_stride_structured_buff;
+	};
+
 	const D3D11_RASTERIZER_DESC default_rs_desc{ 
 		D3D11_FILL_SOLID,
 		D3D11_CULL_BACK,
@@ -175,30 +213,6 @@ namespace zorya
 		false,
 		{false},
 	};
-
-	static D3D11_BLEND_DESC create_default_blend_desc()
-	{
-		D3D11_BLEND_DESC blend_desc;
-		blend_desc.AlphaToCoverageEnable = false;
-		blend_desc.IndependentBlendEnable = false;
-		blend_desc.RenderTarget[0].BlendEnable = false;
-		blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
-		blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_ZERO;
-		blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-		blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-		blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-		blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-		blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-		blend_desc.RenderTarget[1].BlendEnable = false;
-		blend_desc.RenderTarget[2].BlendEnable = false;
-		blend_desc.RenderTarget[3].BlendEnable = false;
-		blend_desc.RenderTarget[4].BlendEnable = false;
-		blend_desc.RenderTarget[5].BlendEnable = false;
-		blend_desc.RenderTarget[6].BlendEnable = false;
-		blend_desc.RenderTarget[7].BlendEnable = false;
-
-		return blend_desc;
-	}
 
 
 	template <class T>
@@ -229,27 +243,6 @@ namespace zorya
 
 		void init();
 
-		//template <typename T>
-		//Result_Code create_constant_buffer(constant_buffer_handle<T>* hnd_constant_buffer, const char* name)
-		//{
-		//	D3D11_BUFFER_DESC buffer_desc{};
-		//	buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		//	buffer_desc.ByteWidth = sizeof(T);
-
-		//	Constant_Buffer& const_buffer = m_cb_resources.at(m_const_buff_count);
-		//	const_buffer.constant_buffer_name = name;
-
-		//	HRESULT hr = m_device->CreateBuffer(&buffer_desc, nullptr, &const_buffer.buffer);
-		//	if (!FAILED(hr))
-		//	{
-		//		hnd_constant_buffer->index = m_const_buff_count;
-		//		m_const_buff_count += 1;
-		//	}
-
-		//	return Result_Code{ hr };
-		//}
-
-
 		Result_Code create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, Resource_Usage usage, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size = 1, Render_SRV_Handle* srv_handle = nullptr, Render_RTV_Handle* rtv_handle = nullptr, bool generate_mips = false, int mip_levels = 1, int sample_count = 1, int sample_quality = 0);
 		Result_Code create_srv_tex_2d(Render_SRV_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels = 1, int most_detailed_mip = 0);
 		Result_Code create_rtv_tex_2d(Render_RTV_Handle* rtv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0);
@@ -262,7 +255,7 @@ namespace zorya
 		Result_Code create_tex_cubemap(Render_Texture_Handle* tex_handle, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size = 1, Render_SRV_Handle* srv_handle = nullptr, Render_RTV_Handle* rtv_handle = nullptr, bool generate_mips = false, int mip_levels = 1, int sample_count = 1, int sample_quality = 0);
 		Result_Code create_srv_tex_cubemap(Render_SRV_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int first_array_slice = 0, int mipLevels = 1, int most_detailed_mip = 0);
 
-		Result_Code create_constant_buffer(Constant_Buffer_Handle* hnd, const D3D11_BUFFER_DESC* buffer_desc);
+		Result_Code create_constant_buffer(Constant_Buffer_Handle* hnd, const Buffer_Desc* buffer_desc);
 
 		Result_Code create_pso(PSO_Handle* pso_hnd, const PSO_Desc& pso_desc);
 		Result_Code create_pixel_shader(Pixel_Shader_Handle* ps_hnd, const Shader_Bytecode& bytecode);
@@ -272,13 +265,6 @@ namespace zorya
 		Result_Code create_bl_state(BL_State_Handle* bl_state_hnd, const D3D11_BLEND_DESC& bl_state_desc);
 
 		Render_SRV_Handle add_srv(ID3D11ShaderResourceView*&& srv_resource);
-
-		//template <typename T>
-		//Constant_Buffer* get_cb_pointer(const constant_buffer_handle<T> cb_hnd)
-		//{
-		//	zassert(cb_hnd.index < m_const_buff_count);
-		//	return &m_cb_resources.at(cb_hnd.index);
-		//}
 
 		//TODO: remove this method when rest of abstraction is implemented?
 		ID3D11Texture2D* get_tex_2d_pointer(const Render_Texture_Handle rt_hnd) const;
@@ -330,7 +316,7 @@ namespace zorya
 		std::vector<ID3D11BlendState*> m_bl_state_resources;
 		std::vector<ID3D11InputLayout*> m_input_layout_resources;
 
-		int m_tex_2d_count, m_rtv_count, m_srv_count, m_dsv_count, m_const_buff_count, m_pso_count, m_ps_count, m_vs_count, m_ds_state_count, m_rs_state_count, m_bl_state_count, m_input_layout_count;
+		int m_tex_2d_count{ 1 }, m_rtv_count{ 1 }, m_srv_count{ 1 }, m_dsv_count{ 1 }, m_const_buff_count{ 1 }, m_pso_count{ 1 }, m_ps_count{ 1 }, m_vs_count{ 1 }, m_ds_state_count{ 1 }, m_rs_state_count{ 1 }, m_bl_state_count{ 1 }, m_input_layout_count{ 1 };
 
 	};
 
