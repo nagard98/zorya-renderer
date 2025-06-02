@@ -36,7 +36,7 @@ namespace zorya
 		Result_Code create_pixel_shader(Pixel_Shader_Handle* ps_hnd, const Shader_Bytecode& bytecode);
 		Result_Code create_vertex_shader(Vertex_Shader_Handle* vs_hnd, const Shader_Bytecode& bytecode);
 		Result_Code create_ds_state(DS_State_Handle* ds_state_hnd, const Depth_Stencil_State_Desc& ds_state_desc);
-		Result_Code create_rs_state(RS_State_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc);
+		Result_Code create_rs_state(RS_State_Handle* rs_state_hnd, const Rasterizer_State_Desc& rs_state_desc);
 		Result_Code create_bl_state(BL_State_Handle* bl_state_hnd, const D3D11_BLEND_DESC& bl_state_desc);
 
 		Render_SRV_Handle add_srv(ID3D11ShaderResourceView*&& srv_resource);
@@ -55,7 +55,7 @@ namespace zorya
 		const Pipeline_State_Object* get_pso_pointer(const PSO_Handle pso_hnd) const;
 
 		DS_State_Handle ds_state_hnd_from_desc(const Depth_Stencil_State_Desc& ds_state_desc);
-		RS_State_Handle rs_state_hnd_from_desc(const D3D11_RASTERIZER_DESC& rs_state_desc);
+		RS_State_Handle rs_state_hnd_from_desc(const Rasterizer_State_Desc& rs_state_desc);
 		BL_State_Handle bl_state_hnd_from_desc(const D3D11_BLEND_DESC& bl_state_desc);
 
 

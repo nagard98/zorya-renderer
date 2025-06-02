@@ -822,13 +822,13 @@ namespace zorya
 		return zr;
 	}
 
-	Result_Code Render_Hardware_Interface::create_rs_state(Render_Resource_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc)
+	Result_Code Render_Hardware_Interface::create_rs_state(Render_Resource_Handle* rs_state_hnd, const Rasterizer_State_Desc& rs_state_desc)
 	{
 		rs_state_hnd->type = Render_Resource_Type::Rasterizer_State;
 		return create_rs_state(reinterpret_cast<RS_State_Handle*>(rs_state_hnd), rs_state_desc);
 	}
 
-	Result_Code Render_Hardware_Interface::create_rs_state(RS_State_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc)
+	Result_Code Render_Hardware_Interface::create_rs_state(RS_State_Handle* rs_state_hnd, const Rasterizer_State_Desc& rs_state_desc)
 	{
 		Result_Code zr = m_device.create_rs_state(rs_state_hnd, rs_state_desc);
 		return zr;
@@ -895,7 +895,7 @@ namespace zorya
 		return m_device.ds_state_hnd_from_desc(ds_state_desc);
 	}
 
-	RS_State_Handle Render_Hardware_Interface::rs_state_hnd_from_desc(const D3D11_RASTERIZER_DESC& rs_state_desc)
+	RS_State_Handle Render_Hardware_Interface::rs_state_hnd_from_desc(const Rasterizer_State_Desc& rs_state_desc)
 	{
 		return m_device.rs_state_hnd_from_desc(rs_state_desc);
 	}

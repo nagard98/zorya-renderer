@@ -164,18 +164,48 @@ namespace zorya
 		uint32_t byte_stride_structured_buff;
 	};
 
-	const D3D11_RASTERIZER_DESC default_rs_desc{ 
-		D3D11_FILL_SOLID,
-		D3D11_CULL_BACK,
-		false,
-		0,
-		0.0f,
-		0.0f,
-		true,
-		false,
-		false,
-		false
+	enum class Fill_Mode : uint8_t
+	{
+		WIREFRAME = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME,
+		SOLID = D3D11_FILL_MODE::D3D11_FILL_SOLID
 	};
+
+	enum class Cull_Mode : uint8_t
+	{
+		NONE = D3D11_CULL_MODE::D3D11_CULL_NONE,
+		FRONT = D3D11_CULL_MODE::D3D11_CULL_FRONT,
+		BACK = D3D11_CULL_MODE::D3D11_CULL_BACK
+	};
+
+	struct Rasterizer_State_Desc
+	{
+		static Rasterizer_State_Desc create();
+
+		Fill_Mode fill_mode;
+		Cull_Mode cull_mode;
+		bool is_front_counter_clock_wise;
+		int32_t depth_bias;
+		float depth_bias_clamp;
+		float slope_depth_bias;
+		bool is_depth_clip_enabled;
+		bool is_scissor_culling_enabled;
+		bool is_multisample_enabled;
+		bool is_antialiased_line_enabled;
+	};
+
+
+	//const D3D11_RASTERIZER_DESC default_rs_desc{ 
+	//	D3D11_FILL_SOLID,
+	//	D3D11_CULL_BACK,
+	//	false,
+	//	0,
+	//	0.0f,
+	//	0.0f,
+	//	true,
+	//	false,
+	//	false,
+	//	false
+	//};
 
 	const D3D11_BLEND_DESC default_bl_desc{ 
 		false,

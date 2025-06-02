@@ -44,7 +44,7 @@ namespace zorya
 	{
 		Shader_Bytecode pixel_shader_bytecode;
 		Shader_Bytecode vertex_shader_bytecode;
-		D3D11_RASTERIZER_DESC rasterizer_desc;
+		Rasterizer_State_Desc rasterizer_desc;
 		Depth_Stencil_State_Desc depth_stencil_desc;
 		D3D11_INPUT_ELEMENT_DESC* input_elements_desc;
 		D3D11_BLEND_DESC blend_desc;

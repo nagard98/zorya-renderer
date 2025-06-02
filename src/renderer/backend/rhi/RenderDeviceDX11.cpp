@@ -48,6 +48,23 @@ namespace zorya
 		return d3d11_desc;
 	}
 
+	static D3D11_RASTERIZER_DESC internal_translate(const Rasterizer_State_Desc& rasterizer_desc)
+	{
+		D3D11_RASTERIZER_DESC d3d11_desc;
+		d3d11_desc.FillMode = static_cast<D3D11_FILL_MODE>(rasterizer_desc.fill_mode);
+		d3d11_desc.CullMode = static_cast<D3D11_CULL_MODE>(rasterizer_desc.cull_mode);
+		d3d11_desc.FrontCounterClockwise = rasterizer_desc.is_front_counter_clock_wise;
+		d3d11_desc.DepthBias = rasterizer_desc.depth_bias;
+		d3d11_desc.DepthBiasClamp = rasterizer_desc.depth_bias_clamp;
+		d3d11_desc.SlopeScaledDepthBias = rasterizer_desc.slope_depth_bias;
+		d3d11_desc.DepthClipEnable = rasterizer_desc.is_depth_clip_enabled;
+		d3d11_desc.ScissorEnable = rasterizer_desc.is_scissor_culling_enabled;
+		d3d11_desc.MultisampleEnable = rasterizer_desc.is_multisample_enabled;
+		d3d11_desc.AntialiasedLineEnable = rasterizer_desc.is_antialiased_line_enabled;
+
+		return d3d11_desc;
+	}
+
 	namespace wrl = Microsoft::WRL;
 
 	#define SOFT_LIMIT_RESOURCE_TYPE 256
@@ -76,6 +93,7 @@ namespace zorya
 		m_ds_state_handles.insert({XXH64(&default_ds_desc, sizeof(Depth_Stencil_State_Desc), 0) , ds_state_hnd});
 		
 		RS_State_Handle rs_state_hnd;
+		const Rasterizer_State_Desc default_rs_desc = Rasterizer_State_Desc::create();
 		create_rs_state(&rs_state_hnd, default_rs_desc);
 		m_rs_state_handles.insert({XXH64(&default_rs_desc, sizeof(default_rs_desc), 0) , rs_state_hnd});
 	}
@@ -448,9 +466,10 @@ namespace zorya
 		return Result_Code{ hr };
 	}
 
-	Result_Code DX11_Render_Device::create_rs_state(RS_State_Handle* rs_state_hnd, const D3D11_RASTERIZER_DESC& rs_state_desc)
+	Result_Code DX11_Render_Device::create_rs_state(RS_State_Handle* rs_state_hnd, const Rasterizer_State_Desc& rs_state_desc)
 	{
-		HRESULT hr = m_device->CreateRasterizerState(&rs_state_desc, &m_rs_state_resources.at(m_rs_state_count));
+		const D3D11_RASTERIZER_DESC d3d11_rs_desc = internal_translate(rs_state_desc);
+		HRESULT hr = m_device->CreateRasterizerState(&d3d11_rs_desc, &m_rs_state_resources.at(m_rs_state_count));
 		if (!FAILED(hr))
 		{
 			rs_state_hnd->index = m_rs_state_count;
@@ -573,7 +592,7 @@ namespace zorya
 		return ds_state_hnd;
 	}
 
-	RS_State_Handle DX11_Render_Device::rs_state_hnd_from_desc(const D3D11_RASTERIZER_DESC& rs_state_desc)
+	RS_State_Handle DX11_Render_Device::rs_state_hnd_from_desc(const Rasterizer_State_Desc& rs_state_desc)
 	{
 		uint64_t rs_hash = XXH64(&rs_state_desc, sizeof(rs_state_desc), 0);
 		auto found_it = m_rs_state_handles.find(rs_hash);

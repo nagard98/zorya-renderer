@@ -36,4 +36,20 @@ namespace zorya
 
 		return desc;
 	}
+	Rasterizer_State_Desc Rasterizer_State_Desc::create()
+	{
+		Rasterizer_State_Desc desc;
+		desc.cull_mode = Cull_Mode::BACK;
+		desc.fill_mode = Fill_Mode::SOLID;
+		desc.is_front_counter_clock_wise = false;
+		desc.depth_bias = 0;
+		desc.depth_bias_clamp = 0.0f;
+		desc.slope_depth_bias = 0.0f;
+		desc.is_depth_clip_enabled = true;
+		desc.is_scissor_culling_enabled = false;
+		desc.is_multisample_enabled = false;
+		desc.is_antialiased_line_enabled = false;
+
+		return desc;
+	}
 }

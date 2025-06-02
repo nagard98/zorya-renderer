@@ -50,7 +50,7 @@ namespace zorya
 			shadow_map_creation_pso_desc.depth_stencil_desc.depth_write_mask = D3D11_DEPTH_WRITE_MASK_ALL;
 			shadow_map_creation_pso_desc.depth_stencil_desc.depth_enable = true;
 			shadow_map_creation_pso_desc.depth_stencil_desc.depth_test_func = Comparison_Func::GREATER;
-			shadow_map_creation_pso_desc.rasterizer_desc = default_rs_desc;
+			shadow_map_creation_pso_desc.rasterizer_desc = Rasterizer_State_Desc::create();
 			shadow_map_creation_pso_desc.input_elements_desc = s_vertex_layout_desc;
 			shadow_map_creation_pso_desc.num_elements = sizeof(s_vertex_layout_desc)/sizeof(s_vertex_layout_desc[0]);
 			shadow_map_creation_pso_desc.blend_desc = create_default_blend_desc();
@@ -64,7 +64,7 @@ namespace zorya
 			skybox_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::SKYBOX];
 			skybox_pso_desc.depth_stencil_desc = Depth_Stencil_State_Desc::create();
 			skybox_pso_desc.depth_stencil_desc.depth_test_func = Comparison_Func::LESS_EQUAL;
-			skybox_pso_desc.rasterizer_desc = default_rs_desc;
+			skybox_pso_desc.rasterizer_desc = Rasterizer_State_Desc::create();
 			skybox_pso_desc.input_elements_desc = s_vertex_layout_desc;
 			skybox_pso_desc.num_elements = sizeof(s_vertex_layout_desc) / sizeof(s_vertex_layout_desc[0]);
 			skybox_pso_desc.blend_desc = create_default_blend_desc();
@@ -78,7 +78,7 @@ namespace zorya
 			equirectagular_to_cubemap_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::EQUIRECTANGULAR];
 			equirectagular_to_cubemap_pso_desc.depth_stencil_desc = Depth_Stencil_State_Desc::create();
 			equirectagular_to_cubemap_pso_desc.depth_stencil_desc.depth_test_func = Comparison_Func::LESS_EQUAL;
-			equirectagular_to_cubemap_pso_desc.rasterizer_desc = default_rs_desc;
+			equirectagular_to_cubemap_pso_desc.rasterizer_desc = Rasterizer_State_Desc::create();
 			equirectagular_to_cubemap_pso_desc.input_elements_desc = s_vertex_layout_desc;
 			equirectagular_to_cubemap_pso_desc.num_elements = sizeof(s_vertex_layout_desc) / sizeof(s_vertex_layout_desc[0]);
 			equirectagular_to_cubemap_pso_desc.blend_desc = create_default_blend_desc();
@@ -92,7 +92,7 @@ namespace zorya
 			convolve_cubemap_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::CONVOLVE_CUBEMAP];
 			convolve_cubemap_pso_desc.depth_stencil_desc = Depth_Stencil_State_Desc::create();
 			convolve_cubemap_pso_desc.depth_stencil_desc.depth_test_func = Comparison_Func::LESS_EQUAL;
-			convolve_cubemap_pso_desc.rasterizer_desc = default_rs_desc;
+			convolve_cubemap_pso_desc.rasterizer_desc = Rasterizer_State_Desc::create();
 			convolve_cubemap_pso_desc.input_elements_desc = s_vertex_layout_desc;
 			convolve_cubemap_pso_desc.num_elements = sizeof(s_vertex_layout_desc) / sizeof(s_vertex_layout_desc[0]);
 			convolve_cubemap_pso_desc.blend_desc = create_default_blend_desc();
@@ -106,7 +106,7 @@ namespace zorya
 			build_pre_filtered_map_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::BUILD_PRE_FILTERED_CUBEMAP];
 			build_pre_filtered_map_pso_desc.depth_stencil_desc = Depth_Stencil_State_Desc::create();
 			build_pre_filtered_map_pso_desc.depth_stencil_desc.depth_test_func = Comparison_Func::LESS_EQUAL;
-			build_pre_filtered_map_pso_desc.rasterizer_desc = default_rs_desc;
+			build_pre_filtered_map_pso_desc.rasterizer_desc = Rasterizer_State_Desc::create();
 			build_pre_filtered_map_pso_desc.input_elements_desc = s_vertex_layout_desc;
 			build_pre_filtered_map_pso_desc.num_elements = sizeof(s_vertex_layout_desc) / sizeof(s_vertex_layout_desc[0]);
 			build_pre_filtered_map_pso_desc.blend_desc = create_default_blend_desc();
@@ -118,7 +118,7 @@ namespace zorya
 			build_brdf_lut_map_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::FULL_QUAD];
 			build_brdf_lut_map_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::BUILD_PRE_FILTERED_CUBEMAP];
 			build_brdf_lut_map_pso_desc.depth_stencil_desc = Depth_Stencil_State_Desc::create();
-			build_brdf_lut_map_pso_desc.rasterizer_desc = default_rs_desc;
+			build_brdf_lut_map_pso_desc.rasterizer_desc = Rasterizer_State_Desc::create();
 			build_brdf_lut_map_pso_desc.input_elements_desc = nullptr;
 			build_brdf_lut_map_pso_desc.num_elements = 0;
 			build_brdf_lut_map_pso_desc.blend_desc = create_default_blend_desc();
@@ -131,7 +131,7 @@ namespace zorya
 			composit_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::FULL_QUAD];
 			composit_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::COMPOSIT];
 			composit_pso_desc.depth_stencil_desc = Depth_Stencil_State_Desc::create();
-			composit_pso_desc.rasterizer_desc = default_rs_desc;
+			composit_pso_desc.rasterizer_desc = Rasterizer_State_Desc::create();
 			composit_pso_desc.input_elements_desc = nullptr;
 			composit_pso_desc.num_elements = 0;
 			composit_pso_desc.blend_desc = create_default_blend_desc();
@@ -145,7 +145,7 @@ namespace zorya
 			shadow_mask_build_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::FULL_QUAD];
 			shadow_mask_build_pso_desc.depth_stencil_desc = Depth_Stencil_State_Desc::create();
 			shadow_mask_build_pso_desc.blend_desc = create_default_blend_desc();
-			shadow_mask_build_pso_desc.rasterizer_desc = default_rs_desc;
+			shadow_mask_build_pso_desc.rasterizer_desc = Rasterizer_State_Desc::create();
 			shadow_mask_build_pso_desc.input_elements_desc = nullptr;
 			shadow_mask_build_pso_desc.num_elements = 0;
 			shadow_mask_build_pso_desc.stencil_ref_value = 1;
@@ -166,7 +166,7 @@ namespace zorya
 			lighting_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::LIGHTING];
 			lighting_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::FULL_QUAD];
 			lighting_pso_desc.depth_stencil_desc = Depth_Stencil_State_Desc::create();
-			lighting_pso_desc.rasterizer_desc = default_rs_desc;
+			lighting_pso_desc.rasterizer_desc = Rasterizer_State_Desc::create();
 			lighting_pso_desc.input_elements_desc = nullptr;
 			lighting_pso_desc.num_elements = 0;
 
@@ -201,7 +201,7 @@ namespace zorya
 			sss_golubev_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(u8)PShader_ID::SSSSS];
 			sss_golubev_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::FULL_QUAD];
 			sss_golubev_pso_desc.depth_stencil_desc = Depth_Stencil_State_Desc::create();
-			sss_golubev_pso_desc.rasterizer_desc = default_rs_desc;
+			sss_golubev_pso_desc.rasterizer_desc = Rasterizer_State_Desc::create();
 			sss_golubev_pso_desc.input_elements_desc = nullptr;
 			sss_golubev_pso_desc.num_elements = 0;
 
@@ -229,7 +229,7 @@ namespace zorya
 			sss_jimenez_sep_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(u8)PShader_ID::SSSSS];
 			sss_jimenez_sep_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::FULL_QUAD];
 			sss_jimenez_sep_pso_desc.depth_stencil_desc = Depth_Stencil_State_Desc::create();
-			sss_jimenez_sep_pso_desc.rasterizer_desc = default_rs_desc;
+			sss_jimenez_sep_pso_desc.rasterizer_desc = Rasterizer_State_Desc::create();
 			sss_jimenez_sep_pso_desc.input_elements_desc = nullptr;
 			sss_jimenez_sep_pso_desc.num_elements = 0;
 
@@ -257,7 +257,7 @@ namespace zorya
 			sss_jimenez_gauss_hor_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(u8)PShader_ID::SSSSS];
 			sss_jimenez_gauss_hor_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::FULL_QUAD];
 			sss_jimenez_gauss_hor_pso_desc.depth_stencil_desc = Depth_Stencil_State_Desc::create();
-			sss_jimenez_gauss_hor_pso_desc.rasterizer_desc = default_rs_desc;
+			sss_jimenez_gauss_hor_pso_desc.rasterizer_desc = Rasterizer_State_Desc::create();
 			sss_jimenez_gauss_hor_pso_desc.input_elements_desc = nullptr;
 			sss_jimenez_gauss_hor_pso_desc.num_elements = 0;
 
@@ -291,7 +291,7 @@ namespace zorya
 			sss_jimenez_gauss_ver_pso_desc.pixel_shader_bytecode = Shader_Manager::s_pixel_shader_bytecode_buffers[(u8)PShader_ID::SSSSS];
 			sss_jimenez_gauss_ver_pso_desc.vertex_shader_bytecode = Shader_Manager::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::FULL_QUAD];
 			sss_jimenez_gauss_ver_pso_desc.depth_stencil_desc = Depth_Stencil_State_Desc::create();
-			sss_jimenez_gauss_ver_pso_desc.rasterizer_desc = default_rs_desc;
+			sss_jimenez_gauss_ver_pso_desc.rasterizer_desc = Rasterizer_State_Desc::create();
 			sss_jimenez_gauss_ver_pso_desc.input_elements_desc = nullptr;
 			sss_jimenez_gauss_ver_pso_desc.num_elements = 0;
 
@@ -364,10 +364,10 @@ namespace zorya
 		pso_desc.pixel_shader_bytecode = Pixel_Shader::s_pixel_shader_bytecode_buffers[(uint8_t)PShader_ID::STANDARD];
 		pso_desc.vertex_shader_bytecode = Vertex_Shader::s_vertex_shader_bytecode_buffers[(uint8_t)VShader_ID::STANDARD];
 
-		pso_desc.rasterizer_desc.CullMode = D3D11_CULL_BACK;
-		pso_desc.rasterizer_desc.FillMode = D3D11_FILL_SOLID;
-		pso_desc.rasterizer_desc.FrontCounterClockwise = false;
-		pso_desc.rasterizer_desc.DepthClipEnable = true;
+		pso_desc.rasterizer_desc.cull_mode = Cull_Mode::BACK;
+		pso_desc.rasterizer_desc.fill_mode = Fill_Mode::SOLID;
+		pso_desc.rasterizer_desc.is_front_counter_clock_wise = false;
+		pso_desc.rasterizer_desc.is_depth_clip_enabled = true;
 
 		pso_desc.depth_stencil_desc.depth_enable = true;
 		pso_desc.depth_stencil_desc.depth_write_mask = D3D11_DEPTH_WRITE_MASK_ALL;
