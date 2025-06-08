@@ -31,12 +31,6 @@ namespace zorya
 
 	typedef uint8_t RHI_RESULT;
 
-	template <typename T, typename I>
-	struct State_Variant_Ptr
-	{
-		RHI_State variant = -1;
-		T* p_state_object;
-	};
 
 	class Render_Hardware_Interface
 	{
