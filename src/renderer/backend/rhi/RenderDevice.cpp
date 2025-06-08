@@ -66,4 +66,21 @@ namespace zorya
 		return desc;
 	}
 
+	Shader_Resource_View_Desc Shader_Resource_View_Desc::create()
+	{
+		Shader_Resource_View_Desc desc;
+		desc.format = Texture_Format::UNKNOWN;
+
+		return desc;
+	}
+
+	Texture_2D_SRV_Desc Texture_2D_SRV_Desc::create()
+	{
+		Texture_2D_SRV_Desc desc;
+		desc.mip_levels = 1;
+		desc.most_detailed_mip = 0;
+
+		return desc;
+	}
+
 }

@@ -123,43 +123,23 @@ namespace zorya
 		zr.value = m_device->CreateTexture2D(&tex_2d_desc, init_data, &m_tex_2d_resources.at(m_tex_2d_count));
 		RETURN_IF_FAILED_ZRY(zr);
 
-		//if (srv_handle != nullptr)
-		//{
-		//	zr.value = m_device->CreateShaderResourceView(m_tex_2d_resources.at(m_tex_2d_count), nullptr, &m_srv_resources.at(m_srv_count));
-		//	RETURN_IF_FAILED_ZRY(zr);
-		//	set_debug_object_name(m_srv_resources.at(m_srv_count), "tex_srv");
-		//	//TODO: better handle creation for resources
-		//	srv_handle->index = m_srv_count;
-		//	m_srv_count += 1;
-		//}
-		//if (rtv_handle != nullptr)
-		//{
-		//	zr.value = m_device->CreateRenderTargetView(m_tex_2d_resources.at(m_tex_2d_count), nullptr, &m_rtv_resources.at(m_rtv_count));
-		//	RETURN_IF_FAILED_ZRY(zr);
-		//	set_debug_object_name(m_rtv_resources.at(m_rtv_count), "tex_rtv");
-
-		//	//TODO: better handle creation for resources
-		//	rtv_handle->index = m_rtv_count;
-		//	m_rtv_count += 1;
-		//}
-
 		tex_handle->index = m_tex_2d_count;
 		m_tex_2d_count += 1;
 		
 		return zr;
 	}
 
-	Result_Code DX11_Render_Device::create_srv_tex_2d(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels, int most_detailed_map)
+	Result_Code DX11_Render_Device::create_srv_tex_2d(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, const Shader_Resource_View_Desc& desc)
 	{
 		assert(srv_handle != nullptr);
 
 		D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
 		ZeroMemory(&srv_desc, sizeof(srv_desc));
 
-		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srv_desc.Format = static_cast<DXGI_FORMAT>(format);
-		srv_desc.Texture2D.MipLevels = mip_levels;
-		srv_desc.Texture2D.MostDetailedMip = most_detailed_map;
+		srv_desc.ViewDimension = static_cast<D3D_SRV_DIMENSION>(desc.resource_dimension);
+		srv_desc.Format = static_cast<DXGI_FORMAT>(desc.format);
+		srv_desc.Texture2D.MipLevels = desc.texture_2d.mip_levels;
+		srv_desc.Texture2D.MostDetailedMip = desc.texture_2d.most_detailed_mip;
 
 		Result_Code zr{ S_OK };
 

@@ -560,7 +560,12 @@ namespace zorya
 		Result_Code res = m_device.create_texture_2d(&hnd_staging_tex, nullptr, staging_tex_desc);
 		assert(res.value == S_OK);
 
-		res = m_device.create_srv_tex_2d(&hnd_staging_srv, hnd_staging_tex, staging_tex_desc.format, -1, 0);
+		Shader_Resource_View_Desc staging_srv_desc = Shader_Resource_View_Desc::create();
+		staging_srv_desc.format = format;
+		staging_srv_desc.resource_dimension = Resource_Dimension::TEXTURE_2D;
+		staging_srv_desc.texture_2d.mip_levels = -1;
+		staging_srv_desc.texture_2d.most_detailed_mip = 0;
+		res = m_device.create_srv_tex_2d(&hnd_staging_srv, hnd_staging_tex, staging_srv_desc);
 		assert(res.value == S_OK);
 
 		ID3D11Texture2D* stag_tex = m_device.get_tex_2d_pointer(hnd_staging_tex);
@@ -581,7 +586,12 @@ namespace zorya
 		res = m_device.create_texture_2d(&hnd_final_tex, nullptr, final_tex_desc);
 		assert(res.value == S_OK);
 
-		res = m_device.create_srv_tex_2d(hnd_srv, hnd_final_tex, format, -1, 0);
+		Shader_Resource_View_Desc final_srv_desc = Shader_Resource_View_Desc::create();
+		final_srv_desc.format = format;
+		final_srv_desc.resource_dimension = Resource_Dimension::TEXTURE_2D;
+		final_srv_desc.texture_2d.mip_levels = -1;
+		final_srv_desc.texture_2d.most_detailed_mip = 0;
+		res = m_device.create_srv_tex_2d(hnd_srv, hnd_final_tex, final_srv_desc);
 		assert(res.value == S_OK);
 
 		ID3D11Texture2D* final_tex = m_device.get_tex_2d_pointer(hnd_final_tex);
@@ -709,15 +719,15 @@ namespace zorya
 		return zr;
 	}
 
-	Result_Code Render_Hardware_Interface::create_srv_tex_2d(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels, int most_detailed_mip)
+	Result_Code Render_Hardware_Interface::create_srv_tex_2d(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, const Shader_Resource_View_Desc& desc)
 	{
 		srv_handle->type = Render_Resource_Type::SRV;
-		return create_srv_tex_2d(reinterpret_cast<Render_SRV_Handle*>(srv_handle), tex_handle, format, mip_levels, most_detailed_mip);
+		return create_srv_tex_2d(reinterpret_cast<Render_SRV_Handle*>(srv_handle), tex_handle, desc);
 	}
 
-	Result_Code Render_Hardware_Interface::create_srv_tex_2d(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels, int most_detailed_mip)
+	Result_Code Render_Hardware_Interface::create_srv_tex_2d(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, const Shader_Resource_View_Desc& desc)
 	{
-		Result_Code zr = m_device.create_srv_tex_2d(srv_handle, tex_handle, format, mip_levels, most_detailed_mip);
+		Result_Code zr = m_device.create_srv_tex_2d(srv_handle, tex_handle, desc);
 		return zr;
 	}
 

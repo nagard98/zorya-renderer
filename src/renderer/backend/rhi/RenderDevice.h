@@ -204,6 +204,32 @@ namespace zorya
 		uint8_t sample_quality;
 	};
 
+	enum class Resource_Dimension : uint8_t
+	{
+		TEXTURE_2D = D3D_SRV_DIMENSION::D3D11_SRV_DIMENSION_TEXTURE2D
+	};
+
+	struct Texture_2D_SRV_Desc
+	{
+		static Texture_2D_SRV_Desc create();
+
+		int8_t mip_levels;
+		uint8_t most_detailed_mip;
+	};
+
+	struct Shader_Resource_View_Desc
+	{
+		static Shader_Resource_View_Desc create();
+		
+		Texture_Format format;
+		Resource_Dimension resource_dimension;
+		union
+		{
+			Texture_2D_SRV_Desc texture_2d;
+		};
+
+	};
+
 	enum class Fill_Mode : uint8_t
 	{
 		WIREFRAME = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME,

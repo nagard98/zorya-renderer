@@ -187,7 +187,13 @@ namespace zorya
 		final_rt_desc.width = g_resolutionWidth;
 		final_rt_desc.height = g_resolutionHeight;
 		RETURN_IF_FAILED2(hr, rhi.create_texture_2d(&hnd_final_rt, nullptr, final_rt_desc).value);
-		RETURN_IF_FAILED2(hr, rhi.create_srv_tex_2d(&hnd_final_srv, hnd_final_rt, Texture_Format::R8G8B8A8_UNORM).value);
+
+		Shader_Resource_View_Desc final_srv_desc;
+		final_srv_desc.format = Texture_Format::R8G8B8A8_UNORM;
+		final_srv_desc.resource_dimension = Resource_Dimension::TEXTURE_2D;
+		final_srv_desc.texture_2d.mip_levels = 1;
+		final_srv_desc.texture_2d.most_detailed_mip = 0;
+		RETURN_IF_FAILED2(hr, rhi.create_srv_tex_2d(&hnd_final_srv, hnd_final_rt, final_srv_desc).value);
 		RETURN_IF_FAILED2(hr, rhi.create_rtv_tex_2d(&hnd_final_rtv, hnd_final_rt, Texture_Format::R8G8B8A8_UNORM_SRGB).value);
 
 		//----------------------------Skybox----------------------
@@ -309,7 +315,7 @@ namespace zorya
 		Render_Texture_Handle hnd_brdf_lut_map;
 		Render_RTV_Handle hnd_brdf_lut_map_rtv;
 
- 		Texture_2D_Desc skybox_map_desc = Texture_2D_Desc::create();
+		Texture_2D_Desc skybox_map_desc = Texture_2D_Desc::create();
 		skybox_map_desc.resource_usage = Resource_Usage::DEFAULT;
 		skybox_map_desc.bind_flags = Resource_Bind_Flags::SHADER_RESOURCE | Resource_Bind_Flags::RENDER_TARGET;
 		skybox_map_desc.misc_flags = Resource_Misc_Flags::TEXTURE_CUBE;
@@ -361,7 +367,14 @@ namespace zorya
 		brdf_lut_map_desc.misc_flags = Resource_Misc_Flags::GENERATE_MIPS;
 
 		RETURN_IF_FAILED2(hr, rhi.create_texture_2d(&hnd_brdf_lut_map, nullptr, brdf_lut_map_desc).value);
-		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_2d(&skylight.brdf_lut_srv, hnd_brdf_lut_map, Texture_Format::R11G11B10_FLOAT).value);
+
+
+		Shader_Resource_View_Desc brdf_lut_srv_desc;
+		brdf_lut_srv_desc.format = Texture_Format::R11G11B10_FLOAT;
+		brdf_lut_srv_desc.resource_dimension = Resource_Dimension::TEXTURE_2D;
+		brdf_lut_srv_desc.texture_2d.mip_levels = 1;
+		brdf_lut_srv_desc.texture_2d.most_detailed_mip = 0;
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_2d(&skylight.brdf_lut_srv, hnd_brdf_lut_map, brdf_lut_srv_desc).value);
 		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d(&hnd_brdf_lut_map_rtv, hnd_brdf_lut_map, Texture_Format::R11G11B10_FLOAT).value);
 
 		Render_Command_List cmd_list(rhi.m_device);
