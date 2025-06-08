@@ -98,55 +98,54 @@ namespace zorya
 		m_rs_state_handles.insert({XXH64(&default_rs_desc, sizeof(default_rs_desc), 0) , rs_state_hnd});
 	}
 
-	Result_Code DX11_Render_Device::create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, Resource_Usage usage, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
+	Result_Code DX11_Render_Device::create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc)
 	{ 
 		assert(tex_handle != nullptr);
 
 		D3D11_TEXTURE2D_DESC tex_2d_desc;
 		ZeroMemory(&tex_2d_desc, sizeof(tex_2d_desc));
-		tex_2d_desc.Format = static_cast<DXGI_FORMAT>(format);
-		tex_2d_desc.MipLevels = mip_levels;
-		tex_2d_desc.ArraySize = array_size;
-		tex_2d_desc.BindFlags = static_cast<D3D11_BIND_FLAG>(bind_flags); //(srv_handle != nullptr ? D3D11_BIND_SHADER_RESOURCE : 0) | (rtv_handle != nullptr ? D3D11_BIND_RENDER_TARGET : 0);
+		tex_2d_desc.Format = static_cast<DXGI_FORMAT>(desc.format);
+		tex_2d_desc.MipLevels = desc.mip_levels;
+		tex_2d_desc.ArraySize = desc.array_size;
+		tex_2d_desc.BindFlags = static_cast<D3D11_BIND_FLAG>(desc.bind_flags); //(srv_handle != nullptr ? D3D11_BIND_SHADER_RESOURCE : 0) | (rtv_handle != nullptr ? D3D11_BIND_RENDER_TARGET : 0);
 
-		tex_2d_desc.Width = width;
-		tex_2d_desc.Height = height;
-		tex_2d_desc.SampleDesc.Count = sample_count;
-		tex_2d_desc.SampleDesc.Quality = sample_quality;
+		tex_2d_desc.Width = desc.width;
+		tex_2d_desc.Height = desc.height;
+		tex_2d_desc.SampleDesc.Count = desc.sample_count;
+		tex_2d_desc.SampleDesc.Quality = desc.sample_quality;
 
 		//TODO:usage/access_flags/misc_flags
-		tex_2d_desc.Usage = static_cast<D3D11_USAGE>(usage);
+		tex_2d_desc.Usage = static_cast<D3D11_USAGE>(desc.resource_usage);
 		tex_2d_desc.CPUAccessFlags = 0;
-		tex_2d_desc.MiscFlags = generate_mips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0;
+		tex_2d_desc.MiscFlags = static_cast<UINT>(desc.misc_flags);
 
 		Result_Code zr{ S_OK };
 		zr.value = m_device->CreateTexture2D(&tex_2d_desc, init_data, &m_tex_2d_resources.at(m_tex_2d_count));
 		RETURN_IF_FAILED_ZRY(zr);
 
-		if (srv_handle != nullptr)
-		{
-			zr.value = m_device->CreateShaderResourceView(m_tex_2d_resources.at(m_tex_2d_count), nullptr, &m_srv_resources.at(m_srv_count));
-			RETURN_IF_FAILED_ZRY(zr);
-			set_debug_object_name(m_srv_resources.at(m_srv_count), "tex_srv");
-			//TODO: better handle creation for resources
-			srv_handle->index = m_srv_count;
-			m_srv_count += 1;
-		}
-		if (rtv_handle != nullptr)
-		{
-			zr.value = m_device->CreateRenderTargetView(m_tex_2d_resources.at(m_tex_2d_count), nullptr, &m_rtv_resources.at(m_rtv_count));
-			RETURN_IF_FAILED_ZRY(zr);
-			set_debug_object_name(m_rtv_resources.at(m_rtv_count), "tex_rtv");
+		//if (srv_handle != nullptr)
+		//{
+		//	zr.value = m_device->CreateShaderResourceView(m_tex_2d_resources.at(m_tex_2d_count), nullptr, &m_srv_resources.at(m_srv_count));
+		//	RETURN_IF_FAILED_ZRY(zr);
+		//	set_debug_object_name(m_srv_resources.at(m_srv_count), "tex_srv");
+		//	//TODO: better handle creation for resources
+		//	srv_handle->index = m_srv_count;
+		//	m_srv_count += 1;
+		//}
+		//if (rtv_handle != nullptr)
+		//{
+		//	zr.value = m_device->CreateRenderTargetView(m_tex_2d_resources.at(m_tex_2d_count), nullptr, &m_rtv_resources.at(m_rtv_count));
+		//	RETURN_IF_FAILED_ZRY(zr);
+		//	set_debug_object_name(m_rtv_resources.at(m_rtv_count), "tex_rtv");
 
-			//TODO: better handle creation for resources
-			rtv_handle->index = m_rtv_count;
-			m_rtv_count += 1;
-		}
+		//	//TODO: better handle creation for resources
+		//	rtv_handle->index = m_rtv_count;
+		//	m_rtv_count += 1;
+		//}
 
 		tex_handle->index = m_tex_2d_count;
 		m_tex_2d_count += 1;
 		
-
 		return zr;
 	}
 

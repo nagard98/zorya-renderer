@@ -170,11 +170,11 @@ namespace zorya
 
 		Resource_Usage resource_usage;
 		Resource_Bind_Flags bind_flags;
+		Resource_Misc_Flags misc_flags;
 		Texture_Format format;
 		float width;
 		float height;
 		uint32_t array_size;
-		bool generate_mips;
 		uint8_t mip_levels;
 		uint8_t sample_count;
 		uint8_t sample_quality;

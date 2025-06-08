@@ -18,7 +18,7 @@ namespace zorya
 
 		void init();
 
-		Result_Code create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, Resource_Usage usage, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size = 1, Render_SRV_Handle* srv_handle = nullptr, Render_RTV_Handle* rtv_handle = nullptr, bool generate_mips = false, int mip_levels = 1, int sample_count = 1, int sample_quality = 0);
+		Result_Code create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc);
 		Result_Code create_srv_tex_2d(Render_SRV_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels = 1, int most_detailed_mip = 0);
 		Result_Code create_rtv_tex_2d(Render_RTV_Handle* rtv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0);
 		Result_Code create_dsv_tex_2d(Render_DSV_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0, bool is_read_only = false);

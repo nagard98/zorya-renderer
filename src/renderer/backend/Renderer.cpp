@@ -327,7 +327,7 @@ namespace zorya
 		brdf_lut_map_desc.format = Texture_Format::R11G11B10_FLOAT;
 		brdf_lut_map_desc.width = 512;
 		brdf_lut_map_desc.height = 512;
-		brdf_lut_map_desc.generate_mips = true;
+		brdf_lut_map_desc.misc_flags = Resource_Misc_Flags::GENERATE_MIPS;
 		RETURN_IF_FAILED2(hr, rhi.create_tex_2d(&hnd_brdf_lut_map, nullptr, brdf_lut_map_desc).value);
 		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_2d(&skylight.brdf_lut_srv, hnd_brdf_lut_map, Texture_Format::R11G11B10_FLOAT).value);
 		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d(&hnd_brdf_lut_map_rtv, hnd_brdf_lut_map, Texture_Format::R11G11B10_FLOAT).value);

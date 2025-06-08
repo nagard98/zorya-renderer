@@ -57,8 +57,8 @@ namespace zorya
 	Texture_2D_Desc Texture_2D_Desc::create()
 	{
 		Texture_2D_Desc desc;
+		desc.misc_flags = Resource_Misc_Flags::NONE;
 		desc.array_size = 1;
-		desc.generate_mips = false;
 		desc.mip_levels = 1;
 		desc.sample_count = 1;
 		desc.sample_quality = 0;

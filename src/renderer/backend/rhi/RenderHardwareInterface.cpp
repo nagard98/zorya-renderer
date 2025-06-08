@@ -548,9 +548,19 @@ namespace zorya
 		
 		Texture_Format format = texture_asset->is_hdr ? Texture_Format::R32G32B32A32_FLOAT : (tex_config->is_normal_map ? Texture_Format::R8G8B8A8_UNORM : Texture_Format::R8G8B8A8_UNORM_SRGB);
 
-		Result_Code res = m_device.create_tex_2d(&hnd_staging_tex, nullptr, Resource_Usage::DEFAULT, Resource_Bind_Flags::SHADER_RESOURCE | Resource_Bind_Flags::RENDER_TARGET, format,
-			tex_config->max_width, tex_config->max_height, 1,
-			&hnd_staging_srv, nullptr, true, 0, 1, 0);
+		Texture_2D_Desc staging_tex_desc = Texture_2D_Desc::create();
+		staging_tex_desc.resource_usage = Resource_Usage::DEFAULT;
+		staging_tex_desc.bind_flags = Resource_Bind_Flags::SHADER_RESOURCE | Resource_Bind_Flags::RENDER_TARGET;
+		staging_tex_desc.format = format;
+		staging_tex_desc.width = tex_config->max_width;
+		staging_tex_desc.height = tex_config->max_height;
+		staging_tex_desc.misc_flags = Resource_Misc_Flags::GENERATE_MIPS;
+		staging_tex_desc.mip_levels = 0;
+
+		Result_Code res = m_device.create_tex_2d(&hnd_staging_tex, nullptr, staging_tex_desc);
+		assert(res.value == S_OK);
+
+		res = m_device.create_srv_tex_2d(&hnd_staging_srv, hnd_staging_tex, staging_tex_desc.format, -1, 0);
 		assert(res.value == S_OK);
 
 		ID3D11Texture2D* stag_tex = m_device.get_tex_2d_pointer(hnd_staging_tex);
@@ -559,9 +569,19 @@ namespace zorya
 		ID3D11ShaderResourceView* stag_srv = m_device.get_srv_pointer(hnd_staging_srv);
 		m_context->GenerateMips(stag_srv);
 
-		res = m_device.create_tex_2d(&hnd_final_tex, nullptr, Resource_Usage::DEFAULT, Resource_Bind_Flags::SHADER_RESOURCE , format,
-			tex_config->max_width, tex_config->max_height, 1,
-			hnd_srv, nullptr, false, 0, 1, 0);
+		Texture_2D_Desc final_tex_desc = Texture_2D_Desc::create();
+		final_tex_desc.resource_usage = Resource_Usage::DEFAULT;
+		final_tex_desc.bind_flags = Resource_Bind_Flags::SHADER_RESOURCE;
+		final_tex_desc.format = format;
+		final_tex_desc.width = tex_config->max_width;
+		final_tex_desc.height = tex_config->max_height;
+		final_tex_desc.misc_flags = Resource_Misc_Flags::NONE;
+		final_tex_desc.mip_levels = 0;
+
+		res = m_device.create_tex_2d(&hnd_final_tex, nullptr, final_tex_desc);
+		assert(res.value == S_OK);
+
+		res = m_device.create_srv_tex_2d(hnd_srv, hnd_final_tex, format, -1, 0);
 		assert(res.value == S_OK);
 
 		ID3D11Texture2D* final_tex = m_device.get_tex_2d_pointer(hnd_final_tex);
@@ -592,17 +612,20 @@ namespace zorya
 
 		if (!meta.desc.is_cubemap)
 		{
+			Texture_2D_Desc desc = Texture_2D_Desc::create();
+			desc.resource_usage = Resource_Usage::DEFAULT;
+			desc.bind_flags = bind_flags;
+			desc.format = convert_format(meta.desc.format);
+			desc.width = meta.desc.width;
+			desc.height = meta.desc.height;
+			desc.array_size = meta.desc.arr_size;
+			desc.misc_flags = meta.desc.has_mips ? Resource_Misc_Flags::GENERATE_MIPS : Resource_Misc_Flags::NONE;
+			desc.mip_levels = meta.desc.has_mips ? 0 : 1;
+
 			zr = m_device.create_tex_2d(
 				tex_handle,
 				init_data,
-				Resource_Usage::DEFAULT,
-				bind_flags,
-				convert_format(meta.desc.format),
-				meta.desc.width,
-				meta.desc.height,
-				meta.desc.arr_size,
-				nullptr, nullptr,
-				meta.desc.has_mips, meta.desc.has_mips ? 0 : 1
+				desc
 			);
 		} 
 		else
@@ -697,7 +720,7 @@ namespace zorya
 
 	Result_Code Render_Hardware_Interface::create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc)
 	{
-		Result_Code zr = m_device.create_tex_2d(tex_handle, init_data, desc.resource_usage, desc.bind_flags, desc.format, desc.width, desc.height, desc.array_size, nullptr, nullptr, desc.generate_mips, desc.mip_levels, desc.sample_count, desc.sample_quality);
+		Result_Code zr = m_device.create_tex_2d(tex_handle, init_data, desc);
 		return zr;
 	}
 
