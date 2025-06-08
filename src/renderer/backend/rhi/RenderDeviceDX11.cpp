@@ -98,7 +98,7 @@ namespace zorya
 		m_rs_state_handles.insert({XXH64(&default_rs_desc, sizeof(default_rs_desc), 0) , rs_state_hnd});
 	}
 
-	Result_Code DX11_Render_Device::create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc)
+	Result_Code DX11_Render_Device::create_texture_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc)
 	{ 
 		assert(tex_handle != nullptr);
 

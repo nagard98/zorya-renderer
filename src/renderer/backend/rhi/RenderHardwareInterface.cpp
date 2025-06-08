@@ -557,7 +557,7 @@ namespace zorya
 		staging_tex_desc.misc_flags = Resource_Misc_Flags::GENERATE_MIPS;
 		staging_tex_desc.mip_levels = 0;
 
-		Result_Code res = m_device.create_tex_2d(&hnd_staging_tex, nullptr, staging_tex_desc);
+		Result_Code res = m_device.create_texture_2d(&hnd_staging_tex, nullptr, staging_tex_desc);
 		assert(res.value == S_OK);
 
 		res = m_device.create_srv_tex_2d(&hnd_staging_srv, hnd_staging_tex, staging_tex_desc.format, -1, 0);
@@ -578,7 +578,7 @@ namespace zorya
 		final_tex_desc.misc_flags = Resource_Misc_Flags::NONE;
 		final_tex_desc.mip_levels = 0;
 
-		res = m_device.create_tex_2d(&hnd_final_tex, nullptr, final_tex_desc);
+		res = m_device.create_texture_2d(&hnd_final_tex, nullptr, final_tex_desc);
 		assert(res.value == S_OK);
 
 		res = m_device.create_srv_tex_2d(hnd_srv, hnd_final_tex, format, -1, 0);
@@ -609,38 +609,23 @@ namespace zorya
 		bind_flags |= (meta.bind_flags & Bind_Flag::DEPTH_STENCIL) != 0 ? Resource_Bind_Flags::DEPTH_STENCIL : Resource_Bind_Flags::NONE;
 
 		Result_Code zr{ S_OK };
+		 
+		Texture_2D_Desc desc = Texture_2D_Desc::create();
+		desc.resource_usage = Resource_Usage::DEFAULT;
+		desc.bind_flags = bind_flags;
+		desc.format = convert_format(meta.desc.format);
+		desc.width = meta.desc.width;
+		desc.height = meta.desc.height;
+		desc.array_size = meta.desc.arr_size;
+		desc.misc_flags = meta.desc.has_mips ? Resource_Misc_Flags::GENERATE_MIPS : Resource_Misc_Flags::NONE;
+		desc.misc_flags |= meta.desc.is_cubemap ? Resource_Misc_Flags::TEXTURE_CUBE : Resource_Misc_Flags::NONE;
+		desc.mip_levels = meta.desc.has_mips ? 0 : 1;
 
-		if (!meta.desc.is_cubemap)
-		{
-			Texture_2D_Desc desc = Texture_2D_Desc::create();
-			desc.resource_usage = Resource_Usage::DEFAULT;
-			desc.bind_flags = bind_flags;
-			desc.format = convert_format(meta.desc.format);
-			desc.width = meta.desc.width;
-			desc.height = meta.desc.height;
-			desc.array_size = meta.desc.arr_size;
-			desc.misc_flags = meta.desc.has_mips ? Resource_Misc_Flags::GENERATE_MIPS : Resource_Misc_Flags::NONE;
-			desc.mip_levels = meta.desc.has_mips ? 0 : 1;
-
-			zr = m_device.create_tex_2d(
-				tex_handle,
-				init_data,
-				desc
-			);
-		} 
-		else
-		{
-			zr = m_device.create_tex_cubemap(
-				tex_handle,
-				bind_flags,
-				convert_format(meta.desc.format),
-				meta.desc.width,
-				meta.desc.height,
-				meta.desc.arr_size,
-				nullptr, nullptr,
-				meta.desc.has_mips, meta.desc.has_mips ? 0 : 1
-			);
-		}
+		zr = m_device.create_texture_2d(
+			tex_handle,
+			init_data,
+			desc
+		);
 
 		return zr;
 	}
@@ -712,15 +697,15 @@ namespace zorya
 		);
 	}
 
-	Result_Code Render_Hardware_Interface::create_tex_2d(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc)
+	Result_Code Render_Hardware_Interface::create_texture_2d(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc)
 	{
 		tex_handle->type = Render_Resource_Type::Texture;
-		return create_tex_2d(reinterpret_cast<Render_Texture_Handle*>(tex_handle), init_data, desc);
+		return create_texture_2d(reinterpret_cast<Render_Texture_Handle*>(tex_handle), init_data, desc);
 	}
 
-	Result_Code Render_Hardware_Interface::create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc)
+	Result_Code Render_Hardware_Interface::create_texture_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc)
 	{
-		Result_Code zr = m_device.create_tex_2d(tex_handle, init_data, desc);
+		Result_Code zr = m_device.create_texture_2d(tex_handle, init_data, desc);
 		return zr;
 	}
 
@@ -757,18 +742,6 @@ namespace zorya
 	Result_Code Render_Hardware_Interface::create_dsv_tex_2d(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice, bool is_read_only)
 	{
 		Result_Code zr = m_device.create_dsv_tex_2d(dsv_handle, tex_handle, format, mip_slice, is_read_only);
-		return zr;
-	}
-
-	Result_Code Render_Hardware_Interface::create_tex_cubemap(Render_Resource_Handle* tex_handle, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
-	{
-		tex_handle->type = Render_Resource_Type::Texture;
-		return create_tex_cubemap(reinterpret_cast<Render_Texture_Handle*>(tex_handle), bind_flags, format, width, height, array_size, srv_handle, rtv_handle, generate_mips, mip_levels, sample_count, sample_quality);
-	}
-
-	Result_Code Render_Hardware_Interface::create_tex_cubemap(Render_Texture_Handle* tex_handle, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
-	{
-		Result_Code zr = m_device.create_tex_cubemap(tex_handle, bind_flags, format, width, height, array_size, srv_handle, rtv_handle, generate_mips, mip_levels, sample_count, sample_quality);
 		return zr;
 	}
 

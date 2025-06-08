@@ -97,6 +97,30 @@ namespace zorya
 		return lhs;
 	}
 
+	inline Resource_Misc_Flags operator|(Resource_Misc_Flags lhs, Resource_Misc_Flags rhs)
+	{
+		using T = std::underlying_type_t<Resource_Misc_Flags>;
+		return static_cast<Resource_Misc_Flags>(static_cast<T>(lhs) | static_cast<T>(rhs));
+	}
+
+	inline Resource_Misc_Flags operator&(Resource_Misc_Flags lhs, Resource_Misc_Flags rhs)
+	{
+		using T = std::underlying_type_t<Resource_Misc_Flags>;
+		return static_cast<Resource_Misc_Flags>(static_cast<T>(lhs) & static_cast<T>(rhs));
+	}
+
+	inline Resource_Misc_Flags& operator|=(Resource_Misc_Flags& lhs, Resource_Misc_Flags rhs)
+	{
+		lhs = lhs | rhs;
+		return lhs;
+	}
+
+	inline Resource_Misc_Flags& operator&=(Resource_Misc_Flags& lhs, Resource_Misc_Flags rhs)
+	{
+		lhs = lhs & rhs;
+		return lhs;
+	}
+
 
 	enum class Resource_Usage : uint8_t
 	{
@@ -214,9 +238,9 @@ namespace zorya
 	{
 
 	public:
-		Result_Code create_tex_2d()
+		Result_Code create_texture_2d()
 		{
-			return impl().create_tex_2d();
+			return impl().create_texture_2d();
 		}
 
 	private:

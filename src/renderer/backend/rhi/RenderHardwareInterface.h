@@ -61,8 +61,12 @@ namespace zorya
 		Result_Code create_rtv(Render_Resource_Handle* rtv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
 		Result_Code create_rtv(Render_RTV_Handle* rtv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
 
-		Result_Code create_tex_2d(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc);
-		Result_Code create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc);
+		Result_Code create_texture_2d(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc);
+		Result_Code create_texture_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc);
+
+		Result_Code create_constant_buffer(Render_Resource_Handle* hnd, const Buffer_Desc* buffer_desc);
+		Result_Code create_constant_buffer(Constant_Buffer_Handle* hnd, const Buffer_Desc* buffer_desc);
+
 		Result_Code create_srv_tex_2d(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels = 1, int most_detailed_mip = 0);
 		Result_Code create_srv_tex_2d(Render_SRV_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels = 1, int most_detailed_mip = 0);
 		Result_Code create_rtv_tex_2d(Render_Resource_Handle* rtv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0);
@@ -70,15 +74,11 @@ namespace zorya
 		Result_Code create_dsv_tex_2d(Render_Resource_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0, bool is_read_only = false);
 		Result_Code create_dsv_tex_2d(Render_DSV_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0, bool is_read_only = false);
 
-		Result_Code create_tex_cubemap(Render_Resource_Handle* tex_handle, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size = 1, Render_SRV_Handle* srv_handle = nullptr, Render_RTV_Handle* rtv_handle = nullptr, bool generate_mips = false, int mip_levels = 0,  int sample_count = 1, int sample_quality = 0);
-		Result_Code create_tex_cubemap(Render_Texture_Handle* tex_handle, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size = 1, Render_SRV_Handle* srv_handle = nullptr, Render_RTV_Handle* rtv_handle = nullptr, bool generate_mips = false, int mip_levels = 0,  int sample_count = 1, int sample_quality = 0);
 		Result_Code create_srv_tex_2d_array(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int first_array_slice = 0, int mipLevels = 1, int most_detailed_mip = 0);
 		Result_Code create_srv_tex_2d_array(Render_SRV_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int first_array_slice = 0, int mipLevels = 1, int most_detailed_mip = 0);
 		Result_Code create_dsv_tex_2d_array(Render_Resource_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int mip_slice = 0, int first_array_slice = 0);
 		Result_Code create_dsv_tex_2d_array(Render_DSV_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int mip_slice = 0, int first_array_slice = 0);
 
-		Result_Code create_constant_buffer(Render_Resource_Handle* hnd, const Buffer_Desc* buffer_desc);
-		Result_Code create_constant_buffer(Constant_Buffer_Handle* hnd, const Buffer_Desc* buffer_desc);
 
 		Result_Code create_pso(Render_Resource_Handle* pso_hnd, const PSO_Desc& pso_desc);
 		Result_Code create_pso(PSO_Handle* pso_hnd, const PSO_Desc& pso_desc);
