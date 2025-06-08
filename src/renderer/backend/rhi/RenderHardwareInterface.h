@@ -67,15 +67,13 @@ namespace zorya
 		Result_Code create_constant_buffer(Render_Resource_Handle* hnd, const Buffer_Desc* buffer_desc);
 		Result_Code create_constant_buffer(Constant_Buffer_Handle* hnd, const Buffer_Desc* buffer_desc);
 
-		Result_Code create_srv_tex_2d(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, const Shader_Resource_View_Desc& desc);
-		Result_Code create_srv_tex_2d(Render_SRV_Handle* srv_handle, Render_Texture_Handle tex_handle, const Shader_Resource_View_Desc& desc);
+		Result_Code create_srv(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, const Shader_Resource_View_Desc& desc);
+		Result_Code create_srv(Render_SRV_Handle* srv_handle, Render_Texture_Handle tex_handle, const Shader_Resource_View_Desc& desc);
 		Result_Code create_rtv_tex_2d(Render_Resource_Handle* rtv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0);
 		Result_Code create_rtv_tex_2d(Render_RTV_Handle* rtv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0);
 		Result_Code create_dsv_tex_2d(Render_Resource_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0, bool is_read_only = false);
 		Result_Code create_dsv_tex_2d(Render_DSV_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0, bool is_read_only = false);
 
-		Result_Code create_srv_tex_2d_array(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int first_array_slice = 0, int mipLevels = 1, int most_detailed_mip = 0);
-		Result_Code create_srv_tex_2d_array(Render_SRV_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int first_array_slice = 0, int mipLevels = 1, int most_detailed_mip = 0);
 		Result_Code create_dsv_tex_2d_array(Render_Resource_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int mip_slice = 0, int first_array_slice = 0);
 		Result_Code create_dsv_tex_2d_array(Render_DSV_Handle* dsv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size = 1, int mip_slice = 0, int first_array_slice = 0);
 

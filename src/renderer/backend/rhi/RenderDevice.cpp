@@ -83,4 +83,15 @@ namespace zorya
 		return desc;
 	}
 
+	Texture_2D_Array_SRV_Desc Texture_2D_Array_SRV_Desc::create()
+	{
+		Texture_2D_Array_SRV_Desc desc;
+		desc.first_array_slice = 0;
+		desc.array_size = 1;
+		desc.mip_levels = 1;
+		desc.most_detailed_mip = 0;
+
+		return desc;
+	}
+
 }

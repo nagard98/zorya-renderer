@@ -193,7 +193,7 @@ namespace zorya
 		final_srv_desc.resource_dimension = Resource_Dimension::TEXTURE_2D;
 		final_srv_desc.texture_2d.mip_levels = 1;
 		final_srv_desc.texture_2d.most_detailed_mip = 0;
-		RETURN_IF_FAILED2(hr, rhi.create_srv_tex_2d(&hnd_final_srv, hnd_final_rt, final_srv_desc).value);
+		RETURN_IF_FAILED2(hr, rhi.create_srv(&hnd_final_srv, hnd_final_rt, final_srv_desc).value);
 		RETURN_IF_FAILED2(hr, rhi.create_rtv_tex_2d(&hnd_final_rtv, hnd_final_rt, Texture_Format::R8G8B8A8_UNORM_SRGB).value);
 
 		//----------------------------Skybox----------------------
@@ -223,7 +223,7 @@ namespace zorya
 		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_prefiltered_env_map_rtv, &hnd_prefiltered_env_map, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
 
 		//RETURN_IF_FAILED2(hr, rhi.create_texture_2d(&hnd_brdf_lut_map, nullptr, Resource_Usage{ D3D11_USAGE_DEFAULT },  Resource_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 512, 512, 1, nullptr, nullptr, true, 1).value);
-		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_2d(&hnd_brdf_lut_map_srv, &hnd_brdf_lut_map, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv(&hnd_brdf_lut_map_srv, &hnd_brdf_lut_map, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }).value);
 		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d(&hnd_brdf_lut_map_rtv, &hnd_brdf_lut_map, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }).value);
 
 		//load_kernel_file("./assets/Skin1_PreInt_DISCSEP.bn", krn);
@@ -374,7 +374,7 @@ namespace zorya
 		brdf_lut_srv_desc.resource_dimension = Resource_Dimension::TEXTURE_2D;
 		brdf_lut_srv_desc.texture_2d.mip_levels = 1;
 		brdf_lut_srv_desc.texture_2d.most_detailed_mip = 0;
-		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_2d(&skylight.brdf_lut_srv, hnd_brdf_lut_map, brdf_lut_srv_desc).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv(&skylight.brdf_lut_srv, hnd_brdf_lut_map, brdf_lut_srv_desc).value);
 		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d(&hnd_brdf_lut_map_rtv, hnd_brdf_lut_map, Texture_Format::R11G11B10_FLOAT).value);
 
 		Render_Command_List cmd_list(rhi.m_device);

@@ -129,7 +129,7 @@ namespace zorya
 		return zr;
 	}
 
-	Result_Code DX11_Render_Device::create_srv_tex_2d(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, const Shader_Resource_View_Desc& desc)
+	Result_Code DX11_Render_Device::create_srv(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, const Shader_Resource_View_Desc& desc)
 	{
 		assert(srv_handle != nullptr);
 
@@ -138,8 +138,29 @@ namespace zorya
 
 		srv_desc.ViewDimension = static_cast<D3D_SRV_DIMENSION>(desc.resource_dimension);
 		srv_desc.Format = static_cast<DXGI_FORMAT>(desc.format);
-		srv_desc.Texture2D.MipLevels = desc.texture_2d.mip_levels;
-		srv_desc.Texture2D.MostDetailedMip = desc.texture_2d.most_detailed_mip;
+		switch (desc.resource_dimension)
+		{
+
+		case Resource_Dimension::TEXTURE_2D:
+		{
+			srv_desc.Texture2D.MipLevels = desc.texture_2d.mip_levels;
+			srv_desc.Texture2D.MostDetailedMip = desc.texture_2d.most_detailed_mip;
+			break;
+		}
+
+		case Resource_Dimension::TEXTURE_2D_ARRAY:
+		{
+			srv_desc.Texture2DArray.MipLevels = desc.texture_2d_array.mip_levels;
+			srv_desc.Texture2DArray.MostDetailedMip = desc.texture_2d_array.most_detailed_mip;
+			srv_desc.Texture2DArray.ArraySize = desc.texture_2d_array.array_size;
+			srv_desc.Texture2DArray.FirstArraySlice = desc.texture_2d_array.first_array_slice;
+			break;
+		}
+
+		default:
+			zassert(false);
+			break;
+		}
 
 		Result_Code zr{ S_OK };
 
@@ -245,29 +266,6 @@ namespace zorya
 		return zr;
 	}
 
-	Result_Code DX11_Render_Device::create_srv_tex_2d_array(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int array_size, int first_array_slice, int mip_levels, int most_detailed_map)
-	{
-		assert(srv_handle);
-
-		D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
-		ZeroMemory(&srv_desc, sizeof(srv_desc));
-
-		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-		srv_desc.Format = static_cast<DXGI_FORMAT>(format);
-		srv_desc.Texture2DArray.MipLevels = mip_levels;
-		srv_desc.Texture2DArray.MostDetailedMip = most_detailed_map;
-		srv_desc.Texture2DArray.ArraySize = array_size;
-		srv_desc.Texture2DArray.FirstArraySlice = first_array_slice;
-
-		Result_Code zr{ S_OK };
-
-		zr.value = m_device->CreateShaderResourceView(get_tex_2d_pointer(tex_handle), &srv_desc, &m_srv_resources.at(m_srv_count));
-		RETURN_IF_FAILED_ZRY(zr);
-		srv_handle->index = m_srv_count;
-		m_srv_count += 1;
-		
-		return zr;
-	}
 
 	Result_Code DX11_Render_Device::create_srv_tex_cubemap(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int array_size, int first_array_slice, int mipLevels, int most_detailed_mip)
 	{

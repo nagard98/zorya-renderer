@@ -206,13 +206,24 @@ namespace zorya
 
 	enum class Resource_Dimension : uint8_t
 	{
-		TEXTURE_2D = D3D_SRV_DIMENSION::D3D11_SRV_DIMENSION_TEXTURE2D
+		TEXTURE_2D = D3D_SRV_DIMENSION::D3D11_SRV_DIMENSION_TEXTURE2D,
+		TEXTURE_2D_ARRAY = D3D_SRV_DIMENSION::D3D11_SRV_DIMENSION_TEXTURE2DARRAY
 	};
 
 	struct Texture_2D_SRV_Desc
 	{
 		static Texture_2D_SRV_Desc create();
 
+		int8_t mip_levels;
+		uint8_t most_detailed_mip;
+	};
+
+	struct Texture_2D_Array_SRV_Desc
+	{
+		static Texture_2D_Array_SRV_Desc create();
+
+		uint32_t first_array_slice;
+		uint32_t array_size;
 		int8_t mip_levels;
 		uint8_t most_detailed_mip;
 	};
@@ -226,6 +237,7 @@ namespace zorya
 		union
 		{
 			Texture_2D_SRV_Desc texture_2d;
+			Texture_2D_Array_SRV_Desc texture_2d_array;
 		};
 
 	};

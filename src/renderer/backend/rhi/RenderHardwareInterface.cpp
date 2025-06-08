@@ -565,7 +565,7 @@ namespace zorya
 		staging_srv_desc.resource_dimension = Resource_Dimension::TEXTURE_2D;
 		staging_srv_desc.texture_2d.mip_levels = -1;
 		staging_srv_desc.texture_2d.most_detailed_mip = 0;
-		res = m_device.create_srv_tex_2d(&hnd_staging_srv, hnd_staging_tex, staging_srv_desc);
+		res = m_device.create_srv(&hnd_staging_srv, hnd_staging_tex, staging_srv_desc);
 		assert(res.value == S_OK);
 
 		ID3D11Texture2D* stag_tex = m_device.get_tex_2d_pointer(hnd_staging_tex);
@@ -591,7 +591,7 @@ namespace zorya
 		final_srv_desc.resource_dimension = Resource_Dimension::TEXTURE_2D;
 		final_srv_desc.texture_2d.mip_levels = -1;
 		final_srv_desc.texture_2d.most_detailed_mip = 0;
-		res = m_device.create_srv_tex_2d(hnd_srv, hnd_final_tex, final_srv_desc);
+		res = m_device.create_srv(hnd_srv, hnd_final_tex, final_srv_desc);
 		assert(res.value == S_OK);
 
 		ID3D11Texture2D* final_tex = m_device.get_tex_2d_pointer(hnd_final_tex);
@@ -652,11 +652,18 @@ namespace zorya
 
 		if (!meta.desc.is_cubemap)
 		{
-			return m_device.create_srv_tex_2d_array(
+			Shader_Resource_View_Desc srv_desc;
+			srv_desc.format = convert_format(meta.desc.format, Bind_Flag::SHADER_RESOURCE);
+			srv_desc.resource_dimension = Resource_Dimension::TEXTURE_2D_ARRAY;
+			srv_desc.texture_2d_array.array_size = slice_size;
+			srv_desc.texture_2d_array.first_array_slice = view_desc.slice_start_index;
+			srv_desc.texture_2d_array.mip_levels = -1;
+			srv_desc.texture_2d_array.most_detailed_mip = 0;
+
+			return m_device.create_srv(
 				srv_handle,
 				tex_handle,
-				convert_format(meta.desc.format, Bind_Flag::SHADER_RESOURCE),
-				slice_size, view_desc.slice_start_index
+				srv_desc
 			);
 		} else
 		{
@@ -667,8 +674,6 @@ namespace zorya
 				slice_size, view_desc.slice_start_index
 			);
 		}
-
-
 	}
 
 	Result_Code Render_Hardware_Interface::create_dsv(Render_Resource_Handle* dsv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc)
@@ -719,15 +724,15 @@ namespace zorya
 		return zr;
 	}
 
-	Result_Code Render_Hardware_Interface::create_srv_tex_2d(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, const Shader_Resource_View_Desc& desc)
+	Result_Code Render_Hardware_Interface::create_srv(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, const Shader_Resource_View_Desc& desc)
 	{
 		srv_handle->type = Render_Resource_Type::SRV;
-		return create_srv_tex_2d(reinterpret_cast<Render_SRV_Handle*>(srv_handle), tex_handle, desc);
+		return create_srv(reinterpret_cast<Render_SRV_Handle*>(srv_handle), tex_handle, desc);
 	}
 
-	Result_Code Render_Hardware_Interface::create_srv_tex_2d(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, const Shader_Resource_View_Desc& desc)
+	Result_Code Render_Hardware_Interface::create_srv(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, const Shader_Resource_View_Desc& desc)
 	{
-		Result_Code zr = m_device.create_srv_tex_2d(srv_handle, tex_handle, desc);
+		Result_Code zr = m_device.create_srv(srv_handle, tex_handle, desc);
 		return zr;
 	}
 
@@ -752,19 +757,6 @@ namespace zorya
 	Result_Code Render_Hardware_Interface::create_dsv_tex_2d(Render_DSV_Handle* dsv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice, bool is_read_only)
 	{
 		Result_Code zr = m_device.create_dsv_tex_2d(dsv_handle, tex_handle, format, mip_slice, is_read_only);
-		return zr;
-	}
-
-	Result_Code Render_Hardware_Interface::create_srv_tex_2d_array(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int array_size, int first_array_slice, int mipLevels, int most_detailed_mip)
-	{
-
-		srv_handle->type = Render_Resource_Type::SRV;
-		return create_srv_tex_2d_array(reinterpret_cast<Render_SRV_Handle*>(srv_handle), tex_handle, format, array_size, first_array_slice, mipLevels, most_detailed_mip);
-	}
-
-	Result_Code Render_Hardware_Interface::create_srv_tex_2d_array(Render_SRV_Handle* srv_handle, const Render_Texture_Handle tex_handle, Texture_Format format, int array_size, int first_array_slice, int mipLevels, int most_detailed_mip)
-	{
-		Result_Code zr = m_device.create_srv_tex_2d_array(srv_handle, tex_handle, format, array_size, first_array_slice, mipLevels, most_detailed_mip );
 		return zr;
 	}
 
