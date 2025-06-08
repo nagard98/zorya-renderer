@@ -51,8 +51,9 @@ namespace zorya
 		RHI_RESULT load_texture(const wchar_t* path, Shader_Texture2D** shader_texture, bool is_srgb, size_t max_size = 0);
 		RHI_RESULT load_texture2(const Texture2D* const texture_asset, const Texture_Import_Config* const tex_config, Render_SRV_Handle* hnd_srv, size_t max_size = 0);
 
-		Result_Code create_tex(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta);
-		Result_Code create_tex(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta);
+		Result_Code create_texture(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta);
+		Result_Code create_texture(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta);
+
 		Result_Code create_srv(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
 		Result_Code create_srv(Render_SRV_Handle* srv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
 		Result_Code create_dsv(Render_Resource_Handle* dsv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
@@ -60,8 +61,8 @@ namespace zorya
 		Result_Code create_rtv(Render_Resource_Handle* rtv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
 		Result_Code create_rtv(Render_RTV_Handle* rtv_handle, Render_Texture_Handle tex_handle, const Render_Graph_Resource_Metadata& meta, const Render_Graph_View_Desc& view_desc);
 
-		Result_Code create_tex_2d(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, Resource_Usage usage, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size=1, Render_SRV_Handle* srv_handle = nullptr, Render_RTV_Handle* rtv_handle = nullptr, bool generate_mips = false, int mip_levels = 0, int sample_count = 1, int sample_quality = 0);
-		Result_Code create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, Resource_Usage usage, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size=1, Render_SRV_Handle* srv_handle = nullptr, Render_RTV_Handle* rtv_handle = nullptr, bool generate_mips = false, int mip_levels = 0, int sample_count = 1, int sample_quality = 0);
+		Result_Code create_tex_2d(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc);
+		Result_Code create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc);
 		Result_Code create_srv_tex_2d(Render_Resource_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels = 1, int most_detailed_mip = 0);
 		Result_Code create_srv_tex_2d(Render_SRV_Handle* srv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_levels = 1, int most_detailed_mip = 0);
 		Result_Code create_rtv_tex_2d(Render_Resource_Handle* rtv_handle, Render_Texture_Handle tex_handle, Texture_Format format, int mip_slice = 0);

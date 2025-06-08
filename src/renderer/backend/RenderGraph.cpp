@@ -231,7 +231,7 @@ namespace zorya
 
 								if (is_new_resource_required)
 								{
-									zassert(rhi.create_tex(&gpu_resource.hnd_gpu_resource, nullptr, resource_meta).value == S_OK);
+									zassert(rhi.create_texture(&gpu_resource.hnd_gpu_resource, nullptr, resource_meta).value == S_OK);
 								}
 
 							}
@@ -315,7 +315,7 @@ namespace zorya
 
 								if (is_new_resource_required)
 								{
-									zassert(rhi.create_tex(&gpu_resource.hnd_gpu_resource, nullptr, resource_meta).value == S_OK);
+									zassert(rhi.create_texture(&gpu_resource.hnd_gpu_resource, nullptr, resource_meta).value == S_OK);
 								}
 							}
 

@@ -180,7 +180,13 @@ namespace zorya
 
 
 		////-----------------------------------------------------------
-		RETURN_IF_FAILED2(hr, rhi.create_tex_2d(&hnd_final_rt, nullptr, Resource_Usage::DEFAULT, Resource_Bind_Flags::RENDER_TARGET | Resource_Bind_Flags::SHADER_RESOURCE, Texture_Format::R8G8B8A8_TYPELESS, g_resolutionWidth, g_resolutionHeight, 1, nullptr, nullptr, false, 1).value);
+		Texture_2D_Desc final_rt_desc = Texture_2D_Desc::create();
+		final_rt_desc.resource_usage = Resource_Usage::DEFAULT;
+		final_rt_desc.bind_flags = Resource_Bind_Flags::RENDER_TARGET | Resource_Bind_Flags::SHADER_RESOURCE;
+		final_rt_desc.format = Texture_Format::R8G8B8A8_TYPELESS;
+		final_rt_desc.width = g_resolutionWidth;
+		final_rt_desc.height = g_resolutionHeight;
+		RETURN_IF_FAILED2(hr, rhi.create_tex_2d(&hnd_final_rt, nullptr, final_rt_desc).value);
 		RETURN_IF_FAILED2(hr, rhi.create_srv_tex_2d(&hnd_final_srv, hnd_final_rt, Texture_Format::R8G8B8A8_UNORM).value);
 		RETURN_IF_FAILED2(hr, rhi.create_rtv_tex_2d(&hnd_final_rtv, hnd_final_rt, Texture_Format::R8G8B8A8_UNORM_SRGB).value);
 
@@ -307,7 +313,7 @@ namespace zorya
 		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&skylight.skybox_srv, hnd_skybox_map, Texture_Format::R11G11B10_FLOAT, 6).value);
 		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_skybox_map_rtv, hnd_skybox_map, Texture_Format::R11G11B10_FLOAT, 6).value);
 
-		RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_irradiance_map, Resource_Bind_Flags::SHADER_RESOURCE | Resource_Bind_Flags::RENDER_TARGET, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 64, 64, 6, nullptr, nullptr, false, 1).value);
+		RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_irradiance_map, Resource_Bind_Flags::SHADER_RESOURCE | Resource_Bind_Flags::RENDER_TARGET, Texture_Format::R11G11B10_FLOAT, 64, 64, 6, nullptr, nullptr, false, 1).value);
 		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&skylight.irradiance_map_srv, hnd_irradiance_map, Texture_Format::R11G11B10_FLOAT, 6).value);
 		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_irradiance_map_rtv, hnd_irradiance_map, Texture_Format::R11G11B10_FLOAT, 6).value);
 
@@ -315,7 +321,14 @@ namespace zorya
 		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&skylight.prefiltered_env_map_srv, hnd_prefiltered_env_map, Texture_Format::R11G11B10_FLOAT, 6, 0, -1).value);
 		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_prefiltered_env_map_rtv, hnd_prefiltered_env_map, Texture_Format::R11G11B10_FLOAT, 6).value);
 
-		RETURN_IF_FAILED2(hr, rhi.create_tex_2d(&hnd_brdf_lut_map, nullptr, Resource_Usage::DEFAULT, Resource_Bind_Flags::SHADER_RESOURCE | Resource_Bind_Flags::RENDER_TARGET, Texture_Format::R11G11B10_FLOAT, 512, 512, 1, nullptr, nullptr, true, 1).value);
+		Texture_2D_Desc brdf_lut_map_desc = Texture_2D_Desc::create();
+		brdf_lut_map_desc.resource_usage = Resource_Usage::DEFAULT;
+		brdf_lut_map_desc.bind_flags = Resource_Bind_Flags::SHADER_RESOURCE | Resource_Bind_Flags::RENDER_TARGET;
+		brdf_lut_map_desc.format = Texture_Format::R11G11B10_FLOAT;
+		brdf_lut_map_desc.width = 512;
+		brdf_lut_map_desc.height = 512;
+		brdf_lut_map_desc.generate_mips = true;
+		RETURN_IF_FAILED2(hr, rhi.create_tex_2d(&hnd_brdf_lut_map, nullptr, brdf_lut_map_desc).value);
 		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_2d(&skylight.brdf_lut_srv, hnd_brdf_lut_map, Texture_Format::R11G11B10_FLOAT).value);
 		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d(&hnd_brdf_lut_map_rtv, hnd_brdf_lut_map, Texture_Format::R11G11B10_FLOAT).value);
 

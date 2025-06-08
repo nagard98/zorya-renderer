@@ -575,13 +575,13 @@ namespace zorya
 	}
 
 
-	Result_Code Render_Hardware_Interface::create_tex(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta)
+	Result_Code Render_Hardware_Interface::create_texture(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta)
 	{
 		tex_handle->type = Render_Resource_Type::Texture;
-		return create_tex(reinterpret_cast<Render_Texture_Handle*>(tex_handle), init_data, meta);
+		return create_texture(reinterpret_cast<Render_Texture_Handle*>(tex_handle), init_data, meta);
 	}
 
-	Result_Code Render_Hardware_Interface::create_tex(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta)
+	Result_Code Render_Hardware_Interface::create_texture(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Render_Graph_Resource_Metadata& meta)
 	{
 		Resource_Bind_Flags bind_flags = (meta.bind_flags & Bind_Flag::RENDER_TARGET) != 0 ? Resource_Bind_Flags::RENDER_TARGET : Resource_Bind_Flags::NONE;
 		bind_flags |= (meta.bind_flags & Bind_Flag::SHADER_RESOURCE) != 0 ? Resource_Bind_Flags::SHADER_RESOURCE : Resource_Bind_Flags::NONE;
@@ -689,15 +689,15 @@ namespace zorya
 		);
 	}
 
-	Result_Code Render_Hardware_Interface::create_tex_2d(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, Resource_Usage usage, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
+	Result_Code Render_Hardware_Interface::create_tex_2d(Render_Resource_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc)
 	{
 		tex_handle->type = Render_Resource_Type::Texture;
-		return create_tex_2d(reinterpret_cast<Render_Texture_Handle*>(tex_handle), init_data, usage, bind_flags, format, width, height, array_size, srv_handle, rtv_handle, generate_mips, mip_levels, sample_count, sample_quality);
+		return create_tex_2d(reinterpret_cast<Render_Texture_Handle*>(tex_handle), init_data, desc);
 	}
 
-	Result_Code Render_Hardware_Interface::create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, Resource_Usage usage, Resource_Bind_Flags bind_flags, Texture_Format format, float width, float height, int array_size, Render_SRV_Handle* srv_handle, Render_RTV_Handle* rtv_handle, bool generate_mips, int mip_levels, int sample_count, int sample_quality)
+	Result_Code Render_Hardware_Interface::create_tex_2d(Render_Texture_Handle* tex_handle, const D3D11_SUBRESOURCE_DATA* init_data, const Texture_2D_Desc& desc)
 	{
-		Result_Code zr = m_device.create_tex_2d(tex_handle, init_data, usage, bind_flags, format, width, height, array_size, srv_handle, rtv_handle, generate_mips, mip_levels, sample_count, sample_quality);
+		Result_Code zr = m_device.create_tex_2d(tex_handle, init_data, desc.resource_usage, desc.bind_flags, desc.format, desc.width, desc.height, desc.array_size, nullptr, nullptr, desc.generate_mips, desc.mip_levels, desc.sample_count, desc.sample_quality);
 		return zr;
 	}
 

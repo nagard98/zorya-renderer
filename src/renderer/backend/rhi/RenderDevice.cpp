@@ -36,6 +36,7 @@ namespace zorya
 
 		return desc;
 	}
+
 	Rasterizer_State_Desc Rasterizer_State_Desc::create()
 	{
 		Rasterizer_State_Desc desc;
@@ -52,4 +53,17 @@ namespace zorya
 
 		return desc;
 	}
+
+	Texture_2D_Desc Texture_2D_Desc::create()
+	{
+		Texture_2D_Desc desc;
+		desc.array_size = 1;
+		desc.generate_mips = false;
+		desc.mip_levels = 1;
+		desc.sample_count = 1;
+		desc.sample_quality = 0;
+
+		return desc;
+	}
+
 }

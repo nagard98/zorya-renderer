@@ -164,6 +164,22 @@ namespace zorya
 		uint32_t byte_stride_structured_buff;
 	};
 
+	struct Texture_2D_Desc
+	{
+		static Texture_2D_Desc create();
+
+		Resource_Usage resource_usage;
+		Resource_Bind_Flags bind_flags;
+		Texture_Format format;
+		float width;
+		float height;
+		uint32_t array_size;
+		bool generate_mips;
+		uint8_t mip_levels;
+		uint8_t sample_count;
+		uint8_t sample_quality;
+	};
+
 	enum class Fill_Mode : uint8_t
 	{
 		WIREFRAME = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME,
@@ -192,27 +208,6 @@ namespace zorya
 		bool is_multisample_enabled;
 		bool is_antialiased_line_enabled;
 	};
-
-
-	//const D3D11_RASTERIZER_DESC default_rs_desc{ 
-	//	D3D11_FILL_SOLID,
-	//	D3D11_CULL_BACK,
-	//	false,
-	//	0,
-	//	0.0f,
-	//	0.0f,
-	//	true,
-	//	false,
-	//	false,
-	//	false
-	//};
-
-	const D3D11_BLEND_DESC default_bl_desc{ 
-		false,
-		false,
-		{false},
-	};
-
 
 	template <class T>
 	class Render_Device
