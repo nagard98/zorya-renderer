@@ -73,9 +73,6 @@ namespace zorya
 
 	struct Renderable_Entity
 	{
-		~Renderable_Entity()
-		{		}
-
 		bool operator==(const Renderable_Entity& r)
 		{
 			return ID == r.ID;
@@ -104,6 +101,13 @@ namespace zorya
 
 	struct Light_Info
 	{
+		Light_Info() : dir_light() {}
+
+		static Light_Info create(Directional_Light dir_light, const dx::XMMATRIX& final_world_transform = dx::XMMatrixIdentity());
+		static Light_Info create(Point_Light point_light, const dx::XMMATRIX& final_world_transform = dx::XMMatrixIdentity());
+		static Light_Info create(Spot_Light spot_light, const dx::XMMATRIX& final_world_transform = dx::XMMatrixIdentity());
+		static Light_Info create(Sky_Light sky_light, const dx::XMMATRIX& final_world_transform = dx::XMMatrixIdentity());
+
 		Light_Type tag;
 		union
 		{

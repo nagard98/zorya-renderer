@@ -1,10 +1,12 @@
 #ifndef PIPELINE_STATE_OBJECT_H_
 #define PIPELINE_STATE_OBJECT_H_
 
-#include "d3d11.h"
 #include "Platform.h"
+#include "renderer/backend/rhi/RenderDevice.h"
 #include "renderer/frontend/Shader.h"
 #include "renderer/backend/rhi/RenderDeviceHandles.h"
+
+#include "d3d11.h"
 
 #include <cstdint>
 
@@ -42,8 +44,8 @@ namespace zorya
 	{
 		Shader_Bytecode pixel_shader_bytecode;
 		Shader_Bytecode vertex_shader_bytecode;
-		D3D11_RASTERIZER_DESC rasterizer_desc;
-		D3D11_DEPTH_STENCIL_DESC depth_stencil_desc;
+		Rasterizer_State_Desc rasterizer_desc;
+		Depth_Stencil_State_Desc depth_stencil_desc;
 		D3D11_INPUT_ELEMENT_DESC* input_elements_desc;
 		D3D11_BLEND_DESC blend_desc;
 		uint8_t num_elements;

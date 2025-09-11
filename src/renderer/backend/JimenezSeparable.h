@@ -8,8 +8,6 @@
 #include <string>
 #include <Windows.h>
 
-#include <Platform.h>
-
 namespace dx = DirectX;
 
 namespace zorya
@@ -203,7 +201,7 @@ namespace zorya
 
 	void override_ssss_discr_sep_kernel(const std::vector<float>& _kernel_data)
 	{
-		//bool use_img_2d_kernel = false;
+		bool use_img_2d_kernel = false;
 
 		// conversion of linear kernel data to sample array
 		std::vector<Kernel_Sample> k;
@@ -276,7 +274,6 @@ namespace zorya
 
 	std::vector<float4> separable_sss_calculate_kernel()
 	{
-
 		const float RANGE = 9.9f;//num_samples > 20 ? 3.0f : 2.0f;
 		const float EXPONENT = 2.0f;
 

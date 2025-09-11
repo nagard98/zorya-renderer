@@ -9,8 +9,7 @@
 #include "BufferCache.h"
 #include "ConstantBuffer.h"
 #include "renderer/frontend/Shader.h"
-#include "renderer/backend/rhi/RenderDevice.h"
-#include "renderer/frontend/Shader.h"
+#include "renderer/backend/rhi/RenderDeviceDX11.h"
 #include "renderer/backend/PipelineStateObject.h"
 
 namespace zorya

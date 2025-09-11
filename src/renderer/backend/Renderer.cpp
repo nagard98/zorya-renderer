@@ -58,70 +58,70 @@ namespace zorya
 		m_shadow_map_viewport.width = 4096.0f;
 		m_shadow_map_viewport.height = 4096.f;
 
-		D3D11_BUFFER_DESC material_cb_desc;
+		Buffer_Desc material_cb_desc;
 		ZeroMemory(&material_cb_desc, sizeof(material_cb_desc));
-		material_cb_desc.ByteWidth = sizeof(Material_Params);
-		material_cb_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		material_cb_desc.Usage = D3D11_USAGE_DEFAULT;
+		material_cb_desc.byte_width = sizeof(Material_Params);
+		material_cb_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		material_cb_desc.usage = Resource_Usage::DEFAULT;
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&m_hnd_object_cb, &material_cb_desc).value);
 		
-		
-		D3D11_BUFFER_DESC build_ibl_per_draw_cb_desc;
+		Buffer_Desc build_ibl_per_draw_cb_desc;
 		ZeroMemory(&build_ibl_per_draw_cb_desc, sizeof(build_ibl_per_draw_cb_desc));
-		build_ibl_per_draw_cb_desc.ByteWidth = max(sizeof(float) + sizeof(u32), 16);
-		build_ibl_per_draw_cb_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		build_ibl_per_draw_cb_desc.Usage = D3D11_USAGE_DEFAULT;
+		build_ibl_per_draw_cb_desc.byte_width = max(sizeof(float) + sizeof(u32), 16);
+		build_ibl_per_draw_cb_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		build_ibl_per_draw_cb_desc.usage = Resource_Usage::DEFAULT;
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_ibl_spec_draw_cb, &build_ibl_per_draw_cb_desc).value);
 
 
 		//World transform constant buffer setup---------------------------------------------------
-		D3D11_BUFFER_DESC cb_world_desc;
-		cb_world_desc.Usage = D3D11_USAGE_DEFAULT;
-		cb_world_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		cb_world_desc.CPUAccessFlags = 0;
-		cb_world_desc.MiscFlags = 0;
-		cb_world_desc.ByteWidth = sizeof(World_CB);
+		Buffer_Desc cb_world_desc;
+		cb_world_desc.usage = Resource_Usage::DEFAULT;
+		cb_world_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		cb_world_desc.access_flags = CPU_Access_Flags::NONE;
+		cb_world_desc.misc_flags = Resource_Misc_Flags::NONE;
+		cb_world_desc.byte_width = sizeof(World_CB);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_world_cb, &cb_world_desc).value);
 				
 		//---------------------------------------------------
 
-		D3D11_BUFFER_DESC cb_cam_transf_desc;
-		cb_cam_transf_desc.Usage = D3D11_USAGE_DEFAULT;
-		cb_cam_transf_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		cb_cam_transf_desc.CPUAccessFlags = 0;
-		cb_cam_transf_desc.MiscFlags = 0;
-		cb_cam_transf_desc.ByteWidth = sizeof(Cam_Transformation);
+		Buffer_Desc cb_cam_transf_desc;
+		cb_cam_transf_desc.usage = Resource_Usage::DEFAULT;
+		cb_cam_transf_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		cb_cam_transf_desc.access_flags = CPU_Access_Flags::NONE;
+		cb_cam_transf_desc.misc_flags = Resource_Misc_Flags::NONE;
+		cb_cam_transf_desc.byte_width = sizeof(Cam_Transformation);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_cam_transf_cb, &cb_cam_transf_desc).value);
-
-		D3D11_BUFFER_DESC cb_light_draw_desc;
-		cb_light_draw_desc.Usage = D3D11_USAGE_DEFAULT;
-		cb_light_draw_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		cb_light_draw_desc.CPUAccessFlags = 0;
-		cb_light_draw_desc.MiscFlags = 0;
-		cb_light_draw_desc.ByteWidth = sizeof(Light_Draw_Constants);
+		
+		Buffer_Desc cb_light_draw_desc;
+		cb_light_draw_desc.usage = Resource_Usage::DEFAULT;
+		cb_light_draw_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		cb_light_draw_desc.access_flags = CPU_Access_Flags::NONE;
+		cb_light_draw_desc.misc_flags = Resource_Misc_Flags::NONE;
+		cb_light_draw_desc.byte_width = sizeof(Light_Draw_Constants);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_light_draw_cb, &cb_light_draw_desc).value);
 
-		D3D11_BUFFER_DESC cb_sss_draw_desc;
-		cb_sss_draw_desc.Usage = D3D11_USAGE_DEFAULT;
-		cb_sss_draw_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		cb_sss_draw_desc.CPUAccessFlags = 0;
-		cb_sss_draw_desc.MiscFlags = 0;
-		cb_sss_draw_desc.ByteWidth = sizeof(SSS_Draw_Constants);
+		Buffer_Desc cb_sss_draw_desc;
+		cb_sss_draw_desc.usage = Resource_Usage::DEFAULT;
+		cb_sss_draw_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		cb_sss_draw_desc.access_flags = CPU_Access_Flags::NONE;
+		cb_sss_draw_desc.misc_flags = Resource_Misc_Flags::NONE;
+		cb_sss_draw_desc.byte_width = sizeof(SSS_Draw_Constants);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_sss_draw_cb, &cb_sss_draw_desc).value);
 
 		//View matrix constant buffer setup-------------------------------------------------------------
-		D3D11_BUFFER_DESC cb_cam_desc;
-		cb_cam_desc.Usage = D3D11_USAGE_DEFAULT;
-		cb_cam_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		cb_cam_desc.CPUAccessFlags = 0;
-		cb_cam_desc.MiscFlags = 0;
-		cb_cam_desc.ByteWidth = sizeof(View_CB);
+
+		Buffer_Desc cb_cam_desc;
+		cb_cam_desc.usage = Resource_Usage::DEFAULT;
+		cb_cam_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		cb_cam_desc.access_flags = CPU_Access_Flags::NONE;
+		cb_cam_desc.misc_flags = Resource_Misc_Flags::NONE;
+		cb_cam_desc.byte_width = sizeof(View_CB);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_view_cb, &cb_cam_desc).value);
 
@@ -129,12 +129,12 @@ namespace zorya
 		//----------------------------------------------------------------
 
 		//Projection matrix constant buffer setup--------------------------------------
-		D3D11_BUFFER_DESC cb_proj_desc;
-		cb_proj_desc.Usage = D3D11_USAGE_DEFAULT;
-		cb_proj_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		cb_proj_desc.CPUAccessFlags = 0;
-		cb_proj_desc.MiscFlags = 0;
-		cb_proj_desc.ByteWidth = sizeof(Proj_CB);
+		Buffer_Desc cb_proj_desc;
+		cb_proj_desc.usage= Resource_Usage::DEFAULT;
+		cb_proj_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		cb_proj_desc.access_flags = CPU_Access_Flags::NONE;
+		cb_proj_desc.misc_flags = Resource_Misc_Flags::NONE;
+		cb_proj_desc.byte_width = sizeof(Proj_CB);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_proj_cb, &cb_proj_desc).value);
 
@@ -142,49 +142,59 @@ namespace zorya
 		//------------------------------------------------------------------
 
 		//Light constant buffer setup---------------------------------------
-		D3D11_BUFFER_DESC light_buff_desc;
+
+		Buffer_Desc light_buff_desc;
 		ZeroMemory(&light_buff_desc, sizeof(light_buff_desc));
-		light_buff_desc.Usage = D3D11_USAGE_DEFAULT;
-		light_buff_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		light_buff_desc.ByteWidth = sizeof(Frame_Constant_Buff);
+		light_buff_desc.usage = Resource_Usage::DEFAULT;
+		light_buff_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		light_buff_desc.byte_width = sizeof(Frame_Constant_Buff);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&m_hnd_frame_cb, &light_buff_desc).value);
 
 		//---------------------------------------------------------
-
-		D3D11_BUFFER_DESC inv_matrix_cb_desc;
+		Buffer_Desc inv_matrix_cb_desc;
 		ZeroMemory(&inv_matrix_cb_desc, sizeof(inv_matrix_cb_desc));
-		inv_matrix_cb_desc.ByteWidth = sizeof(dx::XMMatrixIdentity()) * 2;
-		inv_matrix_cb_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		inv_matrix_cb_desc.Usage = D3D11_USAGE_DEFAULT;
+		inv_matrix_cb_desc.byte_width = sizeof(dx::XMMatrixIdentity()) * 2;
+		inv_matrix_cb_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		inv_matrix_cb_desc.usage = Resource_Usage::DEFAULT;
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_inv_mat_cb, &inv_matrix_cb_desc).value);
 
 		//---------------------------------------------------------
 
-		D3D11_BUFFER_DESC dir_shadow_map_buff_desc;
-		ZeroMemory(&dir_shadow_map_buff_desc, sizeof(D3D11_BUFFER_DESC));
-		dir_shadow_map_buff_desc.Usage = D3D11_USAGE_DEFAULT;
-		dir_shadow_map_buff_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		dir_shadow_map_buff_desc.ByteWidth = sizeof(Dir_Shadow_CB);
+		Buffer_Desc dir_shadow_map_buff_desc;
+		ZeroMemory(&dir_shadow_map_buff_desc, sizeof(Buffer_Desc));
+		dir_shadow_map_buff_desc.usage = Resource_Usage::DEFAULT;
+		dir_shadow_map_buff_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		dir_shadow_map_buff_desc.byte_width = sizeof(Dir_Shadow_CB);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_dir_shad_cb, &dir_shadow_map_buff_desc).value);
 
-		D3D11_BUFFER_DESC omni_dir_shadow_map_buff_desc;
-		ZeroMemory(&omni_dir_shadow_map_buff_desc, sizeof(D3D11_BUFFER_DESC));
-		omni_dir_shadow_map_buff_desc.Usage = D3D11_USAGE_DEFAULT;
-		omni_dir_shadow_map_buff_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		omni_dir_shadow_map_buff_desc.ByteWidth = sizeof(Omni_Dir_Shadow_CB);
+		Buffer_Desc omni_dir_shadow_map_buff_desc;
+		ZeroMemory(&omni_dir_shadow_map_buff_desc, sizeof(Buffer_Desc));
+		omni_dir_shadow_map_buff_desc.usage = Resource_Usage::DEFAULT;
+		omni_dir_shadow_map_buff_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
+		omni_dir_shadow_map_buff_desc.byte_width = sizeof(Omni_Dir_Shadow_CB);
 
 		RETURN_IF_FAILED2(hr, rhi.create_constant_buffer(&hnd_omni_dir_shad_cb, &omni_dir_shadow_map_buff_desc).value);
 
 
 		////-----------------------------------------------------------
-		ZRY_Usage def{ D3D11_USAGE_DEFAULT };
+		Texture_2D_Desc final_rt_desc = Texture_2D_Desc::create();
+		final_rt_desc.resource_usage = Resource_Usage::DEFAULT;
+		final_rt_desc.bind_flags = Resource_Bind_Flags::RENDER_TARGET | Resource_Bind_Flags::SHADER_RESOURCE;
+		final_rt_desc.format = Texture_Format::R8G8B8A8_TYPELESS;
+		final_rt_desc.width = g_resolutionWidth;
+		final_rt_desc.height = g_resolutionHeight;
+		RETURN_IF_FAILED2(hr, rhi.create_texture_2d(&hnd_final_rt, nullptr, final_rt_desc).value);
 
-		RETURN_IF_FAILED2(hr, rhi.create_tex_2d(&hnd_final_rt, nullptr, def, ZRY_Bind_Flags{ D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE }, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_TYPELESS }, g_resolutionWidth, g_resolutionHeight, 1, nullptr, nullptr, false, 1).value);
-		RETURN_IF_FAILED2(hr, rhi.create_srv_tex_2d(&hnd_final_srv, &hnd_final_rt, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_UNORM }).value);
-		RETURN_IF_FAILED2(hr, rhi.create_rtv_tex_2d(&hnd_final_rtv, &hnd_final_rt, ZRY_Format{ DXGI_FORMAT_R8G8B8A8_UNORM_SRGB }).value);
+		Shader_Resource_View_Desc final_srv_desc;
+		final_srv_desc.format = Texture_Format::R8G8B8A8_UNORM;
+		final_srv_desc.resource_dimension = Resource_Dimension::TEXTURE_2D;
+		final_srv_desc.texture_2d.mip_levels = 1;
+		final_srv_desc.texture_2d.most_detailed_mip = 0;
+		RETURN_IF_FAILED2(hr, rhi.create_srv(&hnd_final_srv, hnd_final_rt, final_srv_desc).value);
+		RETURN_IF_FAILED2(hr, rhi.create_rtv_tex_2d(&hnd_final_rtv, hnd_final_rt, Texture_Format::R8G8B8A8_UNORM_SRGB).value);
 
 		//----------------------------Skybox----------------------
 		//wrl::ComPtr<ID3D11Resource> sky_texture;
@@ -200,21 +210,21 @@ namespace zorya
 		//tex->load_asset(tex_import_config);
 		//rhi.load_texture2(tex, tex_import_config, &hnd_environment_map_srv);
 		//
-		//RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_skybox_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 512, 512, 6, nullptr, nullptr, false, 1).value);
-		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&hnd_skybox_map_srv, &hnd_skybox_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
-		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_skybox_map_rtv, &hnd_skybox_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+		//RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_skybox_map, Resource_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 512, 512, 6, nullptr, nullptr, false, 1).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&hnd_skybox_map_srv, &hnd_skybox_map, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_skybox_map_rtv, &hnd_skybox_map, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
 
-		//RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_irradiance_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 64, 64, 6, nullptr, nullptr, false, 1).value);
-		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&hnd_irradiance_map_srv, &hnd_irradiance_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
-		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_irradiance_map_rtv, &hnd_irradiance_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+		//RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_irradiance_map, Resource_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 64, 64, 6, nullptr, nullptr, false, 1).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&hnd_irradiance_map_srv, &hnd_irradiance_map, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_irradiance_map_rtv, &hnd_irradiance_map, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
 		//
-		//RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_prefiltered_env_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 64, 64, 6, nullptr, nullptr, true, 0).value);
-		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&hnd_prefiltered_env_map_srv, &hnd_prefiltered_env_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6, 0, -1).value);
-		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_prefiltered_env_map_rtv, &hnd_prefiltered_env_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+		//RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_prefiltered_env_map, Resource_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 64, 64, 6, nullptr, nullptr, true, 0).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&hnd_prefiltered_env_map_srv, &hnd_prefiltered_env_map, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6, 0, -1).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_prefiltered_env_map_rtv, &hnd_prefiltered_env_map, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
 
-		//RETURN_IF_FAILED2(hr, rhi.create_tex_2d(&hnd_brdf_lut_map, nullptr, ZRY_Usage{ D3D11_USAGE_DEFAULT },  ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 512, 512, 1, nullptr, nullptr, true, 1).value);
-		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_2d(&hnd_brdf_lut_map_srv, &hnd_brdf_lut_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }).value);
-		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d(&hnd_brdf_lut_map_rtv, &hnd_brdf_lut_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }).value);
+		//RETURN_IF_FAILED2(hr, rhi.create_texture_2d(&hnd_brdf_lut_map, nullptr, Resource_Usage{ D3D11_USAGE_DEFAULT },  Resource_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 512, 512, 1, nullptr, nullptr, true, 1).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_srv(&hnd_brdf_lut_map_srv, &hnd_brdf_lut_map, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }).value);
+		//RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d(&hnd_brdf_lut_map_rtv, &hnd_brdf_lut_map, Texture_Format{ DXGI_FORMAT_R11G11B10_FLOAT }).value);
 
 		//load_kernel_file("./assets/Skin1_PreInt_DISCSEP.bn", krn);
 
@@ -305,21 +315,67 @@ namespace zorya
 		Render_Texture_Handle hnd_brdf_lut_map;
 		Render_RTV_Handle hnd_brdf_lut_map_rtv;
 
-		RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_skybox_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 512, 512, 6, nullptr, nullptr, false, 1).value);
-		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&skylight.skybox_srv, &hnd_skybox_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
-		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_skybox_map_rtv, &hnd_skybox_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+		Texture_2D_Desc skybox_map_desc = Texture_2D_Desc::create();
+		skybox_map_desc.resource_usage = Resource_Usage::DEFAULT;
+		skybox_map_desc.bind_flags = Resource_Bind_Flags::SHADER_RESOURCE | Resource_Bind_Flags::RENDER_TARGET;
+		skybox_map_desc.misc_flags = Resource_Misc_Flags::TEXTURE_CUBE;
+		skybox_map_desc.format = Texture_Format::R11G11B10_FLOAT;
+		skybox_map_desc.width = 512;
+		skybox_map_desc.height = 512;
+		skybox_map_desc.array_size = 6;
+		skybox_map_desc.mip_levels = 1;
 
-		RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_irradiance_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 64, 64, 6, nullptr, nullptr, false, 1).value);
-		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&skylight.irradiance_map_srv, &hnd_irradiance_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
-		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_irradiance_map_rtv, &hnd_irradiance_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+		RETURN_IF_FAILED2(hr, rhi.create_texture_2d(&hnd_skybox_map, nullptr, skybox_map_desc).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&skylight.skybox_srv, hnd_skybox_map, Texture_Format::R11G11B10_FLOAT, 6).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_skybox_map_rtv, hnd_skybox_map, Texture_Format::R11G11B10_FLOAT, 6).value);
 
-		RETURN_IF_FAILED2(hr, rhi.create_tex_cubemap(&hnd_prefiltered_env_map, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 64, 64, 6, nullptr, nullptr, true, 0).value);
-		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&skylight.prefiltered_env_map_srv, &hnd_prefiltered_env_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6, 0, -1).value);
-		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_prefiltered_env_map_rtv, &hnd_prefiltered_env_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 6).value);
+		Texture_2D_Desc irradinace_map_desc = Texture_2D_Desc::create();
+		irradinace_map_desc.resource_usage = Resource_Usage::DEFAULT;
+		irradinace_map_desc.bind_flags = Resource_Bind_Flags::SHADER_RESOURCE | Resource_Bind_Flags::RENDER_TARGET;
+		irradinace_map_desc.misc_flags = Resource_Misc_Flags::TEXTURE_CUBE;
+		irradinace_map_desc.format = Texture_Format::R11G11B10_FLOAT;
+		irradinace_map_desc.width = 64;
+		irradinace_map_desc.height = 64;
+		irradinace_map_desc.array_size = 6;
+		irradinace_map_desc.mip_levels = 1;
 
-		RETURN_IF_FAILED2(hr, rhi.create_tex_2d(&hnd_brdf_lut_map, nullptr, ZRY_Usage{ D3D11_USAGE_DEFAULT }, ZRY_Bind_Flags{ D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET }, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }, 512, 512, 1, nullptr, nullptr, true, 1).value);
-		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_2d(&skylight.brdf_lut_srv, &hnd_brdf_lut_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }).value);
-		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d(&hnd_brdf_lut_map_rtv, &hnd_brdf_lut_map, ZRY_Format{ DXGI_FORMAT_R11G11B10_FLOAT }).value);
+		RETURN_IF_FAILED2(hr, rhi.create_texture_2d(&hnd_irradiance_map, nullptr, irradinace_map_desc).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&skylight.irradiance_map_srv, hnd_irradiance_map, Texture_Format::R11G11B10_FLOAT, 6).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_irradiance_map_rtv, hnd_irradiance_map, Texture_Format::R11G11B10_FLOAT, 6).value);
+
+
+		Texture_2D_Desc prefiltered_env_map_desc = Texture_2D_Desc::create();
+		prefiltered_env_map_desc.resource_usage = Resource_Usage::DEFAULT;
+		prefiltered_env_map_desc.bind_flags = Resource_Bind_Flags::SHADER_RESOURCE | Resource_Bind_Flags::RENDER_TARGET;
+		prefiltered_env_map_desc.misc_flags = Resource_Misc_Flags::TEXTURE_CUBE | Resource_Misc_Flags::GENERATE_MIPS;
+		prefiltered_env_map_desc.format = Texture_Format::R11G11B10_FLOAT;
+		prefiltered_env_map_desc.width = 64;
+		prefiltered_env_map_desc.height = 64;
+		prefiltered_env_map_desc.array_size = 6;
+		prefiltered_env_map_desc.mip_levels = 0;
+
+		RETURN_IF_FAILED2(hr, rhi.create_texture_2d(&hnd_prefiltered_env_map, nullptr, prefiltered_env_map_desc).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv_tex_cubemap(&skylight.prefiltered_env_map_srv, hnd_prefiltered_env_map, Texture_Format::R11G11B10_FLOAT, 6, 0, -1).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d_array(&hnd_prefiltered_env_map_rtv, hnd_prefiltered_env_map, Texture_Format::R11G11B10_FLOAT, 6).value);
+
+		Texture_2D_Desc brdf_lut_map_desc = Texture_2D_Desc::create();
+		brdf_lut_map_desc.resource_usage = Resource_Usage::DEFAULT;
+		brdf_lut_map_desc.bind_flags = Resource_Bind_Flags::SHADER_RESOURCE | Resource_Bind_Flags::RENDER_TARGET;
+		brdf_lut_map_desc.format = Texture_Format::R11G11B10_FLOAT;
+		brdf_lut_map_desc.width = 512;
+		brdf_lut_map_desc.height = 512;
+		brdf_lut_map_desc.misc_flags = Resource_Misc_Flags::GENERATE_MIPS;
+
+		RETURN_IF_FAILED2(hr, rhi.create_texture_2d(&hnd_brdf_lut_map, nullptr, brdf_lut_map_desc).value);
+
+
+		Shader_Resource_View_Desc brdf_lut_srv_desc;
+		brdf_lut_srv_desc.format = Texture_Format::R11G11B10_FLOAT;
+		brdf_lut_srv_desc.resource_dimension = Resource_Dimension::TEXTURE_2D;
+		brdf_lut_srv_desc.texture_2d.mip_levels = 1;
+		brdf_lut_srv_desc.texture_2d.most_detailed_mip = 0;
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_srv(&skylight.brdf_lut_srv, hnd_brdf_lut_map, brdf_lut_srv_desc).value);
+		RETURN_IF_FAILED2(hr, rhi.m_device.create_rtv_tex_2d(&hnd_brdf_lut_map_rtv, hnd_brdf_lut_map, Texture_Format::R11G11B10_FLOAT).value);
 
 		Render_Command_List cmd_list(rhi.m_device);
 		Arena arena(10 * 1024 * 1024);

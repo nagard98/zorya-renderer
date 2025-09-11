@@ -243,10 +243,10 @@ namespace zorya
 						cb_data->variables = new CB_Variable[cbuff_desc.Variables];
 						cb_data->num_variables = cbuff_desc.Variables;
 
-						D3D11_BUFFER_DESC cb_res_desc{};
-						cb_res_desc.ByteWidth = cbuff_desc.Size;
-						cb_res_desc.Usage = D3D11_USAGE_DEFAULT;
-						cb_res_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+						Buffer_Desc cb_res_desc{};
+						cb_res_desc.byte_width = cbuff_desc.Size;
+						cb_res_desc.usage = Resource_Usage::DEFAULT;
+						cb_res_desc.bind_flags = Resource_Bind_Flags::CONSTANT_BUFFER;
 						
 						for (int i = 0; i < cbuff_desc.Variables; i++)
 						{
@@ -288,13 +288,13 @@ namespace zorya
 						rhi.m_context->UpdateSubresource(rhi.get_cb_pointer(hnd_cb_resource), 0, nullptr, cb_data->cb_start, 0, 0);
 
 					}
-					shader_resources.emplace_back(desc.Name, desc.BindPoint, desc.BindCount, to_zry_resource_type(desc.Type), Render_Resource_Handle{ hnd_cb_resource.index }, cb_data);
+					shader_resources.emplace_back(desc.Name, desc.BindPoint, desc.BindCount, to_zry_resource_type(desc.Type), Constant_Buffer_Handle{ hnd_cb_resource.index }, cb_data);
 					break;
 				}
 
 				default:
 				{
-					shader_resources.emplace_back(desc.Name, desc.BindPoint, desc.BindCount, to_zry_resource_type(desc.Type), Render_Resource_Handle{ 0 }, nullptr);
+					shader_resources.emplace_back(desc.Name, desc.BindPoint, desc.BindCount, to_zry_resource_type(desc.Type), Render_Resource_Handle{}, nullptr);
 					break;
 				}
 

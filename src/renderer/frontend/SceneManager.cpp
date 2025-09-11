@@ -40,7 +40,7 @@ namespace zorya
 
     Scene_Manager::Scene_Manager() : 
         hnd_default_material(Material_Cache_Handle_t{ 0,IS_FIRST_MAT_ALLOC }),
-        m_scene_graph(Renderable_Entity{ 0, Entity_Type::COLLECTION, nullptr, "scene", IDENTITY_TRANSFORM }) {}
+        m_scene_graph(Renderable_Entity{ 0, Entity_Type::COLLECTION, nullptr, "scene", IDENTITY_TRANSFORM }){}
 
 
     HRESULT Scene_Manager::init()
@@ -86,8 +86,9 @@ namespace zorya
         {
             hnd_light.index = m_scene_lights.size();
             {
-                Light_Info& light_info = m_scene_lights.emplace_back(Light_Info{ Light_Type::DIRECTIONAL, {Directional_Light{{}, shadow_map_near_plane, shadow_map_far_plane}}, dx::XMMatrixIdentity() });
+                Light_Info light_info = Light_Info::create(Directional_Light{ {}, shadow_map_near_plane, shadow_map_far_plane });
                 dx::XMStoreFloat4(&light_info.dir_light.dir, direction);
+                m_scene_lights.push_back(light_info);
             }
         }
 
@@ -403,6 +404,42 @@ namespace zorya
         }
 
         return new_node;
+    }
+
+    Light_Info Light_Info::create(Directional_Light dir_light, const dx::XMMATRIX& final_world_transform)
+    {
+        Light_Info info;
+        info.tag = Light_Type::DIRECTIONAL;
+        info.dir_light = std::move(dir_light);
+        info.final_world_transform = final_world_transform;
+        return info;
+    }
+
+    Light_Info Light_Info::create(Point_Light point_light, const dx::XMMATRIX& final_world_transform)
+    {
+        Light_Info info;
+        info.tag = Light_Type::DIRECTIONAL;
+        info.point_light = std::move(point_light);
+        info.final_world_transform = final_world_transform;
+        return info;
+    }
+
+    Light_Info Light_Info::create(Spot_Light spot_light, const dx::XMMATRIX& final_world_transform)
+    {
+        Light_Info info;
+        info.tag = Light_Type::DIRECTIONAL;
+        info.spot_light = std::move(spot_light);
+        info.final_world_transform = final_world_transform;
+        return info;
+    }
+
+    Light_Info Light_Info::create(Sky_Light sky_light, const dx::XMMATRIX& final_world_transform)
+    {
+        Light_Info info;
+        info.tag = Light_Type::DIRECTIONAL;
+        info.sky_light = std::move(sky_light);
+        info.final_world_transform = final_world_transform;
+        return info;
     }
 
 }
